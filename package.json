@@ -1,0 +1,21 @@
+{
+  "name": "creditos-app",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace @creditos/api",
+    "dev:web": "npm run dev --workspace @creditos/web",
+    "build": "npm run build --workspaces",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.62.2",
+    "@types/nodemailer": "^8.0.1"
+  },
+  "dependencies": {
+    "nodemailer": "^9.0.1"
+  }
+}
