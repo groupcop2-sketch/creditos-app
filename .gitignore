@@ -11,4 +11,4 @@ apps/*/.turbo
 apps/*/node_modules
 *.tsbuildinfo
 *.log
-api/*
+apps/api/*
