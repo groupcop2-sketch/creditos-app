@@ -1,3 +1,4 @@
+const API_URL = import.meta.env.VITE_API_URL || "";
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
@@ -1141,7 +1142,7 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    fetch('/api/v1/status')
+    fetch(API_URL + '/api/v1/status')
       .then(async (response) => {
         if (!response.ok) throw new Error('No se pudo consultar el estado');
         return response.json() as Promise<{ database: string; status: string }>;

@@ -894,8 +894,10 @@ export type PortalCreditosResponse = {
   }>;
 };
 
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 async function request<T>(path: string, options: RequestInit = {}, token?: string) {
-  const response = await fetch(path, {
+  const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -949,21 +951,21 @@ export const api = {
       method: 'POST', body: JSON.stringify({ creditoId })
     }, token),
   getGeneratedDocumentPdf: async (token: string, id: number) => {
-    const response = await fetch(`/api/v1/documentos/generados/${id}/pdf`, { headers: { Authorization: `Bearer ${token}` } });
+    const response = await fetch(`${API_URL}/api/v1/documentos/generados/${id}/pdf`, { headers: { Authorization: `Bearer ${token}` } });
     if (!response.ok) throw new Error('No se pudo abrir el documento generado');
     return response.blob();
   },
   uploadTemplatePdfBase: async (token: string, templateId: number, file: File) => {
     const data = new FormData();
     data.append('file', file);
-    const response = await fetch(`/api/v1/documentos/plantillas/${templateId}/pdf-base`, {
+    const response = await fetch(`${API_URL}/api/v1/documentos/plantillas/${templateId}/pdf-base`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: data
     });
     if (!response.ok) throw new Error('No se pudo cargar el PDF base');
     return response.json() as Promise<{ fileName: string; hash: string; pages: number }>;
   },
   getTemplatePdfBase: async (token: string, templateId: number) => {
-    const response = await fetch(`/api/v1/documentos/plantillas/${templateId}/pdf-base`, {
+    const response = await fetch(`${API_URL}/api/v1/documentos/plantillas/${templateId}/pdf-base`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('La plantilla no tiene un PDF base');
@@ -1055,7 +1057,7 @@ export const api = {
   uploadCreditoPagoSoporte: async (token: string, pagoId: number, file: File) => {
     const data = new FormData();
     data.append('file', file);
-    const response = await fetch(`/api/v1/creditos/pagos/${pagoId}/soporte`, {
+    const response = await fetch(`${API_URL}/api/v1/creditos/pagos/${pagoId}/soporte`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: data
@@ -1065,7 +1067,7 @@ export const api = {
     return payload as CreditoExpediente;
   },
   getCreditoPagoSoporte: async (token: string, pagoId: number) => {
-    const response = await fetch(`/api/v1/creditos/pagos/${pagoId}/soporte`, {
+    const response = await fetch(`${API_URL}/api/v1/creditos/pagos/${pagoId}/soporte`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('No se pudo abrir el soporte de pago');
@@ -1078,7 +1080,7 @@ export const api = {
   uploadCreditoDocumentoArchivo: async (token: string, documentoId: number, file: File) => {
     const data = new FormData();
     data.append('file', file);
-    const response = await fetch(`/api/v1/creditos/documentos/${documentoId}/archivo`, {
+    const response = await fetch(`${API_URL}/api/v1/creditos/documentos/${documentoId}/archivo`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: data
@@ -1088,7 +1090,7 @@ export const api = {
     return payload as CreditoExpediente;
   },
   getCreditoDocumentoArchivo: async (token: string, documentoId: number) => {
-    const response = await fetch(`/api/v1/creditos/documentos/${documentoId}/archivo`, {
+    const response = await fetch(`${API_URL}/api/v1/creditos/documentos/${documentoId}/archivo`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('No se pudo abrir el archivo');
@@ -1100,7 +1102,7 @@ export const api = {
   updateFirmaEstado: (token: string, firmaId: number, estado: string) =>
     request<FirmaCreditoRow>(`/api/v1/firmas/${firmaId}/estado`, { method: 'PATCH', body: JSON.stringify({ estado }) }, token),
   getFirmaPdfFirmado: async (token: string, firmaId: number) => {
-    const response = await fetch(`/api/v1/firmas/${firmaId}/pdf-firmado`, {
+    const response = await fetch(`${API_URL}/api/v1/firmas/${firmaId}/pdf-firmado`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) throw new Error('No se pudo abrir el PDF firmado');
