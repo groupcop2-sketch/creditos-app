@@ -4,6 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
     "noEmit": true
   },
   "include": ["vite.config.ts"]
