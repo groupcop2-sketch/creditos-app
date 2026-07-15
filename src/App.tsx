@@ -21,6 +21,7 @@ import {
   type CreditoRow,
   type CreditosCatalogs,
   type DashboardGerencial,
+  type OperativoReporte,
   type DocumentTemplateDetail,
   type DocumentTemplateRow,
   type DocumentVariable,
@@ -33,12 +34,14 @@ import {
   type IdentificationTypeRow,
   type LibranzeraRow,
   type PermissionRow,
+  type ParametroFinancieroRow,
   type PortalCatalogs,
   type PortalCliente,
   type PortalCreditosResponse,
   type PortalProductoCredito,
   type ProductoAtributoRow,
   type ProductoCreditoRow,
+  type ProductoConvenioRow,
   type ProductoDocumentoRow,
   type ProductoEtapaRow,
   type ProductosCreditoCatalogs,
@@ -56,7 +59,7 @@ type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
 type AliadosTab = 'registro' | 'directorio';
 type ComercialesTab = 'libranzera' | 'vendedor' | 'directorio';
-type ProductosCreditoTab = 'solicitudes' | 'general' | 'atributos' | 'documentos' | 'etapas';
+type ProductosCreditoTab = 'solicitudes' | 'general' | 'atributos' | 'convenios' | 'documentos' | 'etapas' | 'parametros';
 type ThemeMode = 'light' | 'dark';
 type PaletteKey = 'azul' | 'verde' | 'vino' | 'grafito';
 
@@ -134,6 +137,7 @@ type UserFormState = {
 type RoleFormState = {
   nombre: string;
   descripcion: string;
+  montoMaximoAprobacion: string;
 };
 
 type PermissionFormState = {
@@ -374,6 +378,10 @@ type ProductoCreditoFormState = {
   tasaMoraMensual: string;
   primeraCuotaMesSiguiente: boolean;
   observacionCalendario: string;
+  porcentajeEndeudamientoMaximo: string;
+  antiguedadMinimaMeses: string;
+  requiereEmpleadoActivo: boolean;
+  bloqueaEmbargos: boolean;
 };
 
 type ProductoAtributoFormState = {
@@ -382,12 +390,46 @@ type ProductoAtributoFormState = {
   nombre: string;
   valor: string;
   porcentaje: string;
+  valor2: string;
   minimo: string;
   maximo: string;
   aplicaIva: boolean;
   obligatorio: boolean;
   proveedor: string;
   prioridad: string;
+};
+
+type FormulaCalculoFormState = {
+  nombre: string;
+  codigo: string;
+  baseCalculo: string;
+  operacion: string;
+  requiereValor: boolean;
+  requiereValor2: boolean;
+  requierePorcentaje: boolean;
+  aplicaMinimo: boolean;
+  aplicaMaximo: boolean;
+};
+
+type ParametroFinancieroFormState = {
+  codigo: string;
+  nombre: string;
+  valor: string;
+  unidad: string;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
+};
+
+type ProductoConvenioFormState = {
+  idEmpresa: string;
+  cupoTotal: string;
+  cupoUsado: string;
+  porcentajeEndeudamientoMaximo: string;
+  requiereValidacionPagaduria: boolean;
+  vigenciaDesde: string;
+  vigenciaHasta: string;
+  activo: boolean;
+  observacion: string;
 };
 
 type ProductoDocumentoFormState = {
@@ -474,7 +516,8 @@ const initialUserForm: UserFormState = {
 
 const initialRoleForm: RoleFormState = {
   nombre: '',
-  descripcion: ''
+  descripcion: '',
+  montoMaximoAprobacion: ''
 };
 
 const initialPermissionForm: PermissionFormState = {
@@ -751,7 +794,11 @@ const initialProductoCreditoForm: ProductoCreditoFormState = {
   moraDespuesVencimiento: '0',
   tasaMoraMensual: '2',
   primeraCuotaMesSiguiente: true,
-  observacionCalendario: ''
+  observacionCalendario: '',
+  porcentajeEndeudamientoMaximo: '40',
+  antiguedadMinimaMeses: '0',
+  requiereEmpleadoActivo: true,
+  bloqueaEmbargos: true
 };
 
 const initialProductoAtributoForm: ProductoAtributoFormState = {
@@ -760,12 +807,46 @@ const initialProductoAtributoForm: ProductoAtributoFormState = {
   nombre: '',
   valor: '',
   porcentaje: '',
+  valor2: '',
   minimo: '',
   maximo: '',
   aplicaIva: false,
   obligatorio: false,
   proveedor: '',
   prioridad: '1'
+};
+
+const initialFormulaCalculoForm: FormulaCalculoFormState = {
+  nombre: '',
+  codigo: '',
+  baseCalculo: 'VALOR_CREDITO',
+  operacion: 'PORCENTAJE',
+  requiereValor: false,
+  requiereValor2: false,
+  requierePorcentaje: true,
+  aplicaMinimo: true,
+  aplicaMaximo: true
+};
+
+const initialParametroFinancieroForm: ParametroFinancieroFormState = {
+  codigo: '',
+  nombre: '',
+  valor: '',
+  unidad: 'VALOR',
+  vigenciaDesde: new Date().toISOString().slice(0, 10),
+  vigenciaHasta: ''
+};
+
+const initialProductoConvenioForm: ProductoConvenioFormState = {
+  idEmpresa: '',
+  cupoTotal: '',
+  cupoUsado: '0',
+  porcentajeEndeudamientoMaximo: '',
+  requiereValidacionPagaduria: true,
+  vigenciaDesde: '',
+  vigenciaHasta: '',
+  activo: true,
+  observacion: ''
 };
 
 const initialProductoDocumentoForm: ProductoDocumentoFormState = {
@@ -947,6 +1028,7 @@ function App() {
   const [dashboard, setDashboard] = useState<DashboardGerencial | null>(null);
   const [dashboardFilters, setDashboardFilters] = useState({ fechaInicio: '', fechaFin: '' });
   const [carteraReporte, setCarteraReporte] = useState<CarteraReporte | null>(null);
+  const [operativoReporte, setOperativoReporte] = useState<OperativoReporte | null>(null);
   const [carteraFilters, setCarteraFilters] = useState({ fechaInicio: '', fechaFin: '', idEmpresa: '', idProducto: '', idSocio: '', estado: '' });
   const [apiStatus, setApiStatus] = useState('Conectando a la API...');
   const [view, setView] = useState<ViewKey>('dashboard');
@@ -1052,7 +1134,11 @@ function App() {
   const [productosCreditoTab, setProductosCreditoTab] = useState<ProductosCreditoTab>('general');
   const [productoCreditoForm, setProductoCreditoForm] = useState<ProductoCreditoFormState>(initialProductoCreditoForm);
   const [productoAtributoForm, setProductoAtributoForm] = useState<ProductoAtributoFormState>(initialProductoAtributoForm);
+  const [editingProductoCreditoId, setEditingProductoCreditoId] = useState<number | null>(null);
+  const [editingProductoAtributoId, setEditingProductoAtributoId] = useState<number | null>(null);
+  const [formulaCalculoForm, setFormulaCalculoForm] = useState<FormulaCalculoFormState>(initialFormulaCalculoForm);
   const [productoDocumentoForm, setProductoDocumentoForm] = useState<ProductoDocumentoFormState>(initialProductoDocumentoForm);
+  const [selectedProductoDocumentoId, setSelectedProductoDocumentoId] = useState<number | null>(null);
   const [productoEtapaForm, setProductoEtapaForm] = useState<ProductoEtapaFormState>(initialProductoEtapaForm);
   const [selectedProductoEtapaId, setSelectedProductoEtapaId] = useState<number | null>(null);
   const [creditoForm, setCreditoForm] = useState<CreditoFormState>(initialCreditoForm);
@@ -1065,8 +1151,13 @@ function App() {
     libranzeras: []
   });
   const [productosCredito, setProductosCredito] = useState<ProductoCreditoRow[]>([]);
+  const [parametrosFinancieros, setParametrosFinancieros] = useState<ParametroFinancieroRow[]>([]);
+  const [parametroFinancieroForm, setParametroFinancieroForm] = useState<ParametroFinancieroFormState>(initialParametroFinancieroForm);
   const [selectedProductoCreditoId, setSelectedProductoCreditoId] = useState<number | null>(null);
   const [productoAtributos, setProductoAtributos] = useState<ProductoAtributoRow[]>([]);
+  const [productoConvenios, setProductoConvenios] = useState<ProductoConvenioRow[]>([]);
+  const [productoConvenioForm, setProductoConvenioForm] = useState<ProductoConvenioFormState>(initialProductoConvenioForm);
+  const [selectedProductoConvenioId, setSelectedProductoConvenioId] = useState<number | null>(null);
   const [productoDocumentos, setProductoDocumentos] = useState<ProductoDocumentoRow[]>([]);
   const [productoEtapas, setProductoEtapas] = useState<ProductoEtapaRow[]>([]);
   const [creditosCatalogs, setCreditosCatalogs] = useState<CreditosCatalogs>({
@@ -1113,6 +1204,8 @@ function App() {
     tipoCuenta: '',
     numeroCuenta: '',
     referenciaPago: '',
+    numeroOrden: '',
+    comprobantePago: '',
     observacion: ''
   });
   const [fondeoDisponible, setFondeoDisponible] = useState<FondeoDisponibleRow[]>([]);
@@ -1125,7 +1218,21 @@ function App() {
     fechaPago: new Date().toISOString().slice(0, 10),
     valorPago: '',
     medioPago: '',
+    tipoRecaudo: 'MANUAL',
+    periodoNomina: '',
     referenciaPago: '',
+    observacion: ''
+  });
+  const [recaudoMasivoForm, setRecaudoMasivoForm] = useState({
+    fechaPago: new Date().toISOString().slice(0, 10),
+    periodoNomina: new Date().toISOString().slice(0, 7),
+    referenciaLote: '',
+    observacion: '',
+    contenido: ''
+  });
+  const [recaudoMasivoResultado, setRecaudoMasivoResultado] = useState<Awaited<ReturnType<typeof api.registrarRecaudoMasivo>> | null>(null);
+  const [creditoCausacionForm, setCreditoCausacionForm] = useState({
+    fechaCorte: new Date().toISOString().slice(0, 10),
     observacion: ''
   });
   const [creditoSimulacion, setCreditoSimulacion] = useState<SimulacionCredito | null>(null);
@@ -1215,6 +1322,16 @@ function App() {
   const creditProgress = creditoExpediente?.etapas.length
     ? Math.round((creditoExpediente.etapas.filter((etapa) => etapa.estadoEtapa === 'APROBADA').length / creditoExpediente.etapas.length) * 100)
     : 0;
+  const liquidacionDefinitivaActual = creditoExpediente?.liquidacionDefinitiva ?? null;
+  const carteraExpedienteResumen = creditoExpediente?.cuotas.reduce((acc, cuota) => {
+    const saldo = cuota.saldoCuota;
+    acc.saldo += saldo;
+    acc.pagado += cuota.valorPagado;
+    if (cuota.estado !== 'PAGADA') acc.pendientes += 1;
+    if (cuota.estado === 'VENCIDA' || cuota.estado === 'EN_MORA') acc.vencido += saldo;
+    acc.mora += cuota.valorMora;
+    return acc;
+  }, { saldo: 0, vencido: 0, mora: 0, pagado: 0, pendientes: 0 }) ?? { saldo: 0, vencido: 0, mora: 0, pagado: 0, pendientes: 0 };
   const selectedPortalProducto = portalProductos.find((producto) => String(producto.id) === portalCreditoForm.idProductoCredito);
   const selectedCity = addressCatalogs.ciudades.find((item) => String(item.id) === empresaForm.direccion.idCiudad);
   const citySearchValue = citySearch || selectedCity?.nombre || '';
@@ -1333,9 +1450,13 @@ function App() {
   useEffect(() => {
     if (!session || !selectedProductoCreditoId) {
       setProductoAtributos([]);
+      setProductoConvenios([]);
+      setProductoConvenioForm(initialProductoConvenioForm);
+      setSelectedProductoConvenioId(null);
       setProductoDocumentos([]);
       setProductoEtapas([]);
       setSelectedProductoEtapaId(null);
+      setSelectedProductoDocumentoId(null);
       setProductoEtapaForm(initialProductoEtapaForm);
       return;
     }
@@ -1441,6 +1562,45 @@ function App() {
     }
   };
 
+  const reloadOperativoReporte = async () => {
+    if (!session) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      setOperativoReporte(await api.getReporteOperativo(session.token, carteraFilters));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo cargar el reporte operativo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportOperativoCsv = () => {
+    if (!operativoReporte) return;
+    const lines: string[] = [];
+    lines.push(['REPORTE OPERATIVO'].map(csvCell).join(';'));
+    lines.push(['Generado', new Date().toLocaleString('es-CO')].map(csvCell).join(';'));
+    lines.push('');
+    lines.push(['Resumen'].map(csvCell).join(';'));
+    Object.entries(operativoReporte.resumen).forEach(([key, value]) => lines.push([key, value].map(csvCell).join(';')));
+    lines.push('');
+    lines.push(['Solicitudes'].map(csvCell).join(';'));
+    lines.push(['Credito', 'Cliente', 'Empresa', 'Producto', 'Estado', 'Fecha', 'Monto', 'Plazo', 'Cuota'].map(csvCell).join(';'));
+    operativoReporte.solicitudes.forEach((item) => lines.push([item.credito, item.cliente, item.empresa, item.producto, item.estado, item.fecha, item.monto, item.plazo ?? '', item.cuota ?? ''].map(csvCell).join(';')));
+    lines.push('');
+    lines.push(['Desembolsos'].map(csvCell).join(';'));
+    lines.push(['Credito', 'Cliente', 'Empresa', 'Fecha', 'Valor', 'Banco', 'Orden', 'Estado', 'Comprobante'].map(csvCell).join(';'));
+    operativoReporte.desembolsos.forEach((item) => lines.push([item.credito, item.cliente, item.empresa, item.fechaDesembolso, item.valorDesembolso, item.bancoDestino ?? '', item.numeroOrden ?? '', item.estadoDesembolso, item.comprobantePago ?? ''].map(csvCell).join(';')));
+    lines.push('');
+    lines.push(['Liquidaciones pendientes'].map(csvCell).join(';'));
+    lines.push(['Credito', 'Cliente', 'Empresa', 'Version', 'Fecha', 'Valor desembolso', 'Valor credito', 'Cuota'].map(csvCell).join(';'));
+    operativoReporte.liquidacionesPendientes.forEach((item) => lines.push([item.credito, item.cliente, item.empresa, item.version, item.fecha, item.valorDesembolso, item.valorCredito, item.cuota].map(csvCell).join(';')));
+    lines.push('');
+    lines.push(['Comite'].map(csvCell).join(';'));
+    lines.push(['Credito', 'Cliente', 'Empresa', 'Monto', 'Votos', 'Requeridos', 'Fecha'].map(csvCell).join(';'));
+    operativoReporte.comite.forEach((item) => lines.push([item.credito, item.cliente, item.empresa, item.monto, item.votos, item.votosRequeridos ?? '', item.fecha].map(csvCell).join(';')));
+    downloadTextFile('reporte-operativo-' + new Date().toISOString().slice(0, 10) + '.csv', '\uFEFF' + lines.join('\n'), 'text/csv;charset=utf-8');
+  };
   const reloadCarteraReporte = async () => {
     if (!session) return;
     setLoading(true);
@@ -1846,7 +2006,7 @@ function App() {
       }));
       setCreditoDesembolsoForm((current) => ({
         ...current,
-        valorDesembolso: current.valorDesembolso || String(expediente.decisiones[0]?.montoAprobado ?? expediente.credito.montoSolicitado ?? ''),
+        valorDesembolso: current.valorDesembolso || String(expediente.liquidacionDefinitiva?.valorDesembolso ?? expediente.decisiones[0]?.montoAprobado ?? expediente.credito.montoSolicitado ?? ''),
         fechaPrimeraCuota: current.fechaPrimeraCuota || nextMonthDate(current.fechaDesembolso),
         periodicidad: expediente.sugerenciaCalendario?.periodicidad || current.periodicidad || 'MENSUAL',
         diaCorte: String(expediente.sugerenciaCalendario?.diaCorte ?? current.diaCorte ?? 25),
@@ -1872,14 +2032,18 @@ function App() {
     if (!session) return;
 
     try {
-      const [atributosResponse, documentosResponse, etapasResponse] = await Promise.all([
+      const [atributosResponse, conveniosResponse, documentosResponse, etapasResponse] = await Promise.allSettled([
         api.listProductoAtributos(session.token, productoId),
+        api.listProductoConvenios(session.token, productoId),
         api.listProductoDocumentos(session.token, productoId),
         api.listProductoEtapas(session.token, productoId)
       ]);
-      setProductoAtributos(atributosResponse);
-      setProductoDocumentos(documentosResponse);
-      setProductoEtapas(etapasResponse);
+      setProductoAtributos(atributosResponse.status === 'fulfilled' ? atributosResponse.value : []);
+      setProductoConvenios(conveniosResponse.status === 'fulfilled' ? conveniosResponse.value : []);
+      setProductoDocumentos(documentosResponse.status === 'fulfilled' ? documentosResponse.value : []);
+      setProductoEtapas(etapasResponse.status === 'fulfilled' ? etapasResponse.value : []);
+      const fallidos = [atributosResponse, conveniosResponse, documentosResponse, etapasResponse].filter((item) => item.status === 'rejected');
+      if (fallidos.length) setMessage('Algunos detalles del producto no estan disponibles en el API actual. Reinicia o despliega el backend actualizado.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo cargar el detalle del producto');
     }
@@ -1931,7 +2095,7 @@ function App() {
         idBanco: item.idBanco ? Number(item.idBanco) : null,
         idTipoCuenta: item.idTipoCuenta ? Number(item.idTipoCuenta) : null,
         cuentaNomina: item.cuentaNomina || null,
-        tieneEmbargos: ['true', '1', 'si', 'sí', 's'].includes((item.tieneEmbargos || '').toLowerCase()),
+        tieneEmbargos: ['true', '1', 'si', 'si', 's'].includes((item.tieneEmbargos || '').toLowerCase()),
         idEstadoCivil: item.idEstadoCivil ? Number(item.idEstadoCivil) : null,
         personasCargo: item.personasCargo ? Number(item.personasCargo) : 0,
         idTipoVivienda: item.idTipoVivienda ? Number(item.idTipoVivienda) : null,
@@ -2466,7 +2630,11 @@ function App() {
     setMessage('');
 
     try {
-      await api.createRole(session.token, roleForm);
+      await api.createRole(session.token, {
+        nombre: roleForm.nombre,
+        descripcion: roleForm.descripcion,
+        montoMaximoAprobacion: roleForm.montoMaximoAprobacion ? Number(roleForm.montoMaximoAprobacion) : null
+      });
       setRoleForm(initialRoleForm);
       await reloadSecurityData();
       setMessage('Rol creado correctamente');
@@ -2909,106 +3077,479 @@ function App() {
     }
   };
 
-  const handleCreateProductoCredito = async (event: FormEvent) => {
+  const getProductoCreditoValidation = () => {
+    const errors: string[] = [];
+    const montoMinimo = productoCreditoForm.montoMinimo ? Number(productoCreditoForm.montoMinimo) : null;
+    const montoMaximo = productoCreditoForm.montoMaximo ? Number(productoCreditoForm.montoMaximo) : null;
+    const salarioMinimo = productoCreditoForm.salarioMinimo ? Number(productoCreditoForm.salarioMinimo) : null;
+    const salarioMaximo = productoCreditoForm.salarioMaximo ? Number(productoCreditoForm.salarioMaximo) : null;
+    const plazoMinimo = productoCreditoForm.plazoMinimo ? Number(productoCreditoForm.plazoMinimo) : null;
+    const plazoMaximo = productoCreditoForm.plazoMaximo ? Number(productoCreditoForm.plazoMaximo) : null;
+    if (!productoCreditoForm.nombre.trim()) errors.push('El nombre del producto es obligatorio.');
+    if (!productoCreditoForm.idTipoCredito) errors.push('Selecciona el tipo de credito.');
+    if (montoMinimo !== null && montoMaximo !== null && montoMinimo > montoMaximo) errors.push('El tope minimo no puede ser mayor que el tope maximo.');
+    if (salarioMinimo !== null && salarioMaximo !== null && salarioMinimo > salarioMaximo) errors.push('El salario minimo no puede ser mayor que el salario maximo.');
+    if (plazoMinimo !== null && plazoMaximo !== null && plazoMinimo > plazoMaximo) errors.push('El plazo minimo no puede ser mayor que el plazo maximo.');
+    if (productoCreditoForm.requiereCodeudor && Number(productoCreditoForm.numeroCodeudores || 0) < 1) errors.push('Si requiere codeudor, indica al menos 1 codeudor.');
+    return errors;
+  };
+
+  const getProductoAtributoValidation = () => {
+    const errors: string[] = [];
+    const formula = productosCreditoCatalogs.tiposCalculo.find((item) => String(item.id) === productoAtributoForm.idTipoCalculo)?.nombre.toLowerCase() ?? '';
+    if (!productoAtributoForm.idTipoAtributo) errors.push('Selecciona donde aplica el atributo.');
+    if (!productoAtributoForm.idTipoCalculo) errors.push('Selecciona el tipo de formula.');
+    if (!productoAtributoForm.nombre.trim()) errors.push('El nombre del atributo es obligatorio.');
+    if ((formula.includes('%') || formula.includes('porcentaje')) && !productoAtributoForm.porcentaje) errors.push('Esta formula requiere porcentaje.');
+    if (formula.includes('valor fijo') && !productoAtributoForm.valor) errors.push('La formula de valor fijo requiere valor.');
+    return errors;
+  };
+
+  const buildProductoCreditoPayload = () => ({
+    nombre: productoCreditoForm.nombre,
+    descripcion: productoCreditoForm.descripcion || null,
+    idTipoCredito: Number(productoCreditoForm.idTipoCredito),
+    tipoTasa: productoCreditoForm.tipoTasa,
+    idLibranzera: productoCreditoForm.idLibranzera ? Number(productoCreditoForm.idLibranzera) : null,
+    montoMinimo: productoCreditoForm.montoMinimo ? Number(productoCreditoForm.montoMinimo) : null,
+    montoMaximo: productoCreditoForm.montoMaximo ? Number(productoCreditoForm.montoMaximo) : null,
+    salarioMinimo: productoCreditoForm.salarioMinimo ? Number(productoCreditoForm.salarioMinimo) : null,
+    salarioMaximo: productoCreditoForm.salarioMaximo ? Number(productoCreditoForm.salarioMaximo) : null,
+    plazoMinimo: productoCreditoForm.plazoMinimo ? Number(productoCreditoForm.plazoMinimo) : null,
+    plazoMaximo: productoCreditoForm.plazoMaximo ? Number(productoCreditoForm.plazoMaximo) : null,
+    modeloPlazo: productoCreditoForm.modeloPlazo,
+    permiteCreditoMultiple: productoCreditoForm.permiteCreditoMultiple,
+    interesAjustable: productoCreditoForm.interesAjustable,
+    permiteRefinanciacion: productoCreditoForm.permiteRefinanciacion,
+    permiteRetanqueo: productoCreditoForm.permiteRetanqueo,
+    requiereCodeudor: productoCreditoForm.requiereCodeudor,
+    numeroCodeudores: Number(productoCreditoForm.numeroCodeudores || 0),
+    formatoCredito: productoCreditoForm.formatoCredito || null,
+    formatoRequisitos: productoCreditoForm.formatoRequisitos || null,
+    formatoCodeudores: productoCreditoForm.formatoCodeudores || null,
+    proveedorFirma: productoCreditoForm.proveedorFirma || null,
+    periodoGracia: productoCreditoForm.periodoGracia ? Number(productoCreditoForm.periodoGracia) : null,
+    periodicidad: productoCreditoForm.periodicidad,
+    diaCorte: productoCreditoForm.diaCorte ? Number(productoCreditoForm.diaCorte) : null,
+    diaPagoOportuno: productoCreditoForm.diaPagoOportuno ? Number(productoCreditoForm.diaPagoOportuno) : null,
+    ajustarFinSemana: productoCreditoForm.ajustarFinSemana,
+    moraDespuesVencimiento: productoCreditoForm.moraDespuesVencimiento ? Number(productoCreditoForm.moraDespuesVencimiento) : 0,
+    tasaMoraMensual: productoCreditoForm.tasaMoraMensual ? Number(productoCreditoForm.tasaMoraMensual) : 2,
+    primeraCuotaMesSiguiente: productoCreditoForm.primeraCuotaMesSiguiente,
+    observacionCalendario: productoCreditoForm.observacionCalendario || null,
+    porcentajeEndeudamientoMaximo: productoCreditoForm.porcentajeEndeudamientoMaximo ? Number(productoCreditoForm.porcentajeEndeudamientoMaximo) : null,
+    antiguedadMinimaMeses: productoCreditoForm.antiguedadMinimaMeses ? Number(productoCreditoForm.antiguedadMinimaMeses) : null,
+    requiereEmpleadoActivo: productoCreditoForm.requiereEmpleadoActivo,
+    bloqueaEmbargos: productoCreditoForm.bloqueaEmbargos
+  });
+
+  const buildProductoAtributoPayload = () => ({
+    idTipoAtributo: Number(productoAtributoForm.idTipoAtributo),
+    idTipoCalculo: Number(productoAtributoForm.idTipoCalculo),
+    nombre: productoAtributoForm.nombre,
+    valor: productoAtributoForm.valor ? Number(productoAtributoForm.valor) : null,
+    porcentaje: productoAtributoForm.porcentaje ? Number(productoAtributoForm.porcentaje) : null,
+    minimo: productoAtributoForm.minimo ? Number(productoAtributoForm.minimo) : null,
+    maximo: productoAtributoForm.maximo ? Number(productoAtributoForm.maximo) : null,
+    valor2: productoAtributoForm.valor2 ? Number(productoAtributoForm.valor2) : null,
+    aplicaIva: productoAtributoForm.aplicaIva,
+    obligatorio: productoAtributoForm.obligatorio,
+    proveedor: productoAtributoForm.proveedor || null,
+    prioridad: Number(productoAtributoForm.prioridad || 1)
+  });
+
+  const handleEditProductoCredito = (producto: ProductoCreditoRow) => {
+    setSelectedProductoCreditoId(producto.id);
+    setEditingProductoCreditoId(producto.id);
+    setProductoCreditoForm({
+      nombre: producto.nombre,
+      descripcion: producto.descripcion ?? '',
+      idTipoCredito: String(producto.idTipoCredito),
+      tipoTasa: producto.tipoTasa,
+      idLibranzera: String(producto.idLibranzera ?? ''),
+      montoMinimo: String(producto.montoMinimo ?? ''),
+      montoMaximo: String(producto.montoMaximo ?? ''),
+      salarioMinimo: String(producto.salarioMinimo ?? ''),
+      salarioMaximo: String(producto.salarioMaximo ?? ''),
+      plazoMinimo: String(producto.plazoMinimo ?? ''),
+      plazoMaximo: String(producto.plazoMaximo ?? ''),
+      modeloPlazo: producto.modeloPlazo ?? 'MESES',
+      permiteCreditoMultiple: producto.permiteCreditoMultiple,
+      interesAjustable: producto.interesAjustable,
+      permiteRefinanciacion: producto.permiteRefinanciacion,
+      permiteRetanqueo: producto.permiteRetanqueo,
+      requiereCodeudor: producto.requiereCodeudor,
+      numeroCodeudores: String(producto.numeroCodeudores ?? 0),
+      formatoCredito: producto.formatoCredito ?? 'NO',
+      formatoRequisitos: producto.formatoRequisitos ?? 'NO',
+      formatoCodeudores: producto.formatoCodeudores ?? 'NO',
+      proveedorFirma: producto.proveedorFirma ?? '',
+      periodoGracia: String(producto.periodoGracia ?? ''),
+      periodicidad: producto.periodicidad ?? 'MENSUAL',
+      diaCorte: String(producto.diaCorte ?? ''),
+      diaPagoOportuno: String(producto.diaPagoOportuno ?? ''),
+      ajustarFinSemana: Boolean(producto.ajustarFinSemana),
+      moraDespuesVencimiento: String(producto.moraDespuesVencimiento ?? 0),
+      tasaMoraMensual: String(producto.tasaMoraMensual ?? 2),
+      primeraCuotaMesSiguiente: Boolean(producto.primeraCuotaMesSiguiente),
+      observacionCalendario: producto.observacionCalendario ?? '',
+      porcentajeEndeudamientoMaximo: String(producto.porcentajeEndeudamientoMaximo ?? 40),
+      antiguedadMinimaMeses: String(producto.antiguedadMinimaMeses ?? 0),
+      requiereEmpleadoActivo: producto.requiereEmpleadoActivo ?? true,
+      bloqueaEmbargos: producto.bloqueaEmbargos ?? true
+    });
+  };
+
+  const handleCancelProductoCreditoEdit = () => {
+    setEditingProductoCreditoId(null);
+    setProductoCreditoForm({ ...initialProductoCreditoForm, idTipoCredito: String(productosCreditoCatalogs.tiposCredito[0]?.id ?? ''), idLibranzera: String(productosCreditoCatalogs.libranzeras[0]?.id ?? '') });
+  };
+
+  const handleSaveProductoCredito = async (event: FormEvent) => {
     event.preventDefault();
+    if (!session) return;
+    const validation = getProductoCreditoValidation();
+    if (validation.length) {
+      setMessage(validation.join(' '));
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      const payload = buildProductoCreditoPayload();
+      const editId = editingProductoCreditoId;
+      const saved = editId
+        ? await api.updateProductoCredito(session.token, editId, payload)
+        : await api.createProductoCredito(session.token, payload);
+      setEditingProductoCreditoId(null);
+      setProductoCreditoForm({ ...initialProductoCreditoForm, idTipoCredito: String(productosCreditoCatalogs.tiposCredito[0]?.id ?? ''), idLibranzera: String(productosCreditoCatalogs.libranzeras[0]?.id ?? '') });
+      await reloadProductosCreditoData();
+      setSelectedProductoCreditoId(saved.id);
+      setMessage(editId ? 'Producto actualizado correctamente' : 'Producto de credito creado correctamente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo guardar el producto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProductoCredito = async (producto: ProductoCreditoRow) => {
+    if (!session || !window.confirm(`Eliminar el producto "${producto.nombre}"? Esta accion solo procede si no tiene creditos asociados.`)) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      await api.deleteProductoCredito(session.token, producto.id);
+      await reloadProductosCreditoData();
+      if (selectedProductoCreditoId === producto.id) setSelectedProductoCreditoId(null);
+      if (editingProductoCreditoId === producto.id) handleCancelProductoCreditoEdit();
+      setMessage('Producto eliminado correctamente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo eliminar el producto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
+  const handleToggleProductoCreditoEstado = async (producto: ProductoCreditoRow) => {
     if (!session) return;
     setLoading(true);
     setMessage('');
     try {
-      const created = await api.createProductoCredito(session.token, {
-        nombre: productoCreditoForm.nombre,
-        descripcion: productoCreditoForm.descripcion || null,
-        idTipoCredito: Number(productoCreditoForm.idTipoCredito),
-        tipoTasa: productoCreditoForm.tipoTasa,
-        idLibranzera: productoCreditoForm.idLibranzera ? Number(productoCreditoForm.idLibranzera) : null,
-        montoMinimo: productoCreditoForm.montoMinimo ? Number(productoCreditoForm.montoMinimo) : null,
-        montoMaximo: productoCreditoForm.montoMaximo ? Number(productoCreditoForm.montoMaximo) : null,
-        salarioMinimo: productoCreditoForm.salarioMinimo ? Number(productoCreditoForm.salarioMinimo) : null,
-        salarioMaximo: productoCreditoForm.salarioMaximo ? Number(productoCreditoForm.salarioMaximo) : null,
-        plazoMinimo: productoCreditoForm.plazoMinimo ? Number(productoCreditoForm.plazoMinimo) : null,
-        plazoMaximo: productoCreditoForm.plazoMaximo ? Number(productoCreditoForm.plazoMaximo) : null,
-        modeloPlazo: productoCreditoForm.modeloPlazo,
-        permiteCreditoMultiple: productoCreditoForm.permiteCreditoMultiple,
-        interesAjustable: productoCreditoForm.interesAjustable,
-        permiteRefinanciacion: productoCreditoForm.permiteRefinanciacion,
-        permiteRetanqueo: productoCreditoForm.permiteRetanqueo,
-        requiereCodeudor: productoCreditoForm.requiereCodeudor,
-        numeroCodeudores: Number(productoCreditoForm.numeroCodeudores || 0),
-        formatoCredito: productoCreditoForm.formatoCredito || null,
-        formatoRequisitos: productoCreditoForm.formatoRequisitos || null,
-        formatoCodeudores: productoCreditoForm.formatoCodeudores || null,
-        proveedorFirma: productoCreditoForm.proveedorFirma || null,
-        periodoGracia: productoCreditoForm.periodoGracia ? Number(productoCreditoForm.periodoGracia) : null,
-        periodicidad: productoCreditoForm.periodicidad,
-        diaCorte: productoCreditoForm.diaCorte ? Number(productoCreditoForm.diaCorte) : null,
-        diaPagoOportuno: productoCreditoForm.diaPagoOportuno ? Number(productoCreditoForm.diaPagoOportuno) : null,
-        ajustarFinSemana: productoCreditoForm.ajustarFinSemana,
-        moraDespuesVencimiento: productoCreditoForm.moraDespuesVencimiento ? Number(productoCreditoForm.moraDespuesVencimiento) : 0,
-        tasaMoraMensual: productoCreditoForm.tasaMoraMensual ? Number(productoCreditoForm.tasaMoraMensual) : 2,
-        primeraCuotaMesSiguiente: productoCreditoForm.primeraCuotaMesSiguiente,
-        observacionCalendario: productoCreditoForm.observacionCalendario || null
-      });
-      setProductoCreditoForm({ ...initialProductoCreditoForm, idTipoCredito: String(productosCreditoCatalogs.tiposCredito[0]?.id ?? ''), idLibranzera: String(productosCreditoCatalogs.libranzeras[0]?.id ?? '') });
+      const updated = await api.updateProductoCreditoEstado(session.token, producto.id, !producto.activo);
+      await reloadProductosCreditoData();
+      setSelectedProductoCreditoId(updated.id);
+      setMessage(updated.activo ? 'Producto activado correctamente' : 'Producto inactivado correctamente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo cambiar el estado del producto');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProductoCreditoVersion = async (producto: ProductoCreditoRow) => {
+    if (!session || !window.confirm(`Crear una nueva version de "${producto.nombre}"? La version actual quedara inactiva.`)) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const created = await api.createProductoCreditoVersion(session.token, producto.id);
       await reloadProductosCreditoData();
       setSelectedProductoCreditoId(created.id);
-      setMessage('Producto de credito creado correctamente');
+      setMessage('Nueva version creada con atributos, documentos y flujo copiados');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo crear el producto');
+      setMessage(error instanceof Error ? error.message : 'No se pudo crear la version del producto');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateProductoAtributo = async (event: FormEvent) => {
+  const handleSaveParametroFinanciero = async (event: FormEvent) => {
     event.preventDefault();
-    if (!session || !selectedProductoCreditoId) return;
+    if (!session) return;
+    if (!parametroFinancieroForm.codigo.trim() || !parametroFinancieroForm.nombre.trim() || !parametroFinancieroForm.valor || !parametroFinancieroForm.vigenciaDesde) {
+      setMessage('Codigo, nombre, valor y vigencia desde son obligatorios.');
+      return;
+    }
     setLoading(true);
     setMessage('');
     try {
-      const response = await api.createProductoAtributo(session.token, selectedProductoCreditoId, {
-        idTipoAtributo: Number(productoAtributoForm.idTipoAtributo),
-        idTipoCalculo: Number(productoAtributoForm.idTipoCalculo),
-        nombre: productoAtributoForm.nombre,
-        valor: productoAtributoForm.valor ? Number(productoAtributoForm.valor) : null,
-        porcentaje: productoAtributoForm.porcentaje ? Number(productoAtributoForm.porcentaje) : null,
-        minimo: productoAtributoForm.minimo ? Number(productoAtributoForm.minimo) : null,
-        maximo: productoAtributoForm.maximo ? Number(productoAtributoForm.maximo) : null,
-        aplicaIva: productoAtributoForm.aplicaIva,
-        obligatorio: productoAtributoForm.obligatorio,
-        proveedor: productoAtributoForm.proveedor || null,
-        prioridad: Number(productoAtributoForm.prioridad || 1)
+      await api.createParametroFinanciero(session.token, {
+        codigo: parametroFinancieroForm.codigo.trim().toUpperCase(),
+        nombre: parametroFinancieroForm.nombre.trim(),
+        valor: Number(parametroFinancieroForm.valor),
+        unidad: parametroFinancieroForm.unidad,
+        vigenciaDesde: parametroFinancieroForm.vigenciaDesde,
+        vigenciaHasta: parametroFinancieroForm.vigenciaHasta || null
       });
+      const parametros = await api.listParametrosFinancieros(session.token);
+      setParametrosFinancieros(parametros);
+      setParametroFinancieroForm(initialParametroFinancieroForm);
+      setMessage('Parametro financiero guardado');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo guardar el parametro');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateFormulaCalculo = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session) return;
+    if (!formulaCalculoForm.nombre.trim()) {
+      setMessage('El nombre de la formula es obligatorio.');
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      const formula = await api.createTipoCalculoCredito(session.token, {
+        nombre: formulaCalculoForm.nombre,
+        codigo: formulaCalculoForm.codigo || null,
+        baseCalculo: formulaCalculoForm.baseCalculo,
+        operacion: formulaCalculoForm.operacion,
+        requiereValor: formulaCalculoForm.requiereValor,
+        requiereValor2: formulaCalculoForm.requiereValor2,
+        requierePorcentaje: formulaCalculoForm.requierePorcentaje,
+        aplicaMinimo: formulaCalculoForm.aplicaMinimo,
+        aplicaMaximo: formulaCalculoForm.aplicaMaximo
+      });
+      const catalogs = await api.listProductosCreditoCatalogs(session.token);
+      setProductosCreditoCatalogs(catalogs);
+      setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: String(formula.id) }));
+      setFormulaCalculoForm(initialFormulaCalculoForm);
+      setMessage('Formula creada y seleccionada');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo crear la formula');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProductoAtributo = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session || !selectedProductoCreditoId) return;
+    const validation = getProductoAtributoValidation();
+    if (validation.length) {
+      setMessage(validation.join(' '));
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      const payload = buildProductoAtributoPayload();
+      const editId = editingProductoAtributoId;
+      const response = editId
+        ? await api.updateProductoAtributo(session.token, selectedProductoCreditoId, editId, payload)
+        : await api.createProductoAtributo(session.token, selectedProductoCreditoId, payload);
       setProductoAtributos(response);
+      setEditingProductoAtributoId(null);
       setProductoAtributoForm({ ...initialProductoAtributoForm, idTipoAtributo: productoAtributoForm.idTipoAtributo, idTipoCalculo: productoAtributoForm.idTipoCalculo });
       await reloadProductosCreditoData();
-      setMessage('Atributo agregado');
+      setMessage(editId ? 'Atributo actualizado' : 'Atributo agregado');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo agregar el atributo');
+      setMessage(error instanceof Error ? error.message : 'No se pudo guardar el atributo');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateProductoDocumento = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!session || !selectedProductoCreditoId) return;
+  const handleEditProductoAtributo = (atributo: ProductoAtributoRow) => {
+    const tipoAtributo = productosCreditoCatalogs.tiposAtributo.find((item) => item.nombre === atributo.tipoAtributo);
+    const tipoCalculo = productosCreditoCatalogs.tiposCalculo.find((item) => item.nombre === atributo.tipoCalculo);
+    setEditingProductoAtributoId(atributo.id);
+    setProductoAtributoForm({
+      idTipoAtributo: String(tipoAtributo?.id ?? ''),
+      idTipoCalculo: String(tipoCalculo?.id ?? ''),
+      nombre: atributo.nombre,
+      valor: String(atributo.valor ?? ''),
+      porcentaje: String(atributo.porcentaje ?? ''),
+      valor2: String(atributo.valor2 ?? ''),
+      minimo: String(atributo.minimo ?? ''),
+      maximo: String(atributo.maximo ?? ''),
+      aplicaIva: atributo.aplicaIva,
+      obligatorio: atributo.obligatorio,
+      proveedor: atributo.proveedor ?? '',
+      prioridad: String(atributo.prioridad ?? 1)
+    });
+  };
+
+  const handleCancelProductoAtributoEdit = () => {
+    setEditingProductoAtributoId(null);
+    setProductoAtributoForm(initialProductoAtributoForm);
+  };
+
+  const handleDeleteProductoAtributo = async (atributo: ProductoAtributoRow) => {
+    if (!session || !selectedProductoCreditoId || !window.confirm(`Eliminar el atributo "${atributo.nombre}"?`)) return;
     setLoading(true);
     setMessage('');
     try {
-      const response = await api.createProductoDocumento(session.token, selectedProductoCreditoId, {
-        idDocumentoCredito: Number(productoDocumentoForm.idDocumentoCredito),
-        obligatorio: productoDocumentoForm.obligatorio,
-        prioridad: Number(productoDocumentoForm.prioridad || 1),
-        aplicaA: productoDocumentoForm.aplicaA,
-        requiereFirma: productoDocumentoForm.requiereFirma,
-        requiereValidacion: productoDocumentoForm.requiereValidacion
-      });
+      const response = await api.deleteProductoAtributo(session.token, selectedProductoCreditoId, atributo.id);
+      setProductoAtributos(response);
+      if (editingProductoAtributoId === atributo.id) handleCancelProductoAtributoEdit();
+      await reloadProductosCreditoData();
+      setMessage('Atributo eliminado');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo eliminar el atributo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const buildProductoDocumentoPayload = () => ({
+    idDocumentoCredito: Number(productoDocumentoForm.idDocumentoCredito),
+    obligatorio: productoDocumentoForm.obligatorio,
+    prioridad: Number(productoDocumentoForm.prioridad || 1),
+    aplicaA: productoDocumentoForm.aplicaA,
+    requiereFirma: productoDocumentoForm.requiereFirma,
+    requiereValidacion: productoDocumentoForm.requiereValidacion
+  });
+
+  const buildProductoConvenioPayload = () => ({
+    idEmpresa: Number(productoConvenioForm.idEmpresa),
+    cupoTotal: productoConvenioForm.cupoTotal ? Number(productoConvenioForm.cupoTotal) : null,
+    cupoUsado: productoConvenioForm.cupoUsado ? Number(productoConvenioForm.cupoUsado) : 0,
+    porcentajeEndeudamientoMaximo: productoConvenioForm.porcentajeEndeudamientoMaximo ? Number(productoConvenioForm.porcentajeEndeudamientoMaximo) : null,
+    requiereValidacionPagaduria: productoConvenioForm.requiereValidacionPagaduria,
+    vigenciaDesde: productoConvenioForm.vigenciaDesde || null,
+    vigenciaHasta: productoConvenioForm.vigenciaHasta || null,
+    activo: productoConvenioForm.activo,
+    observacion: productoConvenioForm.observacion || null
+  });
+
+  const handleEditProductoConvenio = (convenio: ProductoConvenioRow) => {
+    setSelectedProductoConvenioId(convenio.id);
+    setProductoConvenioForm({
+      idEmpresa: String(convenio.idEmpresa),
+      cupoTotal: String(convenio.cupoTotal ?? ''),
+      cupoUsado: String(convenio.cupoUsado ?? 0),
+      porcentajeEndeudamientoMaximo: String(convenio.porcentajeEndeudamientoMaximo ?? ''),
+      requiereValidacionPagaduria: convenio.requiereValidacionPagaduria,
+      vigenciaDesde: convenio.vigenciaDesde ?? '',
+      vigenciaHasta: convenio.vigenciaHasta ?? '',
+      activo: convenio.activo,
+      observacion: convenio.observacion ?? ''
+    });
+  };
+
+  const handleCancelProductoConvenioEdit = () => {
+    setSelectedProductoConvenioId(null);
+    setProductoConvenioForm(initialProductoConvenioForm);
+  };
+
+  const handleSaveProductoConvenio = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session || !selectedProductoCreditoId) return;
+    if (!productoConvenioForm.idEmpresa) {
+      setMessage('Selecciona la empresa del convenio.');
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await api.saveProductoConvenio(session.token, selectedProductoCreditoId, buildProductoConvenioPayload());
+      setProductoConvenios(response);
+      handleCancelProductoConvenioEdit();
+      setMessage('Convenio guardado');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo guardar el convenio');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProductoConvenio = async (convenio: ProductoConvenioRow) => {
+    if (!session || !selectedProductoCreditoId || !window.confirm(`Eliminar convenio con "${convenio.empresa}"?`)) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await api.deleteProductoConvenio(session.token, selectedProductoCreditoId, convenio.id);
+      setProductoConvenios(response);
+      if (selectedProductoConvenioId === convenio.id) handleCancelProductoConvenioEdit();
+      setMessage('Convenio eliminado');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo eliminar el convenio');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProductoDocumento = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session || !selectedProductoCreditoId) return;
+    if (!productoDocumentoForm.idDocumentoCredito) {
+      setMessage('Selecciona el documento del producto.');
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      const payload = buildProductoDocumentoPayload();
+      const response = selectedProductoDocumentoId
+        ? await api.updateProductoDocumento(session.token, selectedProductoCreditoId, selectedProductoDocumentoId, payload)
+        : await api.createProductoDocumento(session.token, selectedProductoCreditoId, payload);
       setProductoDocumentos(response);
+      setSelectedProductoDocumentoId(null);
       setProductoDocumentoForm({ ...initialProductoDocumentoForm, idDocumentoCredito: productoDocumentoForm.idDocumentoCredito });
       await reloadProductosCreditoData();
-      setMessage('Documento agregado');
+      setMessage(selectedProductoDocumentoId ? 'Documento actualizado' : 'Documento agregado');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo agregar el documento');
+      setMessage(error instanceof Error ? error.message : 'No se pudo guardar el documento');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditProductoDocumento = (documento: ProductoDocumentoRow) => {
+    const catalog = productosCreditoCatalogs.documentos.find((item) => item.nombre === documento.documento);
+    setSelectedProductoDocumentoId(documento.id);
+    setProductoDocumentoForm({
+      idDocumentoCredito: String(catalog?.id ?? ''),
+      obligatorio: documento.obligatorio,
+      prioridad: String(documento.prioridad ?? 1),
+      aplicaA: documento.aplicaA,
+      requiereFirma: documento.requiereFirma,
+      requiereValidacion: documento.requiereValidacion
+    });
+  };
+
+  const handleCancelProductoDocumentoEdit = () => {
+    setSelectedProductoDocumentoId(null);
+    setProductoDocumentoForm(initialProductoDocumentoForm);
+  };
+
+  const handleDeleteProductoDocumento = async (documento: ProductoDocumentoRow) => {
+    if (!session || !selectedProductoCreditoId || !window.confirm(`Eliminar el documento "${documento.documento}" del producto?`)) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await api.deleteProductoDocumento(session.token, selectedProductoCreditoId, documento.id);
+      setProductoDocumentos(response);
+      if (selectedProductoDocumentoId === documento.id) handleCancelProductoDocumentoEdit();
+      await reloadProductosCreditoData();
+      setMessage('Documento eliminado');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo eliminar el documento');
     } finally {
       setLoading(false);
     }
@@ -3140,6 +3681,24 @@ function App() {
     }
   };
 
+
+  const handleDeleteProductoEtapa = async (etapa: ProductoEtapaRow) => {
+    if (!session || !selectedProductoCreditoId || !window.confirm(`Eliminar la etapa "${etapa.etapa}" del flujo?`)) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await api.deleteProductoEtapa(session.token, selectedProductoCreditoId, etapa.id);
+      setProductoEtapas(response);
+      if (selectedProductoEtapaId === etapa.id) handleCancelProductoEtapaEdit();
+      await reloadProductosCreditoData();
+      setMessage('Etapa eliminada');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo eliminar la etapa');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateCredito = async (event: FormEvent) => {
     event.preventDefault();
     if (!session) return;
@@ -3185,6 +3744,7 @@ function App() {
     try {
       const response = await api.simularCredito(session.token, {
         idProductoCredito: Number(creditoForm.idProductoCredito),
+        idEmpleadoEmpresa: creditoForm.idEmpleadoEmpresa ? Number(creditoForm.idEmpleadoEmpresa) : null,
         montoSolicitado: Number(creditoForm.montoSolicitado),
         plazo: Number(creditoForm.plazo),
         tasa: creditoForm.tasa ? Number(creditoForm.tasa) : null
@@ -3308,6 +3868,77 @@ function App() {
     }
   };
 
+  const handleRegistrarEvaluacionCredito = async () => {
+    if (!session || !selectedCreditoId) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const expediente = await api.registrarEvaluacionCredito(session.token, selectedCreditoId, { observacion: 'Evaluacion registrada desde expediente' });
+      applyCreditoExpediente(expediente);
+      setMessage('Evaluacion registrada en el expediente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo registrar la evaluacion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegistrarLiquidacionDefinitiva = async () => {
+    if (!session || !selectedCreditoId) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const expediente = await api.registrarLiquidacionDefinitiva(session.token, selectedCreditoId, {
+        observacion: creditoEtapaObservacion || 'Liquidacion definitiva registrada desde expediente'
+      });
+      applyCreditoExpediente(expediente);
+      setCreditoDesembolsoForm((current) => ({
+        ...current,
+        valorDesembolso: String(expediente.liquidacionDefinitiva?.valorDesembolso ?? current.valorDesembolso),
+        valorFondeo: current.valorFondeo || String(expediente.liquidacionDefinitiva?.valorDesembolso ?? '')
+      }));
+      setMessage('Liquidacion definitiva registrada');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo registrar la liquidacion definitiva');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleAnularLiquidacionDefinitiva = async (liquidacionId: number) => {
+    if (!session) return;
+    const observacion = window.prompt('Motivo de anulacion de la liquidacion');
+    if (observacion === null) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const expediente = await api.anularLiquidacionDefinitiva(session.token, liquidacionId, { observacion });
+      applyCreditoExpediente(expediente);
+      setMessage('Liquidacion anulada correctamente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo anular la liquidacion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnularDesembolsoCredito = async (desembolsoId: number) => {
+    if (!session) return;
+    const observacion = window.prompt('Motivo de anulacion del desembolso');
+    if (observacion === null) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const expediente = await api.anularDesembolsoCredito(session.token, desembolsoId, { observacion });
+      applyCreditoExpediente(expediente);
+      const refreshed = await api.listCreditos(session.token);
+      setCreditos(refreshed);
+      setMessage('Desembolso anulado correctamente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo anular el desembolso');
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleDecideCredito = async (decision: 'APROBADO' | 'RECHAZADO' | 'DEVUELTO') => {
     if (!session || !selectedCreditoId) return;
     setLoading(true);
@@ -3353,10 +3984,12 @@ function App() {
         tipoCuenta: creditoDesembolsoForm.tipoCuenta || null,
         numeroCuenta: creditoDesembolsoForm.numeroCuenta || null,
         referenciaPago: creditoDesembolsoForm.referenciaPago || null,
+        numeroOrden: creditoDesembolsoForm.numeroOrden || null,
+        comprobantePago: creditoDesembolsoForm.comprobantePago || creditoDesembolsoForm.referenciaPago || null,
         observacion: creditoDesembolsoForm.observacion || null
       });
       applyCreditoExpediente(expediente);
-      setCreditoDesembolsoForm((current) => ({ ...current, idInversion: '', valorFondeo: '', observacion: '' }));
+      setCreditoDesembolsoForm((current) => ({ ...current, idInversion: '', valorFondeo: '', numeroOrden: '', comprobantePago: '', observacion: '' }));
       const refreshed = await api.listCreditos(session.token);
       setCreditos(refreshed);
       setMessage('Desembolso registrado');
@@ -3388,6 +4021,52 @@ function App() {
     }
   };
 
+  const parseRecaudoMasivoRows = () => recaudoMasivoForm.contenido
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [creditoRaw, valorRaw, referenciaRaw, observacionRaw] = line.split(/[;,\t]/).map((part) => part.trim());
+      const creditoId = /^\d+$/.test(creditoRaw) ? Number(creditoRaw) : null;
+      return {
+        creditoId,
+        consecutivo: creditoId ? null : creditoRaw,
+        valorPago: Number((valorRaw || '0').replace(/\./g, '').replace(',', '.')),
+        referenciaPago: referenciaRaw || recaudoMasivoForm.referenciaLote || null,
+        observacion: observacionRaw || null
+      };
+    });
+
+  const handleRegistrarRecaudoMasivo = async () => {
+    if (!session) return;
+    const pagos = parseRecaudoMasivoRows();
+    if (!pagos.length) {
+      setMessage('Pega al menos una fila de recaudo.');
+      return;
+    }
+    setLoading(true);
+    setMessage('');
+    try {
+      const resultado = await api.registrarRecaudoMasivo(session.token, {
+        fechaPago: recaudoMasivoForm.fechaPago,
+        periodoNomina: recaudoMasivoForm.periodoNomina,
+        referenciaLote: recaudoMasivoForm.referenciaLote || null,
+        observacion: recaudoMasivoForm.observacion || null,
+        pagos
+      });
+      setRecaudoMasivoResultado(resultado);
+      setMessage(`Recaudo masivo aplicado: ${resultado.aplicados} exitosos, ${resultado.rechazados} rechazados`);
+      if (selectedCreditoId) await reloadCreditoDetalle(selectedCreditoId);
+      if (isCarteraModule) {
+        await reloadOperativoReporte();
+        await reloadCarteraReporte();
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo aplicar el recaudo masivo');
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleRegistrarPagoCredito = async () => {
     if (!session || !selectedCreditoId) return;
     setLoading(true);
@@ -3397,13 +4076,15 @@ function App() {
         fechaPago: creditoPagoForm.fechaPago,
         valorPago: Number(creditoPagoForm.valorPago),
         medioPago: creditoPagoForm.medioPago || null,
+        tipoRecaudo: creditoPagoForm.tipoRecaudo || (creditoPagoForm.medioPago === 'NOMINA' ? 'NOMINA' : 'MANUAL'),
+        periodoNomina: creditoPagoForm.periodoNomina || null,
         referenciaPago: creditoPagoForm.referenciaPago || null,
         observacion: creditoPagoForm.observacion || null
       });
       applyCreditoExpediente(expediente);
       const refreshed = await api.listCreditos(session.token);
       setCreditos(refreshed);
-      setCreditoPagoForm((current) => ({ ...current, valorPago: '', referenciaPago: '', observacion: '' }));
+      setCreditoPagoForm((current) => ({ ...current, valorPago: '', periodoNomina: '', referenciaPago: '', observacion: '' }));
       setMessage('Pago registrado y aplicado a cuotas');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo registrar el pago');
@@ -3421,6 +4102,41 @@ function App() {
     }
   };
 
+  const handleCausarCredito = async () => {
+    if (!session || !selectedCreditoId) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const expediente = await api.causarCredito(session.token, selectedCreditoId, {
+        fechaCorte: creditoCausacionForm.fechaCorte,
+        observacion: creditoCausacionForm.observacion || null
+      });
+      applyCreditoExpediente(expediente);
+      setMessage('Causacion registrada correctamente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo registrar la causacion');
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleReversarPagoCredito = async (pagoId: number) => {
+    if (!session) return;
+    const observacion = window.prompt('Motivo del reverso del pago');
+    if (observacion === null) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const expediente = await api.reversarPagoCredito(session.token, pagoId, { observacion });
+      applyCreditoExpediente(expediente);
+      const refreshed = await api.listCreditos(session.token);
+      setCreditos(refreshed);
+      setMessage('Pago reversado correctamente');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo reversar el pago');
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleEnviarFirmaCredito = async () => {
     if (!session || !selectedCreditoId || !creditoFirmaForm.idPlantilla) return;
     setLoading(true);
@@ -3631,7 +4347,7 @@ function App() {
               <div className="portal-credit-layout">
                 <div className="credit-data-panel">
                   <div className="credit-panel-heading">
-                    <span className="credit-panel-icon">₵</span>
+                    <span className="credit-panel-icon">$</span>
                     <div><h3>Datos del credito</h3><p>Configura el monto y plazo para conocer tu cuota.</p></div>
                   </div>
                   <label className="field-label">Linea de credito *</label>
@@ -3668,7 +4384,7 @@ function App() {
 
                 <aside className="credit-summary-panel">
                   <div className="credit-panel-heading">
-                    <span className="credit-panel-icon">▤</span>
+                    <span className="credit-panel-icon">DOC</span>
                     <div><h3>Resumen</h3><p>Estimacion antes de continuar.</p></div>
                   </div>
                   <div className="estimated-payment">
@@ -3972,11 +4688,15 @@ function App() {
               <article><span>Recaudo hoy</span><strong>{formatMoney(dashboard?.indicadores.recaudoHoy)}</strong><small>Aplicado del dia</small></article>
               <article><span>Recaudo mes</span><strong>{formatMoney(dashboard?.indicadores.recaudoMes)}</strong><small>Aplicado del mes</small></article>
               <article><span>Saldos a favor</span><strong>{formatMoney(dashboard?.indicadores.saldoFavor)}</strong><small>Excedentes registrados</small></article>
+              <article><span>Desembolsos periodo</span><strong>{formatMoney(dashboard?.indicadores.desembolsosPeriodo)}</strong><small>{dashboard?.indicadores.cantidadDesembolsos ?? 0} operaciones</small></article>
+              <article><span>Comite pendiente</span><strong>{dashboard?.indicadores.comitePendiente ?? 0}</strong><small>{formatMoney(dashboard?.indicadores.valorComitePendiente)}</small></article>
+              <article><span>Liquidaciones pendientes</span><strong>{dashboard?.indicadores.liquidacionesPendientes ?? 0}</strong><small>{formatMoney(dashboard?.indicadores.valorLiquidacionesPendientes)}</small></article>
+              <article><span>Documentos pendientes</span><strong>{dashboard?.indicadores.documentosPendientes ?? 0}</strong><small>Por validar</small></article>
             </div>
 
             <div className="executive-chart-grid">
               <section className="surface chart-panel chart-wide">
-                <div className="surface-title"><div><span className="section-kicker">Tendencia</span><h2>Colocacion mensual</h2></div><span>{dashboard?.mensual.length ?? 0} periodos</span></div>
+                <div className="surface-title"><div><span className="section-kicker">Tendencia</span><h2>Colocacion mensual</h2></div><span>{(dashboard?.mensual ?? []).length ?? 0} periodos</span></div>
                 <div className="chart-frame">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={dashboard?.mensual ?? []}>
@@ -4035,7 +4755,54 @@ function App() {
               </section>
 
               <section className="surface chart-panel chart-wide">
-                <div className="surface-title"><div><span className="section-kicker">Cartera</span><h2>Vencida y en mora</h2></div><span>{dashboard?.cartera.vencida.length ?? 0} creditos</span></div>
+                <div className="surface-title"><div><span className="section-kicker">Control operativo</span><h2>Alertas y pendientes</h2></div><span>{(dashboard?.alertas ?? []).filter((item) => item.cantidad > 0).length} activas</span></div>
+                <div className="triple-report-grid">
+                  <div className="mini-report">
+                    <h3>Alertas</h3>
+                    {(dashboard?.alertas ?? []).map((item) => (
+                      <div className="mini-report-row" key={item.tipo}>
+                        <span>{item.titulo}<small>{item.severidad}</small></span>
+                        <strong>{item.valor ? formatMoney(item.valor) : item.cantidad}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mini-report">
+                    <h3>Pendientes por rol</h3>
+                    {(dashboard?.pendientesRol ?? []).map((item) => (
+                      <div className="mini-report-row" key={item.rol}>
+                        <span>{item.rol}<small>{item.cantidad} creditos</small></span>
+                        <strong>{formatMoney(item.valor)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mini-report">
+                    <h3>Recaudo pagaduria</h3>
+                    {(dashboard?.recaudoPagaduria ?? []).slice(0, 6).map((item) => (
+                      <div className="mini-report-row" key={item.nombre}>
+                        <span>{item.nombre}<small>{item.pagos} pagos</small></span>
+                        <strong>{formatMoney(item.valor)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              <section className="surface chart-panel">
+                <div className="surface-title"><div><span className="section-kicker">Mora</span><h2>Edad de cartera</h2></div></div>
+                <div className="chart-frame">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dashboard?.moraEdades ?? []}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="rango" />
+                      <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000000)}M`} />
+                      <Tooltip formatter={(value) => formatMoney(Number(value))} />
+                      <Bar dataKey="saldo" name="Saldo" fill="#d84a58" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </section>
+              <section className="surface chart-panel chart-wide">
+                <div className="surface-title"><div><span className="section-kicker">Cartera</span><h2>Vencida y en mora</h2></div><span>{(dashboard?.cartera?.vencida ?? []).length ?? 0} creditos</span></div>
                 <div className="table-wrap">
                   <table>
                     <thead><tr><th>Credito</th><th>Cliente</th><th>Empresa</th><th>Vence</th><th>Dias mora</th><th>Saldo</th></tr></thead>
@@ -4259,7 +5026,7 @@ function App() {
                       onClick={() => setSelectedEmpresaId(empresa.id)}
                     >
                       <strong>{empresa.razonSocial}</strong>
-                      <span>{empresa.nit} · {empresa.empleados} empleados</span>
+                      <span>{empresa.nit} - {empresa.empleados} empleados</span>
                     </button>
                   ))}
                 </div>
@@ -4597,7 +5364,7 @@ function App() {
                         onClick={() => setSelectedSocioId(socio.id)}
                       >
                         <strong>{socio.nombreCompleto}</strong>
-                        <span>{socio.inversiones} inversiones · {socio.montoInvertido.toLocaleString()}</span>
+                        <span>{socio.inversiones} inversiones - {socio.montoInvertido.toLocaleString()}</span>
                       </button>
                     ))}
                   </div>
@@ -5218,6 +5985,51 @@ function App() {
               <div className="surface-title">
                 <div>
                   <span className="section-kicker">Gestion operativa</span>
+                  <h2>Operacion de creditos</h2>
+                </div>
+                <div className="row-actions">
+                  <button type="button" className="ghost" onClick={handleExportOperativoCsv} disabled={!operativoReporte}>Exportar Excel</button>
+                  <button type="button" onClick={reloadOperativoReporte} disabled={loading}>Actualizar</button>
+                </div>
+              </div>
+              <div className="executive-kpis cartera-kpis">
+                <article><span>Solicitudes</span><strong>{operativoReporte?.resumen.solicitudes ?? 0}</strong><small>{formatMoney(operativoReporte?.resumen.montoSolicitado)}</small></article>
+                <article><span>Aprobadas</span><strong>{operativoReporte?.resumen.aprobadas ?? 0}</strong><small>Flujo positivo</small></article>
+                <article><span>Comite</span><strong>{operativoReporte?.resumen.comitePendiente ?? 0}</strong><small>Pendiente aprobacion</small></article>
+                <article><span>Liquidaciones</span><strong>{operativoReporte?.resumen.liquidacionesPendientes ?? 0}</strong><small>{formatMoney(operativoReporte?.resumen.valorLiquidacionesPendientes)}</small></article>
+                <article><span>Desembolsado</span><strong>{formatMoney(operativoReporte?.resumen.valorDesembolsado)}</strong><small>{operativoReporte?.resumen.desembolsos ?? 0} operaciones</small></article>
+              </div>
+              <div className="cartera-grid">
+                <section className="surface">
+                  <div className="surface-title"><div><span className="section-kicker">Solicitudes</span><h2>Ultimas solicitudes</h2></div><span>{(operativoReporte?.solicitudes ?? []).length ?? 0}</span></div>
+                  <div className="table-wrap"><table><thead><tr><th>Credito</th><th>Cliente</th><th>Empresa</th><th>Estado</th><th>Monto</th></tr></thead><tbody>{(operativoReporte?.solicitudes ?? []).slice(0, 12).map((item) => (
+                    <tr key={item.credito}><td>{item.credito}</td><td>{item.cliente}</td><td>{item.empresa}</td><td><span className={`status-pill small status-${normalizeStatusClass(item.estado)}`}>{item.estado}</span></td><td>{formatMoney(item.monto)}</td></tr>
+                  ))}</tbody></table></div>
+                </section>
+                <section className="surface">
+                  <div className="surface-title"><div><span className="section-kicker">Desembolsos</span><h2>Desembolsos registrados</h2></div><span>{(operativoReporte?.desembolsos ?? []).length ?? 0}</span></div>
+                  <div className="table-wrap"><table><thead><tr><th>Credito</th><th>Cliente</th><th>Fecha</th><th>Valor</th><th>Comprobante</th></tr></thead><tbody>{(operativoReporte?.desembolsos ?? []).slice(0, 12).map((item) => (
+                    <tr key={`${item.credito}-${item.fechaDesembolso}`}><td>{item.credito}</td><td>{item.cliente}</td><td>{item.fechaDesembolso}</td><td>{formatMoney(item.valorDesembolso)}</td><td>{item.comprobantePago ? 'SI' : 'Pendiente'}</td></tr>
+                  ))}</tbody></table></div>
+                </section>
+              </div>
+              <div className="cartera-grid">
+                <section className="surface">
+                  <div className="surface-title"><div><span className="section-kicker">Liquidacion</span><h2>Pendientes de desembolso</h2></div><span>{(operativoReporte?.liquidacionesPendientes ?? []).length ?? 0}</span></div>
+                  <div className="table-wrap"><table><thead><tr><th>Credito</th><th>Cliente</th><th>Empresa</th><th>Valor</th><th>Cuota</th></tr></thead><tbody>{(operativoReporte?.liquidacionesPendientes ?? []).slice(0, 10).map((item) => (
+                    <tr key={`${item.credito}-${item.version}`}><td>{item.credito}</td><td>{item.cliente}</td><td>{item.empresa}</td><td>{formatMoney(item.valorDesembolso)}</td><td>{formatMoney(item.cuota)}</td></tr>
+                  ))}</tbody></table></div>
+                </section>
+                <section className="surface">
+                  <div className="surface-title"><div><span className="section-kicker">Comite</span><h2>Aprobaciones pendientes</h2></div><span>{(operativoReporte?.comite ?? []).length ?? 0}</span></div>
+                  <div className="table-wrap"><table><thead><tr><th>Credito</th><th>Cliente</th><th>Empresa</th><th>Monto</th><th>Votos</th></tr></thead><tbody>{(operativoReporte?.comite ?? []).slice(0, 10).map((item) => (
+                    <tr key={item.credito}><td>{item.credito}</td><td>{item.cliente}</td><td>{item.empresa}</td><td>{formatMoney(item.monto)}</td><td>{item.votos}/{item.votosRequeridos ?? 0}</td></tr>
+                  ))}</tbody></table></div>
+                </section>
+              </div>
+            <div className="surface-title">
+                <div>
+                  <span className="section-kicker">Gestion operativa</span>
                   <h2>Cartera</h2>
                 </div>
                 <div className="row-actions">
@@ -5257,7 +6069,7 @@ function App() {
             </div>
 
             <section className="surface">
-              <div className="surface-title"><div><span className="section-kicker">Detalle</span><h2>Cuotas de cartera</h2></div><span>{carteraReporte?.cuotas.length ?? 0}</span></div>
+              <div className="surface-title"><div><span className="section-kicker">Detalle</span><h2>Cuotas de cartera</h2></div><span>{(carteraReporte?.cuotas ?? []).length ?? 0}</span></div>
               <div className="table-wrap">
                 <table>
                   <thead><tr><th>Credito</th><th>Cliente</th><th>Empresa</th><th>Producto</th><th>Cuota</th><th>Vencimiento</th><th>Estado</th><th>Mora</th><th>Pagado</th><th>Saldo</th></tr></thead>
@@ -5270,7 +6082,7 @@ function App() {
                       <td>{item.numeroCuota}</td>
                       <td>{item.fechaVencimiento}</td>
                       <td><span className={`status-pill small status-${normalizeStatusClass(item.estado)}`}>{item.estado}</span></td>
-                      <td>{item.diasMora} dias · {formatMoney(item.valorMora)}</td>
+                      <td>{item.diasMora} dias - {formatMoney(item.valorMora)}</td>
                       <td>{formatMoney(item.valorPagado)}</td>
                       <td>{formatMoney(item.saldo)}</td>
                     </tr>
@@ -5281,7 +6093,7 @@ function App() {
 
             <div className="cartera-grid">
               <section className="surface">
-                <div className="surface-title"><div><span className="section-kicker">Recaudo</span><h2>Pagos registrados</h2></div><span>{carteraReporte?.recaudos.length ?? 0}</span></div>
+                <div className="surface-title"><div><span className="section-kicker">Recaudo</span><h2>Pagos registrados</h2></div><span>{(carteraReporte?.recaudos ?? []).length ?? 0}</span></div>
                 <div className="table-wrap">
                   <table>
                     <thead><tr><th>Fecha</th><th>Credito</th><th>Cliente</th><th>Valor</th><th>Saldo favor</th><th>Medio</th></tr></thead>
@@ -5311,7 +6123,7 @@ function App() {
                       <h3>{String(title)}</h3>
                       {(rows as Array<{ nombre: string; cantidad: number; saldo: number; vencido?: number }>).slice(0, 8).map((item) => (
                         <div className="mini-report-row" key={item.nombre}>
-                          <span>{item.nombre}<small>{item.cantidad} creditos{typeof item.vencido === 'number' ? ` · vencido ${formatMoney(item.vencido)}` : ''}</small></span>
+                          <span>{item.nombre}<small>{item.cantidad} creditos{typeof item.vencido === 'number' ? ` - vencido ${formatMoney(item.vencido)}` : ''}</small></span>
                           <strong>{formatMoney(item.saldo)}</strong>
                         </div>
                       ))}
@@ -5326,7 +6138,7 @@ function App() {
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
             <div className="config-tabs">
-              {(['solicitudes', 'general', 'atributos', 'documentos', 'etapas'] as ProductosCreditoTab[]).map((tab) => (
+              {(['solicitudes', 'general', 'atributos', 'convenios', 'documentos', 'etapas', 'parametros'] as ProductosCreditoTab[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -5337,14 +6149,16 @@ function App() {
                     solicitudes: 'Solicitudes',
                     general: 'Productos',
                     atributos: 'Condiciones y cargos',
+                    convenios: 'Convenios',
                     documentos: 'Documentacion',
-                    etapas: 'Flujo del credito'
+                    etapas: 'Flujo del credito',
+                    parametros: 'Parametros'
                   }[tab]}
                 </button>
               ))}
             </div>
 
-            {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && (
+            {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && (
               <div className="product-context-bar">
                 <div>
                   <span className="section-kicker">Producto en configuracion</span>
@@ -5409,7 +6223,7 @@ function App() {
                       <input value={creditoForm.montoSolicitado} onChange={(event) => setCreditoForm((current) => ({ ...current, montoSolicitado: event.target.value }))} placeholder="Monto solicitado *" />
                       <select value={creditoForm.plazo} onChange={(event) => setCreditoForm((current) => ({ ...current, plazo: event.target.value }))}>
                         <option value="">Plazo *</option>
-                        {monthOptions.map((month) => <option key={month} value={month}>{month} meses</option>)}
+                        {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
                       </select>
                       <input value={creditoForm.tasa} onChange={(event) => setCreditoForm((current) => ({ ...current, tasa: event.target.value }))} placeholder="Tasa %" />
                     </div>
@@ -5440,6 +6254,13 @@ function App() {
                         <strong>{formatMoney(creditoSimulacion.resumen.totalPagar)}</strong>
                       </article>
                     </div>
+                    {creditoSimulacion.evaluacion && (
+                      <div className={`capacity-panel ${creditoSimulacion.evaluacion.aprobado ? 'approved' : 'blocked'}`}>
+                        <strong>{creditoSimulacion.evaluacion.aprobado ? 'Capacidad aprobada' : 'Capacidad bloqueada'}</strong>
+                        {creditoSimulacion.evaluacion.capacidad && <span>Cuota {formatMoney(creditoSimulacion.evaluacion.capacidad.cuota)} / capacidad {formatMoney(creditoSimulacion.evaluacion.capacidad.capacidadMaxima)} ({creditoSimulacion.evaluacion.capacidad.usoCapacidad ?? 0}%)</span>}
+                        {[...creditoSimulacion.evaluacion.bloqueos, ...creditoSimulacion.evaluacion.alertas].map((item) => <small key={item}>{item}</small>)}
+                      </div>
+                    )}
                     <div className="table-wrap">
                       <table>
                         <thead><tr><th>Concepto</th><th>Tipo</th><th>Valor</th></tr></thead>
@@ -5469,7 +6290,7 @@ function App() {
                         onClick={() => setSelectedCreditoId(credito.id)}
                       >
                         <strong>{credito.consecutivo} - {credito.nombreCliente}</strong>
-                        <span>{credito.producto} Â· {formatMoney(credito.montoSolicitado)} Â· {credito.plazo} meses Â· cuota {formatMoney(credito.cuotaEstimada)}</span>
+                        <span>{credito.producto}  -  {formatMoney(credito.montoSolicitado)}  -  {credito.plazo} meses  -  cuota {formatMoney(credito.cuotaEstimada)}</span>
                       </button>
                     ))}
                   </div>
@@ -5559,7 +6380,7 @@ function App() {
                                 <b>{etapa.orden}</b>
                                 <span>
                                   <strong>{etapa.etapa}</strong>
-                                  <small>{etapa.responsable ?? 'Sin responsable'} · {etapa.estadoEtapa}</small>
+                                  <small>{etapa.responsable ?? 'Sin responsable'} - {etapa.estadoEtapa}</small>
                                 </span>
                               </button>
                             ))}
@@ -5580,17 +6401,23 @@ function App() {
                             <div className="decision-box">
                               <div className="surface-title compact">
                                 <h3>Decision del credito</h3>
-                                <span>{creditoExpediente?.decisiones[0]?.decision ?? 'Sin decision'}</span>
+                                <span>{creditoExpediente?.decisiones[0]?.requiereComite ? `Comite ${creditoExpediente.decisiones[0].estadoComite ?? 'PENDIENTE'} ${creditoExpediente.decisiones[0].votosActuales ?? 0}/${creditoExpediente.decisiones[0].votosRequeridos ?? 0}` : creditoExpediente?.decisiones[0]?.decision ?? 'Sin decision'}</span>
                               </div>
                               <div className="field-grid two-cols">
                                 <input value={creditoDecisionForm.montoAprobado} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, montoAprobado: event.target.value }))} placeholder="Monto aprobado" />
                                 <select value={creditoDecisionForm.plazoAprobado} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, plazoAprobado: event.target.value }))}>
                                   <option value="">Plazo aprobado</option>
-                                  {monthOptions.map((month) => <option key={month} value={month}>{month} meses</option>)}
+                                  {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
                                 </select>
                                 <input value={creditoDecisionForm.tasaAprobada} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, tasaAprobada: event.target.value }))} placeholder="Tasa aprobada %" />
                                 <input value={creditoDecisionForm.cuotaAprobada} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, cuotaAprobada: event.target.value }))} placeholder="Cuota aprobada" />
                               </div>
+                              {creditoExpediente?.decisiones[0]?.requiereComite && creditoExpediente.decisiones[0].estadoComite === 'PENDIENTE' && (
+                                <div className="approval-committee-status">
+                                  <strong>Comite pendiente</strong>
+                                  <span>{creditoExpediente.decisiones[0].votosActuales ?? 0}/{creditoExpediente.decisiones[0].votosRequeridos ?? 0} aprobaciones registradas</span>
+                                </div>
+                              )}
                               <textarea
                                 value={creditoDecisionForm.observacion}
                                 onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, observacion: event.target.value }))}
@@ -5652,7 +6479,9 @@ function App() {
                                   {employeeCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
                                 </select>
                                 <input value={creditoDesembolsoForm.numeroCuenta} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta" />
-                                <input value={creditoDesembolsoForm.referenciaPago} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, referenciaPago: event.target.value }))} placeholder="Referencia de pago" />
+                                <input value={creditoDesembolsoForm.referenciaPago} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, referenciaPago: event.target.value }))} placeholder="Referencia transaccion" />
+                                <input value={creditoDesembolsoForm.numeroOrden} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, numeroOrden: event.target.value }))} placeholder="Numero de orden opcional" />
+                                <input value={creditoDesembolsoForm.comprobantePago} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, comprobantePago: event.target.value }))} placeholder="Comprobante o URL soporte" />
                                 <input value={creditoDesembolsoForm.observacionCalendario} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Observacion calendario" />
                               </div>
                               <textarea
@@ -5725,13 +6554,52 @@ function App() {
                         </section>
 
                         <section className="subsurface">
-                          <div className="surface-title compact"><h3>Liquidacion</h3><span>{creditoExpediente?.liquidacion.length ?? 0} conceptos</span></div>
+                          <div className="surface-title compact">
+                            <h3>Liquidacion definitiva</h3>
+                            <span>{liquidacionDefinitivaActual ? 'Version ' + liquidacionDefinitivaActual.version : 'Pendiente'}</span>
+                          </div>
+                          <div className="stage-actions compact-actions">
+                            <button type="button" disabled={loading} onClick={handleRegistrarLiquidacionDefinitiva}>
+                              {liquidacionDefinitivaActual ? 'Nueva version liquidacion' : 'Registrar liquidacion definitiva'}
+                            </button>
+                          </div>
+                          {liquidacionDefinitivaActual && (
+                            <div className="decision-metrics liquidacion-summary">
+                              <article><span>Monto solicitado</span><strong>{formatMoney(liquidacionDefinitivaActual.montoSolicitado)}</strong></article>
+                              <article><span>Cargos financiados</span><strong>{formatMoney(liquidacionDefinitivaActual.cargosFinanciados)}</strong></article>
+                              <article><span>Descuentos desembolso</span><strong>{formatMoney(liquidacionDefinitivaActual.descuentosDesembolso)}</strong></article>
+                              <article><span>IVA</span><strong>{formatMoney(liquidacionDefinitivaActual.iva)}</strong></article>
+                              <article><span>Valor a desembolsar</span><strong>{formatMoney(liquidacionDefinitivaActual.valorDesembolso)}</strong></article>
+                              <article><span>Valor credito</span><strong>{formatMoney(liquidacionDefinitivaActual.valorCredito)}</strong></article>
+                              <article><span>Cuota</span><strong>{formatMoney(liquidacionDefinitivaActual.cuota)}</strong><small>{liquidacionDefinitivaActual.plazo} meses</small></article>
+                              <article><span>Total pagar</span><strong>{formatMoney(liquidacionDefinitivaActual.totalPagar)}</strong><small>Intereses {formatMoney(liquidacionDefinitivaActual.totalIntereses)}</small></article>
+                            </div>
+                          )}
                           <div className="table-wrap">
                             <table>
-                              <thead><tr><th>Concepto</th><th>Tipo</th><th>Valor</th></tr></thead>
-                              <tbody>{(creditoExpediente?.liquidacion ?? []).map((item) => <tr key={item.id}><td>{item.nombre}</td><td>{item.tipoAtributo ?? '-'}</td><td>{formatMoney(item.valorCalculado)}</td></tr>)}</tbody>
+                              <thead><tr><th>Concepto</th><th>Tipo</th><th>Calculo</th><th>Valor</th></tr></thead>
+                              <tbody>{(creditoExpediente?.liquidacion ?? []).map((item) => <tr key={item.id}><td>{item.nombre}</td><td>{item.tipoAtributo ?? '-'}</td><td>{item.tipoCalculo ?? '-'}</td><td>{formatMoney(item.valorCalculado)}</td></tr>)}</tbody>
                             </table>
                           </div>
+                          {((creditoExpediente?.liquidacionesDefinitivas ?? []).length ?? 0) > 0 && (
+                            <div className="table-wrap stacked-table">
+                              <table>
+                                <thead><tr><th>Version</th><th>Estado</th><th>Desembolso</th><th>Credito</th><th>Cuota</th><th>Total</th><th>Fecha</th><th>Acciones</th></tr></thead>
+                                <tbody>{(creditoExpediente?.liquidacionesDefinitivas ?? []).map((item) => (
+                                  <tr key={item.id}>
+                                    <td>#{item.version}</td>
+                                    <td><span className={'status-pill small status-' + normalizeStatusClass(item.estado)}>{item.estado}</span></td>
+                                    <td>{formatMoney(item.valorDesembolso)}</td>
+                                    <td>{formatMoney(item.valorCredito)}</td>
+                                    <td>{formatMoney(item.cuota)}</td>
+                                    <td>{formatMoney(item.totalPagar)}</td>
+                                    <td>{formatDateTime(item.fecha)}</td>
+                                    <td>{item.estado !== 'ANULADA' ? <button type="button" className="danger tiny" disabled={loading} onClick={() => handleAnularLiquidacionDefinitiva(item.id)}>Anular</button> : '-'}</td>
+                                  </tr>
+                                ))}</tbody>
+                              </table>
+                            </div>
+                          )}
                         </section>
                       </div>
 
@@ -5795,19 +6663,23 @@ function App() {
                         </div>
                       </section>
 
-                      {(creditoExpediente?.desembolsos.length ?? 0) > 0 && (
+                      {((creditoExpediente?.desembolsos ?? []).length ?? 0) > 0 && (
                         <section className="subsurface">
-                          <div className="surface-title compact"><h3>Desembolsos</h3><span>{creditoExpediente?.desembolsos.length ?? 0} registros</span></div>
+                          <div className="surface-title compact"><h3>Desembolsos</h3><span>{(creditoExpediente?.desembolsos ?? []).length ?? 0} registros</span></div>
                           <div className="table-wrap">
                             <table>
-                              <thead><tr><th>Fecha</th><th>Valor</th><th>Banco</th><th>Cuenta</th><th>Referencia</th><th>Usuario</th></tr></thead>
+                              <thead><tr><th>Orden</th><th>Estado</th><th>Fecha</th><th>Valor</th><th>Banco</th><th>Cuenta</th><th>Referencia</th><th>Comprobante</th><th>Acciones</th><th>Usuario</th></tr></thead>
                               <tbody>{creditoExpediente?.desembolsos.map((item) => (
                                 <tr key={item.id}>
-                                  <td>{item.fechaDesembolso}</td>
+                                  <td>{item.numeroOrden ?? '-'}</td>
+                                  <td><span className={'status-pill small status-' + normalizeStatusClass(item.estadoDesembolso)}>{item.estadoDesembolso}</span></td>
+                                  <td>{item.fechaEjecucion ?? item.fechaDesembolso}</td>
                                   <td>{formatMoney(item.valorDesembolso)}</td>
                                   <td>{item.bancoDestino ?? '-'}</td>
                                   <td>{[item.tipoCuenta, item.numeroCuenta].filter(Boolean).join(' ') || '-'}</td>
                                   <td>{item.referenciaPago ?? '-'}</td>
+                                  <td>{item.comprobantePago ?? '-'}</td>
+                                  <td>{item.estadoDesembolso !== 'ANULADO' ? <button type="button" className="danger tiny" disabled={loading} onClick={() => handleAnularDesembolsoCredito(item.id)}>Anular</button> : '-'}</td>
                                   <td>{item.usuario ?? 'Sistema'}</td>
                                 </tr>
                               ))}</tbody>
@@ -5816,7 +6688,7 @@ function App() {
                         </section>
                       )}
 
-                      {(creditoExpediente?.cuotas.length ?? 0) > 0 && (
+                      {((creditoExpediente?.cuotas ?? []).length ?? 0) > 0 && (
                         <section className="subsurface">
                           <div className="surface-title compact">
                             <h3>Registro de pagos</h3>
@@ -5825,7 +6697,11 @@ function App() {
                           <div className="signature-send-grid">
                             <input type="date" value={creditoPagoForm.fechaPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, fechaPago: event.target.value }))} />
                             <input value={creditoPagoForm.valorPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, valorPago: event.target.value }))} placeholder="Valor pagado" />
-                            <select value={creditoPagoForm.medioPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, medioPago: event.target.value }))}>
+                            <select value={creditoPagoForm.tipoRecaudo} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, tipoRecaudo: event.target.value, medioPago: event.target.value === 'NOMINA' ? 'NOMINA' : current.medioPago }))}>
+                              <option value="MANUAL">Recaudo manual</option>
+                              <option value="NOMINA">Recaudo por nomina</option>
+                            </select>
+                            <select value={creditoPagoForm.medioPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, medioPago: event.target.value, tipoRecaudo: event.target.value === 'NOMINA' ? 'NOMINA' : current.tipoRecaudo }))}>
                               <option value="">Medio de pago</option>
                               <option value="TRANSFERENCIA">Transferencia</option>
                               <option value="CONSIGNACION">Consignacion</option>
@@ -5833,19 +6709,39 @@ function App() {
                               <option value="EFECTIVO">Efectivo</option>
                               <option value="OTRO">Otro</option>
                             </select>
+                            <input value={creditoPagoForm.periodoNomina} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, periodoNomina: event.target.value }))} placeholder="Periodo nomina AAAA-MM" />
                             <input value={creditoPagoForm.referenciaPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, referenciaPago: event.target.value }))} placeholder="Referencia" />
                             <input value={creditoPagoForm.observacion} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Observacion" />
                             <button type="button" disabled={loading || !creditoPagoForm.valorPago} onClick={handleRegistrarPagoCredito}>Aplicar pago</button>
                           </div>
-                          {(creditoExpediente?.pagos.length ?? 0) > 0 && (
+                          <div className="subsurface nested-panel">
+                            <div className="surface-title compact"><h3>Cargue masivo pagaduria</h3><span>{recaudoMasivoResultado ? `${recaudoMasivoResultado.aplicados}/${recaudoMasivoResultado.totalFilas}` : 'CSV'}</span></div>
+                            <div className="signature-send-grid">
+                              <input type="date" value={recaudoMasivoForm.fechaPago} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, fechaPago: event.target.value }))} />
+                              <input value={recaudoMasivoForm.periodoNomina} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, periodoNomina: event.target.value }))} placeholder="Periodo nomina AAAA-MM" />
+                              <input value={recaudoMasivoForm.referenciaLote} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, referenciaLote: event.target.value }))} placeholder="Referencia lote" />
+                              <input value={recaudoMasivoForm.observacion} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Observacion lote" />
+                            </div>
+                            <textarea value={recaudoMasivoForm.contenido} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, contenido: event.target.value }))} placeholder="consecutivo;valor;referencia&#10;PC-000001;250000;NOM-2026-07" />
+                            <div className="stage-actions"><button type="button" disabled={loading || !recaudoMasivoForm.contenido.trim()} onClick={handleRegistrarRecaudoMasivo}>Aplicar recaudo masivo</button></div>
+                            {recaudoMasivoResultado && (
+                              <div className="table-wrap"><table><thead><tr><th>Fila</th><th>Credito</th><th>Valor</th><th>Estado</th><th>Mensaje</th></tr></thead><tbody>{recaudoMasivoResultado.resultados.map((item) => (
+                                <tr key={item.fila}><td>{item.fila}</td><td>{item.consecutivo ?? item.creditoId ?? '-'}</td><td>{formatMoney(item.valorPago)}</td><td>{item.aplicado ? 'Aplicado' : 'Rechazado'}</td><td>{item.mensaje}</td></tr>
+                              ))}</tbody></table></div>
+                            )}
+                          </div>
+                          {((creditoExpediente?.pagos ?? []).length ?? 0) > 0 && (
                             <div className="table-wrap">
                               <table>
-                                <thead><tr><th>Fecha</th><th>Valor</th><th>Saldo favor</th><th>Medio</th><th>Referencia</th><th>Soporte</th><th>Usuario</th></tr></thead>
+                                <thead><tr><th>Fecha</th><th>Valor</th><th>Saldo favor</th><th>Recaudo</th><th>Periodo</th><th>Estado</th><th>Medio</th><th>Referencia</th><th>Soporte</th><th>Acciones</th><th>Usuario</th></tr></thead>
                                 <tbody>{creditoExpediente?.pagos.map((item) => (
                                   <tr key={item.id}>
                                     <td>{item.fechaPago}</td>
                                     <td>{formatMoney(item.valorPago)}</td>
                                     <td>{item.saldoFavor > 0 ? formatMoney(item.saldoFavor) : '-'}</td>
+                                    <td>{item.tipoRecaudo ?? '-'}</td>
+                                    <td>{item.periodoNomina ?? '-'}</td>
+                                    <td><span className={'status-pill small status-' + normalizeStatusClass(item.estadoPago)}>{item.estadoPago}</span></td>
                                     <td>{item.medioPago ?? '-'}</td>
                                     <td>{item.referenciaPago ?? '-'}</td>
                                     <td>
@@ -5869,6 +6765,7 @@ function App() {
                                       </div>
                                       {item.soporteNombre && <small className="file-name">{item.soporteNombre}</small>}
                                     </td>
+                                    <td>{item.estadoPago !== 'REVERSADO' ? <button type="button" className="danger tiny" disabled={loading} onClick={() => handleReversarPagoCredito(item.id)}>Reversar</button> : '-'}</td>
                                     <td>{item.usuario ?? 'Sistema'}</td>
                                   </tr>
                                 ))}</tbody>
@@ -5878,11 +6775,34 @@ function App() {
                         </section>
                       )}
 
-                      {(creditoExpediente?.cuotas.length ?? 0) > 0 && (
+                      {((creditoExpediente?.extracto ?? []).length ?? 0) > 0 && (
+                        <section className="subsurface">
+                          <div className="surface-title compact"><h3>Extracto contable</h3><span>{formatMoney(creditoExpediente?.extracto.at(-1)?.saldoContable ?? 0)} saldo</span></div>
+                          <div className="table-wrap"><table>
+                            <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Debito</th><th>Credito</th><th>Saldo</th><th>Ref.</th><th>Usuario</th></tr></thead>
+                            <tbody>{creditoExpediente?.extracto.map((item) => (
+                              <tr key={item.id}><td>{item.fecha}</td><td>{item.tipo}</td><td>{item.concepto}</td><td>{formatMoney(item.debito)}</td><td>{formatMoney(item.credito)}</td><td>{formatMoney(item.saldoContable)}</td><td>{[item.referenciaTipo, item.referenciaId].filter(Boolean).join(' ') || '-'}</td><td>{item.usuario ?? 'Sistema'}</td></tr>
+                            ))}</tbody>
+                          </table></div>
+                        </section>
+                      )}
+                      {((creditoExpediente?.cuotas ?? []).length ?? 0) > 0 && (
                         <section className="subsurface">
                           <div className="surface-title compact">
                             <h3>Cartera definitiva</h3>
-                            <span>{creditoExpediente?.cuotas.length ?? 0} cuotas</span>
+                            <span>{(creditoExpediente?.cuotas ?? []).length ?? 0} cuotas</span>
+                          </div>
+                          <div className="decision-metrics liquidacion-summary">
+                            <article><span>Saldo cartera</span><strong>{formatMoney(carteraExpedienteResumen.saldo)}</strong></article>
+                            <article><span>Cartera vencida</span><strong>{formatMoney(carteraExpedienteResumen.vencido)}</strong></article>
+                            <article><span>Mora causada</span><strong>{formatMoney(carteraExpedienteResumen.mora)}</strong></article>
+                            <article><span>Pagado</span><strong>{formatMoney(carteraExpedienteResumen.pagado)}</strong></article>
+                            <article><span>Cuotas pendientes</span><strong>{carteraExpedienteResumen.pendientes}</strong></article>
+                          </div>
+                          <div className="signature-send-grid">
+                            <input type="date" value={creditoCausacionForm.fechaCorte} onChange={(event) => setCreditoCausacionForm((current) => ({ ...current, fechaCorte: event.target.value }))} />
+                            <input value={creditoCausacionForm.observacion} onChange={(event) => setCreditoCausacionForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Observacion causacion" />
+                            <button type="button" disabled={loading || !creditoCausacionForm.fechaCorte} onClick={handleCausarCredito}>Causar cartera</button>
                           </div>
                           <div className="table-wrap">
                             <table>
@@ -5899,6 +6819,7 @@ function App() {
                                   <th>Cuota</th>
                                   <th>Dias mora</th>
                                   <th>Mora</th>
+                                  <th>Causado</th>
                                   <th>Pagado</th>
                                   <th>Pendiente</th>
                                   <th>Saldo final</th>
@@ -5918,6 +6839,7 @@ function App() {
                                   <td>{formatMoney(item.valorCuota)}</td>
                                   <td>{item.diasMora}</td>
                                   <td>{formatMoney(item.valorMora)}</td>
+                                  <td>{formatMoney(item.capitalCausado + item.interesCausado + item.cargosCausados + item.moraCausada)}</td>
                                   <td>{formatMoney(item.valorPagado)}</td>
                                   <td>{formatMoney(item.saldoCuota)}</td>
                                   <td>{formatMoney(item.saldoFinal)}</td>
@@ -5930,14 +6852,25 @@ function App() {
                       )}
 
                       <section className="subsurface">
-                        <div className="surface-title compact"><h3>Historial</h3><span>{creditoExpediente?.historial.length ?? 0} movimientos</span></div>
-                        {(creditoExpediente?.decisiones.length ?? 0) > 0 && (
+                        <div className="surface-title compact"><h3>Historial</h3><span>{(creditoExpediente?.historial ?? []).length ?? 0} movimientos</span></div>
+                        {((creditoExpediente?.evaluaciones ?? []).length ?? 0) > 0 && (
+                          <div className="table-wrap decision-history">
+                            <h4>Evaluaciones registradas</h4>
+                            <table><thead><tr><th>Fecha</th><th>Recomendacion</th><th>Riesgo</th><th>Puntaje</th><th>Usuario</th></tr></thead>
+                              <tbody>{creditoExpediente?.evaluaciones.map((item) => (
+                                <tr key={item.id}><td>{formatDateTime(item.fecha)}</td><td>{item.recomendacion}</td><td>{item.nivelRiesgo}</td><td>{item.puntaje}</td><td>{item.usuario ?? '-'}</td></tr>
+                              ))}</tbody>
+                            </table>
+                          </div>
+                        )}
+                        {((creditoExpediente?.decisiones ?? []).length ?? 0) > 0 && (
                           <div className="table-wrap decision-history">
                             <table>
-                              <thead><tr><th>Decision</th><th>Monto</th><th>Plazo</th><th>Cuota</th><th>Usuario</th><th>Fecha</th></tr></thead>
+                              <thead><tr><th>Decision</th><th>Comite</th><th>Monto</th><th>Plazo</th><th>Cuota</th><th>Usuario</th><th>Fecha</th></tr></thead>
                               <tbody>{creditoExpediente?.decisiones.map((item) => (
                                 <tr key={item.id}>
                                   <td><span className={`status-pill small status-${normalizeStatusClass(item.decision)}`}>{item.decision}</span></td>
+                                  <td>{item.requiereComite ? `${item.estadoComite ?? 'PENDIENTE'} ${item.votosActuales ?? 0}/${item.votosRequeridos ?? 0}` : '-'}</td>
                                   <td>{formatMoney(item.montoAprobado)}</td>
                                   <td>{item.plazoAprobado ? `${item.plazoAprobado} meses` : '-'}</td>
                                   <td>{formatMoney(item.cuotaAprobada)}</td>
@@ -5952,8 +6885,8 @@ function App() {
                           {(creditoExpediente?.historial ?? []).map((item) => (
                             <article key={item.id}>
                               <strong>{item.accion.replaceAll('_', ' ')}</strong>
-                              <span>{formatDateTime(item.fecha)} · {item.usuario ?? 'Sistema'}</span>
-                              <small>{item.observacion ?? `${item.estadoAnterior ?? '-'} → ${item.estadoNuevo ?? '-'}`}</small>
+                              <span>{formatDateTime(item.fecha)} - {item.usuario ?? 'Sistema'}</span>
+                              <small>{item.observacion ?? `${item.estadoAnterior ?? '-'} -> ${item.estadoNuevo ?? '-'}`}</small>
                             </article>
                           ))}
                         </div>
@@ -5966,46 +6899,49 @@ function App() {
 
             {productosCreditoTab === 'general' && (
               <section className="content-grid credit-product-grid">
-                <form className="surface pagaduria-form" onSubmit={handleCreateProductoCredito}>
+                <form className="surface pagaduria-form" onSubmit={handleSaveProductoCredito}>
                   <div className="surface-title">
-                    <h2>Crear producto de credito</h2>
-                    <button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar producto'}</button>
+                    <h2>{editingProductoCreditoId ? 'Editar producto de credito' : 'Crear producto de credito'}</h2>
+                    <div className="inline-actions">
+                      {editingProductoCreditoId && <button type="button" className="ghost-button" onClick={handleCancelProductoCreditoEdit}>Cancelar</button>}
+                      <button type="submit" disabled={loading}>{loading ? 'Guardando...' : editingProductoCreditoId ? 'Guardar cambios' : 'Guardar producto'}</button>
+                    </div>
                   </div>
                   <div className="form-section">
                     <h3>Informacion general</h3>
                     <div className="field-grid four-cols">
-                      <input value={productoCreditoForm.nombre} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Nombre *" />
-                      <select value={productoCreditoForm.idTipoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idTipoCredito: event.target.value }))}>
+                      <label className="product-field"><span>Nombre *</span><input value={productoCreditoForm.nombre} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Libranza Plus" /></label>
+                      <label className="product-field"><span>Tipo de credito *</span><select value={productoCreditoForm.idTipoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idTipoCredito: event.target.value }))}>
                         <option value="">Tipo de credito *</option>
                         {productosCreditoCatalogs.tiposCredito.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <select value={productoCreditoForm.tipoTasa} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tipoTasa: event.target.value }))}>
-                        <option value="FIJA">Tasa fija</option>
-                        <option value="DIFERENCIAL">Tasa diferencial</option>
-                        <option value="VARIABLE">Tasa variable</option>
-                      </select>
-                      <select value={productoCreditoForm.idLibranzera} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
+                      </select></label>
+                      <label className="product-field"><span>Tipo de tasa *</span><select value={productoCreditoForm.tipoTasa} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tipoTasa: event.target.value }))}>
+                        <option value="FIJA">Fija</option>
+                        <option value="DIFERENCIAL">Diferencial</option>
+                        <option value="VARIABLE">Variable</option>
+                      </select></label>
+                      <label className="product-field"><span>Libranzera</span><select value={productoCreditoForm.idLibranzera} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
                         <option value="">Libranzera</option>
                         {productosCreditoCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <input value={productoCreditoForm.montoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMinimo: event.target.value }))} placeholder="Tope minimo" />
-                      <input value={productoCreditoForm.montoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMaximo: event.target.value }))} placeholder="Tope maximo" />
-                      <input value={productoCreditoForm.salarioMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMinimo: event.target.value }))} placeholder="Salario minimo" />
-                      <input value={productoCreditoForm.salarioMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMaximo: event.target.value }))} placeholder="Salario maximo" />
-                      <select value={productoCreditoForm.plazoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMinimo: event.target.value }))}>
-                        <option value="">Minimo de meses</option>
-                        {monthOptions.map((month) => <option key={month} value={month}>{month} meses</option>)}
-                      </select>
-                      <select value={productoCreditoForm.plazoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMaximo: event.target.value }))}>
-                        <option value="">Maximo de meses</option>
-                        {monthOptions.map((month) => <option key={month} value={month}>{month} meses</option>)}
-                      </select>
-                      <select value={productoCreditoForm.modeloPlazo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, modeloPlazo: event.target.value }))}>
+                      </select></label>
+                      <label className="product-field"><span>Tope minimo</span><input value={productoCreditoForm.montoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMinimo: event.target.value }))} placeholder="Monto minimo aprobado" /><small>Monto minimo que puede solicitarse.</small></label>
+                      <label className="product-field"><span>Tope maximo</span><input value={productoCreditoForm.montoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMaximo: event.target.value }))} placeholder="Monto maximo aprobado" /><small>Limite superior del producto.</small></label>
+                      <label className="product-field"><span>Salario minimo</span><input value={productoCreditoForm.salarioMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMinimo: event.target.value }))} placeholder="Ingreso minimo requerido" /></label>
+                      <label className="product-field"><span>Salario maximo</span><input value={productoCreditoForm.salarioMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMaximo: event.target.value }))} placeholder="Ingreso maximo permitido" /></label>
+                      <label className="product-field"><span>Plazo minimo</span><select value={productoCreditoForm.plazoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMinimo: event.target.value }))}>
+                        <option value="">Sin minimo</option>
+                        {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
+                      </select></label>
+                      <label className="product-field"><span>Plazo maximo</span><select value={productoCreditoForm.plazoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMaximo: event.target.value }))}>
+                        <option value="">Sin maximo</option>
+                        {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
+                      </select></label>
+                      <label className="product-field"><span>Modelo de plazo</span><select value={productoCreditoForm.modeloPlazo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, modeloPlazo: event.target.value }))}>
                         <option value="MESES">Meses</option>
                         <option value="DIAS">Dias</option>
                         <option value="CUOTAS">Cuotas</option>
-                      </select>
-                      <input value={productoCreditoForm.numeroCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, numeroCodeudores: event.target.value }))} placeholder="Numero de codeudores" />
+                      </select></label>
+                      <label className="product-field"><span>Codeudores requeridos</span><input value={productoCreditoForm.numeroCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, numeroCodeudores: event.target.value }))} placeholder="0" /></label>
                     </div>
                     <div className="field-grid four-cols">
                       <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteCreditoMultiple} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteCreditoMultiple: event.target.checked }))} />Credito multiple</label>
@@ -6018,36 +6954,45 @@ function App() {
                   <div className="form-section">
                     <h3>Regla base de cartera</h3>
                     <div className="field-grid four-cols">
-                      <select value={productoCreditoForm.periodicidad} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodicidad: event.target.value }))}>
+                      <label className="product-field"><span>Periodicidad</span><select value={productoCreditoForm.periodicidad} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodicidad: event.target.value }))}>
                         <option value="MENSUAL">Mensual</option>
                         <option value="QUINCENAL">Quincenal</option>
-                      </select>
-                      <input value={productoCreditoForm.diaCorte} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaCorte: event.target.value }))} placeholder="Dia de corte" />
-                      <input value={productoCreditoForm.diaPagoOportuno} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaPagoOportuno: event.target.value }))} placeholder="Dia pago oportuno" />
-                      <input value={productoCreditoForm.moraDespuesVencimiento} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, moraDespuesVencimiento: event.target.value }))} placeholder="Mora despues de dias" />
-                      <input value={productoCreditoForm.tasaMoraMensual} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tasaMoraMensual: event.target.value }))} placeholder="Tasa mora mensual %" />
+                      </select></label>
+                      <label className="product-field"><span>Dia de corte</span><input value={productoCreditoForm.diaCorte} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaCorte: event.target.value }))} placeholder="25" /></label>
+                      <label className="product-field"><span>Dia pago oportuno</span><input value={productoCreditoForm.diaPagoOportuno} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaPagoOportuno: event.target.value }))} placeholder="30" /></label>
+                      <label className="product-field"><span>Mora despues de dias</span><input value={productoCreditoForm.moraDespuesVencimiento} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, moraDespuesVencimiento: event.target.value }))} placeholder="0" /></label>
+                      <label className="product-field"><span>Tasa mora mensual %</span><input value={productoCreditoForm.tasaMoraMensual} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tasaMoraMensual: event.target.value }))} placeholder="2" /></label>
                       <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.primeraCuotaMesSiguiente} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, primeraCuotaMesSiguiente: event.target.checked }))} />Primera cuota mes siguiente</label>
                       <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.ajustarFinSemana} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, ajustarFinSemana: event.target.checked }))} />Ajustar fin de semana</label>
-                      <input value={productoCreditoForm.observacionCalendario} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Observacion calendario" />
+                      <label className="product-field"><span>Observacion calendario</span><input value={productoCreditoForm.observacionCalendario} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Regla especial" /></label>
+                    </div>
+                  </div>
+                  <div className="form-section">
+                    <h3>Reglas de libranza</h3>
+                    <div className="field-grid four-cols">
+                      <label className="product-field"><span>Endeudamiento maximo %</span><input value={productoCreditoForm.porcentajeEndeudamientoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, porcentajeEndeudamientoMaximo: event.target.value }))} placeholder="40" /><small>Porcentaje de salario/neto permitido para la cuota.</small></label>
+                      <label className="product-field"><span>Antiguedad minima</span><input value={productoCreditoForm.antiguedadMinimaMeses} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, antiguedadMinimaMeses: event.target.value }))} placeholder="0" /><small>Meses minimos vinculado a la empresa.</small></label>
+                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.requiereEmpleadoActivo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, requiereEmpleadoActivo: event.target.checked }))} />Empleado activo</label>
+                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.bloqueaEmbargos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, bloqueaEmbargos: event.target.checked }))} />Bloquear embargos</label>
                     </div>
                   </div>
                   <div className="form-section">
                     <h3>Formatos y descripcion</h3>
                     <div className="field-grid four-cols">
-                      <select value={productoCreditoForm.formatoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCredito: event.target.value }))}>
-                        <option value="NO">Formato de credito: NO</option>
-                        <option value="SI">Formato de credito: SI</option>
-                      </select>
-                      <select value={productoCreditoForm.formatoRequisitos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoRequisitos: event.target.value }))}>
-                        <option value="NO">Formato de requisitos: NO</option>
-                        <option value="SI">Formato de requisitos: SI</option>
-                      </select>
-                      <select value={productoCreditoForm.formatoCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCodeudores: event.target.value }))}>
-                        <option value="NO">Formato codeudores: NO</option>
-                        <option value="SI">Formato codeudores: SI</option>
-                      </select>
-                      <input value={productoCreditoForm.proveedorFirma} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, proveedorFirma: event.target.value }))} placeholder="Proveedor firma electronica" />
-                      <input value={productoCreditoForm.periodoGracia} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodoGracia: event.target.value }))} placeholder="Periodo de gracia" />
+                      <label className="product-field"><span>Formato de credito</span><select value={productoCreditoForm.formatoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCredito: event.target.value }))}>
+                        <option value="NO">No</option>
+                        <option value="SI">Si</option>
+                      </select></label>
+                      <label className="product-field"><span>Formato de requisitos</span><select value={productoCreditoForm.formatoRequisitos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoRequisitos: event.target.value }))}>
+                        <option value="NO">No</option>
+                        <option value="SI">Si</option>
+                      </select></label>
+                      <label className="product-field"><span>Formato codeudores</span><select value={productoCreditoForm.formatoCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCodeudores: event.target.value }))}>
+                        <option value="NO">No</option>
+                        <option value="SI">Si</option>
+                      </select></label>
+                      <label className="product-field"><span>Proveedor firma</span><input value={productoCreditoForm.proveedorFirma} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, proveedorFirma: event.target.value }))} placeholder="Proveedor" /></label>
+                      <label className="product-field"><span>Periodo de gracia</span><input value={productoCreditoForm.periodoGracia} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodoGracia: event.target.value }))} placeholder="0" /></label>
                     </div>
                     <textarea value={productoCreditoForm.descripcion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />
                   </div>
@@ -6058,17 +7003,33 @@ function App() {
                     <h2>Productos configurados</h2>
                     <span>{productosCredito.length}</span>
                   </div>
+                  {selectedProductoCredito && (
+                    <div className="product-summary-grid">
+                      <article><span>Monto</span><strong>{formatMoney(selectedProductoCredito.montoMinimo)} - {formatMoney(selectedProductoCredito.montoMaximo)}</strong></article>
+                      <article><span>Plazo</span><strong>{selectedProductoCredito.plazoMinimo ?? '-'} - {selectedProductoCredito.plazoMaximo ?? '-'} {selectedProductoCredito.modeloPlazo?.toLowerCase()}</strong></article>
+                      <article><span>Tasa</span><strong>{selectedProductoCredito.tipoTasa}</strong></article>
+                      <article><span>Reglas</span><strong>{selectedProductoCredito.atributos} atributos - {selectedProductoCredito.documentos} docs - {selectedProductoCredito.etapas} etapas</strong></article>
+                      <article><span>Calendario</span><strong>{selectedProductoCredito.periodicidad ?? 'Mensual'} - corte {selectedProductoCredito.diaCorte ?? '-'}</strong></article>
+                      <article><span>Codeudor</span><strong>{selectedProductoCredito.requiereCodeudor ? String(selectedProductoCredito.numeroCodeudores) + ' requerido(s)' : 'No requerido'}</strong></article>
+                    </div>
+                  )}
                   <div className="list-panel">
                     {productosCredito.map((producto) => (
-                      <button
+                      <div
                         key={producto.id}
-                        type="button"
-                        className={selectedProductoCreditoId === producto.id ? 'company-row active' : 'company-row'}
-                        onClick={() => setSelectedProductoCreditoId(producto.id)}
+                        className={selectedProductoCreditoId === producto.id ? 'company-row product-row active' : 'company-row product-row'}
                       >
-                        <strong>{producto.nombre}</strong>
-                        <span>{producto.consecutivo ?? 'Auto'} · {producto.tipoCredito} · {producto.tipoTasa} · {producto.atributos} atributos · {producto.documentos} documentos · {producto.etapas} etapas</span>
-                      </button>
+                        <button type="button" className="product-row-main" onClick={() => setSelectedProductoCreditoId(producto.id)}>
+                          <strong>{producto.nombre} <small>v{producto.version ?? 1}</small></strong>
+                          <span>{producto.consecutivo ?? 'Auto'} - {producto.tipoCredito} - {producto.tipoTasa} - {producto.activo ? 'Activo' : 'Inactivo'} - {producto.atributos} atributos - {producto.documentos} documentos - {producto.etapas} etapas</span>
+                        </button>
+                        <span className="row-actions compact-actions">
+                          <button type="button" onClick={() => handleEditProductoCredito(producto)}>Editar</button>
+                          <button type="button" onClick={() => handleCreateProductoCreditoVersion(producto)}>Nueva version</button>
+                          <button type="button" onClick={() => handleToggleProductoCreditoEstado(producto)}>{producto.activo ? 'Inactivar' : 'Activar'}</button>
+                          <button type="button" className="danger" onClick={() => handleDeleteProductoCredito(producto)}>Eliminar</button>
+                        </span>
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -6081,27 +7042,87 @@ function App() {
                   <h2>Atributos de {selectedProductoCredito?.nombre ?? 'producto'}</h2>
                   <span>{productoAtributos.length} registros</span>
                 </div>
-                <form className="employee-form" onSubmit={handleCreateProductoAtributo}>
-                  <select value={productoAtributoForm.idTipoAtributo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoAtributo: event.target.value }))}>
-                    <option value="">Tipo atributo</option>
+                <form className="employee-form attribute-form formula-builder" onSubmit={handleCreateFormulaCalculo}>
+                  <label className="product-field"><span>Crear nueva formula</span><input value={formulaCalculoForm.nombre} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. CUOTA * %" /></label>
+                  <label className="product-field"><span>Base</span><select value={formulaCalculoForm.baseCalculo} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, baseCalculo: event.target.value }))}><option value="VALOR_CREDITO">Valor credito</option><option value="VALOR_DESEMBOLSO">Valor desembolso</option><option value="SALDO">Saldo</option><option value="SMLMV">SMLMV</option><option value="CUOTA">Cuota</option><option value="VALOR">Valor</option></select></label>
+                  <label className="product-field"><span>Operacion</span><select value={formulaCalculoForm.operacion} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, operacion: event.target.value, requierePorcentaje: event.target.value === 'PORCENTAJE', requiereValor: event.target.value !== 'PORCENTAJE', requiereValor2: event.target.value === 'BASE_POR_VALOR_DIV_VALOR2' }))}><option value="PORCENTAJE">Porcentaje</option><option value="VALOR_FIJO">Valor fijo</option><option value="VALOR_POR_PLAZO">Valor por plazo</option><option value="BASE_POR_VALOR_DIV_VALOR2">Base * valor / valor2</option></select></label>
+                  <label className="inline-check"><input type="checkbox" checked={formulaCalculoForm.aplicaMinimo} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMinimo: event.target.checked }))} />Minimo</label>
+                  <label className="inline-check"><input type="checkbox" checked={formulaCalculoForm.aplicaMaximo} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMaximo: event.target.checked }))} />Maximo</label>
+                  <button type="submit" disabled={loading}>Crear formula</button>
+                </form>
+                <form className="employee-form attribute-form" onSubmit={handleSaveProductoAtributo}>
+                  <label className="product-field"><span>Aplica a *</span><select value={productoAtributoForm.idTipoAtributo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoAtributo: event.target.value }))}>
+                    <option value="">Selecciona</option>
                     {productosCreditoCatalogs.tiposAtributo.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <select value={productoAtributoForm.idTipoCalculo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: event.target.value }))}>
-                    <option value="">Tipo calculo</option>
+                  </select></label>
+                  <label className="product-field"><span>Tipo de formula *</span><select value={productoAtributoForm.idTipoCalculo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: event.target.value }))}>
+                    <option value="">Selecciona formula</option>
                     {productosCreditoCatalogs.tiposCalculo.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <input value={productoAtributoForm.nombre} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Nombre" />
-                  <input value={productoAtributoForm.valor} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, valor: event.target.value }))} placeholder="Valor" />
-                  <input value={productoAtributoForm.porcentaje} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, porcentaje: event.target.value }))} placeholder="Porcentaje" />
-                  <input value={productoAtributoForm.minimo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, minimo: event.target.value }))} placeholder="Minimo" />
-                  <input value={productoAtributoForm.maximo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, maximo: event.target.value }))} placeholder="Maximo" />
-                  <input value={productoAtributoForm.proveedor} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, proveedor: event.target.value }))} placeholder="Proveedor" />
-                  <input value={productoAtributoForm.prioridad} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, prioridad: event.target.value }))} placeholder="Prioridad" />
+                  </select></label>
+                  <label className="product-field"><span>Nombre *</span><input value={productoAtributoForm.nombre} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Fianza" /></label>
+                  <label className="product-field"><span>Valor</span><input value={productoAtributoForm.valor} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, valor: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field"><span>Valor 2</span><input value={productoAtributoForm.valor2} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, valor2: event.target.value }))} placeholder="Divisor/base 2" /></label>
+                  <label className="product-field"><span>Porcentaje</span><input value={productoAtributoForm.porcentaje} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, porcentaje: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field"><span>Minimo</span><input value={productoAtributoForm.minimo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, minimo: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field"><span>Maximo</span><input value={productoAtributoForm.maximo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, maximo: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field"><span>Proveedor / fianza</span><input value={productoAtributoForm.proveedor} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, proveedor: event.target.value }))} placeholder="Beneficiario" /></label>
+                  <label className="product-field compact-number"><span>Prioridad</span><input value={productoAtributoForm.prioridad} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, prioridad: event.target.value }))} placeholder="1" /></label>
                   <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.aplicaIva} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, aplicaIva: event.target.checked }))} />IVA</label>
                   <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.obligatorio} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, obligatorio: event.target.checked }))} />Obligatorio</label>
-                  <button type="submit" disabled={!selectedProductoCreditoId || loading}>Agregar atributo</button>
+                  <button type="submit" disabled={!selectedProductoCreditoId || loading}>{editingProductoAtributoId ? 'Guardar atributo' : 'Agregar atributo'}</button>
+                  {editingProductoAtributoId && <button type="button" className="ghost-button" onClick={handleCancelProductoAtributoEdit}>Cancelar</button>}
                 </form>
-                <div className="table-wrap"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Calculo</th><th>Valor</th><th>%</th><th>IVA</th></tr></thead><tbody>{productoAtributos.map((item) => <tr key={item.id}><td>{item.nombre}</td><td>{item.tipoAtributo}</td><td>{item.tipoCalculo}</td><td>{item.valor ?? '-'}</td><td>{item.porcentaje ?? '-'}</td><td>{item.aplicaIva ? 'Si' : 'No'}</td></tr>)}</tbody></table></div>
+                <div className="table-wrap"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Calculo</th><th>Valor</th><th>%</th><th>IVA</th><th>Acciones</th></tr></thead><tbody>{productoAtributos.map((item) => <tr key={item.id}><td>{item.nombre}</td><td>{item.tipoAtributo}</td><td>{item.tipoCalculo}</td><td>{item.valor ?? '-'}</td><td>{item.porcentaje ?? '-'}</td><td>{item.aplicaIva ? 'Si' : 'No'}</td><td><span className="row-actions compact-actions"><button type="button" onClick={() => handleEditProductoAtributo(item)}>Editar</button><button type="button" className="danger" onClick={() => handleDeleteProductoAtributo(item)}>Eliminar</button></span></td></tr>)}</tbody></table></div>
+              </section>
+            )}
+
+
+
+            {productosCreditoTab === 'parametros' && (
+              <section className="content-grid credit-product-grid">
+                <form className="surface pagaduria-form" onSubmit={handleSaveParametroFinanciero}>
+                  <div className="surface-title"><div><span className="section-kicker">Variables del negocio</span><h2>Parametros financieros</h2></div><button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar parametro'}</button></div>
+                  <div className="form-section">
+                    <h3>SMLMV, IVA y valores base</h3>
+                    <div className="field-grid five-cols">
+                      <label className="product-field"><span>Codigo *</span><input value={parametroFinancieroForm.codigo} onChange={(event) => setParametroFinancieroForm((current) => ({ ...current, codigo: event.target.value.toUpperCase() }))} placeholder="SMLMV" /></label>
+                      <label className="product-field"><span>Nombre *</span><input value={parametroFinancieroForm.nombre} onChange={(event) => setParametroFinancieroForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Salario minimo" /></label>
+                      <label className="product-field"><span>Valor *</span><input value={parametroFinancieroForm.valor} onChange={(event) => setParametroFinancieroForm((current) => ({ ...current, valor: event.target.value }))} placeholder="0" /></label>
+                      <label className="product-field"><span>Unidad</span><select value={parametroFinancieroForm.unidad} onChange={(event) => setParametroFinancieroForm((current) => ({ ...current, unidad: event.target.value }))}><option value="VALOR">Valor</option><option value="PORCENTAJE">Porcentaje</option></select></label>
+                      <label className="product-field"><span>Vigencia desde *</span><input type="date" value={parametroFinancieroForm.vigenciaDesde} onChange={(event) => setParametroFinancieroForm((current) => ({ ...current, vigenciaDesde: event.target.value }))} /></label>
+                      <label className="product-field"><span>Vigencia hasta</span><input type="date" value={parametroFinancieroForm.vigenciaHasta} onChange={(event) => setParametroFinancieroForm((current) => ({ ...current, vigenciaHasta: event.target.value }))} /></label>
+                    </div>
+                  </div>
+                </form>
+                <section className="surface employees-panel">
+                  <div className="surface-title"><h2>Parametros configurados</h2><span>{parametrosFinancieros.length}</span></div>
+                  <div className="table-wrap"><table><thead><tr><th>Codigo</th><th>Nombre</th><th>Valor</th><th>Unidad</th><th>Desde</th><th>Hasta</th><th>Estado</th></tr></thead><tbody>{parametrosFinancieros.map((item) => <tr key={item.id}><td>{item.codigo}</td><td>{item.nombre}</td><td>{item.unidad === 'PORCENTAJE' ? String(item.valor) + '%' : formatMoney(item.valor)}</td><td>{item.unidad}</td><td>{item.vigenciaDesde}</td><td>{item.vigenciaHasta ?? '-'}</td><td>{item.activo ? 'Activo' : 'Inactivo'}</td></tr>)}</tbody></table></div>
+                </section>
+              </section>
+            )}
+
+
+
+            {productosCreditoTab === 'convenios' && (
+              <section className="surface employees-panel">
+                <div className="surface-title"><div><span className="section-kicker">Pagadurias habilitadas</span><h2>Convenios de {selectedProductoCredito?.nombre ?? 'producto'}</h2></div><span>{productoConvenios.length} empresas</span></div>
+                <form className="employee-form attribute-form" onSubmit={handleSaveProductoConvenio}>
+                  <label className="product-field"><span>Empresa *</span><select value={productoConvenioForm.idEmpresa} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, idEmpresa: event.target.value }))}>
+                    <option value="">Selecciona empresa</option>
+                    {creditosCatalogs.empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                  </select></label>
+                  <label className="product-field"><span>Cupo total</span><input value={productoConvenioForm.cupoTotal} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, cupoTotal: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field"><span>Cupo usado</span><input value={productoConvenioForm.cupoUsado} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, cupoUsado: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field"><span>Endeudamiento %</span><input value={productoConvenioForm.porcentajeEndeudamientoMaximo} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, porcentajeEndeudamientoMaximo: event.target.value }))} placeholder="Producto" /></label>
+                  <label className="product-field"><span>Desde</span><input type="date" value={productoConvenioForm.vigenciaDesde} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, vigenciaDesde: event.target.value }))} /></label>
+                  <label className="product-field"><span>Hasta</span><input type="date" value={productoConvenioForm.vigenciaHasta} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, vigenciaHasta: event.target.value }))} /></label>
+                  <label className="inline-check"><input type="checkbox" checked={productoConvenioForm.requiereValidacionPagaduria} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, requiereValidacionPagaduria: event.target.checked }))} />Validacion pagaduria</label>
+                  <label className="inline-check"><input type="checkbox" checked={productoConvenioForm.activo} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, activo: event.target.checked }))} />Activo</label>
+                  <label className="product-field"><span>Observacion</span><input value={productoConvenioForm.observacion} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Condicion especial" /></label>
+                  <button type="submit" disabled={!selectedProductoCreditoId || loading}>{selectedProductoConvenioId ? 'Guardar convenio' : 'Agregar convenio'}</button>
+                  {selectedProductoConvenioId && <button type="button" className="ghost-button" onClick={handleCancelProductoConvenioEdit}>Cancelar</button>}
+                </form>
+                <div className="table-wrap"><table><thead><tr><th>Empresa</th><th>Cupo</th><th>Disponible</th><th>Endeudamiento</th><th>Validacion</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{productoConvenios.map((item) => <tr key={item.id}><td><strong>{item.empresa}</strong><small>{item.nit ?? ''}</small></td><td>{item.cupoTotal ? formatMoney(item.cupoTotal) : 'Sin limite'}</td><td>{item.cupoDisponible !== null ? formatMoney(item.cupoDisponible) : '-'}</td><td>{item.porcentajeEndeudamientoMaximo ? String(item.porcentajeEndeudamientoMaximo) + '%' : 'Producto'}</td><td>{item.requiereValidacionPagaduria ? 'Si' : 'No'}</td><td>{item.vigenciaDesde ?? '-'} / {item.vigenciaHasta ?? '-'}</td><td>{item.activo ? 'Activo' : 'Inactivo'}</td><td><span className="row-actions compact-actions"><button type="button" onClick={() => handleEditProductoConvenio(item)}>Editar</button><button type="button" className="danger" onClick={() => handleDeleteProductoConvenio(item)}>Eliminar</button></span></td></tr>)}</tbody></table></div>
               </section>
             )}
 
@@ -6120,25 +7141,26 @@ function App() {
                   </div>
                 </aside>
                 <section className="surface employees-panel">
-                <div className="surface-title"><div><span className="section-kicker">Requisitos del producto</span><h2>Documentos de {selectedProductoCredito?.nombre ?? 'producto'}</h2></div><span>{productoDocumentos.length} asignados</span></div>
-                <form className="employee-form" onSubmit={handleCreateProductoDocumento}>
-                  <select value={productoDocumentoForm.idDocumentoCredito} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, idDocumentoCredito: event.target.value }))}>
-                    <option value="">Documento</option>
-                    {productosCreditoCatalogs.documentos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <input value={productoDocumentoForm.prioridad} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, prioridad: event.target.value }))} placeholder="Prioridad" />
-                  <select value={productoDocumentoForm.aplicaA} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, aplicaA: event.target.value }))}>
-                    <option value="CLIENTE">Cliente</option>
-                    <option value="CODEUDOR">Codeudor</option>
-                    <option value="EMPRESA">Empresa</option>
-                    <option value="VEHICULO">Vehiculo</option>
-                  </select>
-                  <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.obligatorio} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, obligatorio: event.target.checked }))} />Obligatorio</label>
-                  <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.requiereFirma} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, requiereFirma: event.target.checked }))} />Firma</label>
-                  <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.requiereValidacion} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, requiereValidacion: event.target.checked }))} />Validacion</label>
-                  <button type="submit" disabled={!selectedProductoCreditoId || loading}>Agregar documento</button>
-                </form>
-                <div className="table-wrap"><table><thead><tr><th>Documento</th><th>Prioridad</th><th>Aplica a</th><th>Obligatorio</th><th>Firma</th><th>Validacion</th></tr></thead><tbody>{productoDocumentos.map((item) => <tr key={item.id}><td>{item.documento}</td><td>{item.prioridad}</td><td>{item.aplicaA}</td><td>{item.obligatorio ? 'Si' : 'No'}</td><td>{item.requiereFirma ? 'Si' : 'No'}</td><td>{item.requiereValidacion ? 'Si' : 'No'}</td></tr>)}</tbody></table></div>
+                  <div className="surface-title"><div><span className="section-kicker">Requisitos del producto</span><h2>Documentos de {selectedProductoCredito?.nombre ?? 'producto'}</h2></div><span>{productoDocumentos.length} asignados</span></div>
+                  <form className="employee-form attribute-form" onSubmit={handleSaveProductoDocumento}>
+                    <label className="product-field"><span>Documento *</span><select value={productoDocumentoForm.idDocumentoCredito} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, idDocumentoCredito: event.target.value }))}>
+                      <option value="">Selecciona</option>
+                      {productosCreditoCatalogs.documentos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                    </select></label>
+                    <label className="product-field compact-number"><span>Prioridad</span><input value={productoDocumentoForm.prioridad} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, prioridad: event.target.value }))} placeholder="1" /></label>
+                    <label className="product-field"><span>Aplica a</span><select value={productoDocumentoForm.aplicaA} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, aplicaA: event.target.value }))}>
+                      <option value="CLIENTE">Cliente</option>
+                      <option value="CODEUDOR">Codeudor</option>
+                      <option value="EMPRESA">Empresa</option>
+                      <option value="VEHICULO">Vehiculo</option>
+                    </select></label>
+                    <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.obligatorio} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, obligatorio: event.target.checked }))} />Obligatorio</label>
+                    <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.requiereFirma} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, requiereFirma: event.target.checked }))} />Firma</label>
+                    <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.requiereValidacion} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, requiereValidacion: event.target.checked }))} />Validacion</label>
+                    <button type="submit" disabled={!selectedProductoCreditoId || loading}>{selectedProductoDocumentoId ? 'Guardar documento' : 'Agregar documento'}</button>
+                    {selectedProductoDocumentoId && <button type="button" className="ghost-button" onClick={handleCancelProductoDocumentoEdit}>Cancelar</button>}
+                  </form>
+                  <div className="table-wrap"><table><thead><tr><th>Documento</th><th>Prioridad</th><th>Aplica a</th><th>Obligatorio</th><th>Firma</th><th>Validacion</th><th>Acciones</th></tr></thead><tbody>{productoDocumentos.map((item) => <tr key={item.id}><td>{item.documento}</td><td>{item.prioridad}</td><td>{item.aplicaA}</td><td>{item.obligatorio ? 'Si' : 'No'}</td><td>{item.requiereFirma ? 'Si' : 'No'}</td><td>{item.requiereValidacion ? 'Si' : 'No'}</td><td><span className="row-actions compact-actions"><button type="button" onClick={() => handleEditProductoDocumento(item)}>Editar</button><button type="button" className="danger" onClick={() => handleDeleteProductoDocumento(item)}>Eliminar</button></span></td></tr>)}</tbody></table></div>
                 </section>
                 <section className="document-template-workspace">
                   <aside className="surface template-list-panel">
@@ -6147,7 +7169,7 @@ function App() {
                       {documentTemplates.map((template) => (
                         <button key={template.id} type="button" className={selectedDocumentTemplate?.id === template.id ? 'template-row active' : 'template-row'} onClick={() => handleSelectDocumentTemplate(template.id)}>
                           <strong>{template.nombre}</strong>
-                          <span>{template.codigo} · v{template.ultimaVersion ?? 0} · {template.estado}</span>
+                          <span>{template.codigo} - v{template.ultimaVersion ?? 0} - {template.estado}</span>
                         </button>
                       ))}
                     </div>
@@ -6185,7 +7207,7 @@ function App() {
                           <div><span className="section-kicker">Formato existente</span><h2>Editor visual de PDF</h2></div>
                           <span>Campos por coordenadas</span>
                         </div>
-                        <p className="muted-note">Carga el PDF institucional, selecciona un campo y haz clic sobre la página. Haz doble clic sobre un campo para eliminarlo.</p>
+                        <p className="muted-note">Carga el PDF institucional, selecciona un campo y haz clic sobre la pagina. Haz doble clic sobre un campo para eliminarlo.</p>
                         <PdfFieldMapper
                           token={session.token}
                           templateId={selectedDocumentTemplate.id}
@@ -6216,14 +7238,14 @@ function App() {
                       <span className="workflow-number">{item.orden}</span>
                       <div>
                         <strong>{item.etapa}</strong>
-                        <small>{item.responsable ?? 'Sin responsable'} · SLA {item.slaHoras ?? '-'} h</small>
+                        <small>{item.responsable ?? 'Sin responsable'} - SLA {item.slaHoras ?? '-'} h</small>
                       </div>
                       <div className="workflow-flags">
                         {item.obligatoria && <span>Obligatoria</span>}
                         {item.permiteDevolucion && <span>Permite devolucion</span>}
                       </div>
-                      <button type="button" className="workflow-edit-button" onClick={() => handleEditProductoEtapa(item)}>Editar</button>
-                      {index < productoEtapas.length - 1 && <i aria-hidden="true">›</i>}
+                      <span className="row-actions compact-actions"><button type="button" className="workflow-edit-button" onClick={() => handleEditProductoEtapa(item)}>Editar</button><button type="button" className="danger" onClick={() => handleDeleteProductoEtapa(item)}>Eliminar</button></span>
+                      {index < productoEtapas.length - 1 && <i aria-hidden="true">{'>'}</i>}
                     </div>
                   )) : <div className="empty-credit-state"><strong>Este producto aun no tiene flujo</strong><span>Agrega la primera etapa para comenzar el proceso.</span></div>}
                 </div>
@@ -6431,6 +7453,7 @@ function App() {
                   <h2>Crear rol</h2>
                   <input value={roleForm.nombre} onChange={(event) => setRoleForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Nombre del rol" />
                   <input value={roleForm.descripcion} onChange={(event) => setRoleForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />
+                  <input value={roleForm.montoMaximoAprobacion} onChange={(event) => setRoleForm((current) => ({ ...current, montoMaximoAprobacion: event.target.value }))} placeholder="Monto maximo aprobacion" />
                   <button type="submit" disabled={loading}>Guardar rol</button>
                 </form>
 
@@ -6455,6 +7478,7 @@ function App() {
                     <article key={role.id} className="row-card">
                       <strong>{role.nombre}</strong>
                       <span>{role.descripcion}</span>
+                      <small>Limite aprobacion: {role.montoMaximoAprobacion === null ? 'Sin limite' : formatMoney(role.montoMaximoAprobacion)}</small>
                     </article>
                   ))}
                 </div>
@@ -6593,3 +7617,7 @@ function App() {
 }
 
 export default App;
+
+
+
+

@@ -35,6 +35,7 @@ export type RoleRow = {
   id: number;
   nombre: string;
   descripcion: string;
+  montoMaximoAprobacion: number | null;
 };
 
 export type PermissionRow = {
@@ -56,6 +57,13 @@ export type DashboardGerencial = {
     recaudoHoy: number;
     recaudoMes: number;
     saldoFavor: number;
+    desembolsosPeriodo: number;
+    cantidadDesembolsos: number;
+    comitePendiente: number;
+    valorComitePendiente: number;
+    liquidacionesPendientes: number;
+    valorLiquidacionesPendientes: number;
+    documentosPendientes: number;
   };
   estados: Array<{ estado: string; cantidad: number; monto: number }>;
   mensual: Array<{ periodo: string; cantidad: number; monto: number }>;
@@ -69,8 +77,24 @@ export type DashboardGerencial = {
     porProducto: Array<{ nombre: string; cantidad: number; saldo: number; vencido: number }>;
     porSocio: Array<{ nombre: string; cantidad: number; saldo: number }>;
   };
+  moraEdades: Array<{ rango: string; cantidad: number; saldo: number }>;
+  pendientesRol: Array<{ rol: string; cantidad: number; valor: number }>;
+  recaudoPagaduria: Array<{ nombre: string; valor: number; pagos: number }>;
+  alertas: Array<{ tipo: string; titulo: string; cantidad: number; valor: number; severidad: string }>;
 };
 
+export type OperativoReporte = {
+  filtros: { empresas: AddressCatalogItem[]; productos: AddressCatalogItem[]; estados: string[] };
+  resumen: {
+    solicitudes: number; montoSolicitado: number; aprobadas: number; rechazadas: number;
+    comitePendiente: number; liquidacionesPendientes: number; valorLiquidacionesPendientes: number;
+    desembolsos: number; valorDesembolsado: number;
+  };
+  solicitudes: Array<{ credito: string; cliente: string; empresa: string; producto: string; estado: string; fecha: string; monto: number; plazo: number | null; cuota: number | null }>; 
+  desembolsos: Array<{ credito: string; cliente: string; empresa: string; fechaDesembolso: string; valorDesembolso: number; bancoDestino: string | null; numeroOrden: string | null; estadoDesembolso: string; comprobantePago: string | null }>; 
+  liquidacionesPendientes: Array<{ credito: string; cliente: string; empresa: string; version: number; fecha: string; valorDesembolso: number; valorCredito: number; cuota: number }>; 
+  comite: Array<{ credito: string; cliente: string; empresa: string; monto: number; votos: number; votosRequeridos: number | null; fecha: string }>; 
+};
 export type CarteraReporte = {
   filtros: {
     empresas: AddressCatalogItem[];
@@ -482,9 +506,43 @@ export type ProductoCreditoRow = {
   primeraCuotaMesSiguiente: boolean | null;
   observacionCalendario: string | null;
   estado: string | null;
+  activo: boolean;
+  version: number;
+  idProductoBase: number | null;
+  vigenciaDesde: string | null;
+  vigenciaHasta: string | null;
+  porcentajeEndeudamientoMaximo: number | null;
+  antiguedadMinimaMeses: number | null;
+  requiereEmpleadoActivo: boolean;
+  bloqueaEmbargos: boolean;
   atributos: number;
   documentos: number;
   etapas: number;
+};
+
+export type ParametroFinancieroRow = {
+  id: number;
+  codigo: string;
+  nombre: string;
+  valor: number;
+  unidad: string;
+  vigenciaDesde: string;
+  vigenciaHasta: string | null;
+  activo: boolean;
+};
+
+export type FormulaCalculoRow = {
+  id: number;
+  nombre: string;
+  codigo: string | null;
+  baseCalculo: string;
+  operacion: string;
+  requiereValor: boolean;
+  requiereValor2: boolean;
+  requierePorcentaje: boolean;
+  aplicaMinimo: boolean;
+  aplicaMaximo: boolean;
+  activo: boolean;
 };
 
 export type ProductoAtributoRow = {
@@ -494,12 +552,30 @@ export type ProductoAtributoRow = {
   nombre: string;
   valor: number | null;
   porcentaje: number | null;
+  valor2: number | null;
   minimo: number | null;
   maximo: number | null;
   aplicaIva: boolean;
   obligatorio: boolean;
   proveedor: string | null;
   prioridad: number;
+};
+
+export type ProductoConvenioRow = {
+  id: number;
+  idProductoCredito: number;
+  idEmpresa: number;
+  empresa: string;
+  nit: string | null;
+  cupoTotal: number | null;
+  cupoUsado: number;
+  cupoDisponible: number | null;
+  porcentajeEndeudamientoMaximo: number | null;
+  requiereValidacionPagaduria: boolean;
+  vigenciaDesde: string | null;
+  vigenciaHasta: string | null;
+  activo: boolean;
+  observacion: string | null;
 };
 
 export type ProductoDocumentoRow = {
@@ -526,7 +602,7 @@ export type ProductoEtapaRow = {
 export type ProductosCreditoCatalogs = {
   tiposCredito: AddressCatalogItem[];
   tiposAtributo: AddressCatalogItem[];
-  tiposCalculo: AddressCatalogItem[];
+  tiposCalculo: FormulaCalculoRow[];
   documentos: AddressCatalogItem[];
   etapas: AddressCatalogItem[];
   libranzeras: AddressCatalogItem[];
@@ -608,11 +684,46 @@ export type CreditoLiquidacionRow = {
   aplicaIva: boolean;
 };
 
+export type CreditoLiquidacionDefinitivaRow = {
+  id: number;
+  creditoId: number;
+  version: number;
+  estado: string;
+  montoSolicitado: number;
+  montoAprobado: number | null;
+  plazo: number;
+  tasaMensual: number;
+  cuota: number;
+  cargosFinanciados: number;
+  descuentosDesembolso: number;
+  iva: number;
+  valorDesembolso: number;
+  valorCredito: number;
+  totalIntereses: number;
+  totalPagar: number;
+  conceptos: Array<Record<string, unknown>>;
+  planPagos: Array<Record<string, unknown>>;
+  observacion: string | null;
+  requiereComite: boolean;
+  votosRequeridos: number | null;
+  votosActuales: number | null;
+  estadoComite: string | null;
+  usuario: string | null;
+  fecha: string;
+};
+
 export type CreditoHistorialRow = {
   id: number;
   accion: string;
   estadoAnterior: string | null;
   estadoNuevo: string | null;
+  observacion: string | null;
+  usuario: string | null;
+  fecha: string;
+};
+
+export type CreditoEvaluacionRow = EvaluacionCreditoAutomatica & {
+  id: number;
   observacion: string | null;
   usuario: string | null;
   fecha: string;
@@ -626,6 +737,10 @@ export type CreditoDecisionRow = {
   tasaAprobada: number | null;
   cuotaAprobada: number | null;
   observacion: string | null;
+  requiereComite: boolean;
+  votosRequeridos: number | null;
+  votosActuales: number | null;
+  estadoComite: string | null;
   usuario: string | null;
   fecha: string;
 };
@@ -638,6 +753,11 @@ export type CreditoDesembolsoRow = {
   tipoCuenta: string | null;
   numeroCuenta: string | null;
   referenciaPago: string | null;
+  numeroOrden: string | null;
+  estadoDesembolso: string;
+  fechaOrden: string | null;
+  fechaEjecucion: string | null;
+  comprobantePago: string | null;
   observacion: string | null;
   usuario: string | null;
   fechaRegistro: string;
@@ -667,6 +787,11 @@ export type CreditoCuotaRow = {
   valorCuota: number;
   diasMora: number;
   valorMora: number;
+  capitalCausado: number;
+  interesCausado: number;
+  cargosCausados: number;
+  moraCausada: number;
+  fechaCausacion: string | null;
   valorPagado: number;
   saldoCuota: number;
   capitalPagado: number;
@@ -680,6 +805,44 @@ export type CreditoCuotaRow = {
   observacion: string | null;
 };
 
+export type RecaudoMasivoResultado = {
+  referenciaLote: string | null;
+  periodoNomina: string;
+  fechaPago: string;
+  totalFilas: number;
+  aplicados: number;
+  rechazados: number;
+  valorAplicado: number;
+  valorRechazado: number;
+  resultados: Array<{
+    fila: number;
+    aplicado: boolean;
+    creditoId: number | null;
+    consecutivo: string | null;
+    valorPago: number;
+    mensaje: string;
+  }>;
+};
+
+export type CreditoExtractoRow = {
+  id: number;
+  fecha: string;
+  tipo: string;
+  concepto: string;
+  debito: number;
+  credito: number;
+  saldoContable: number;
+  carteraCausada: number;
+  interesCausado: number;
+  moraCausada: number;
+  recaudoAplicado: number;
+  referenciaTipo: string | null;
+  referenciaId: number | null;
+  observacion: string | null;
+  usuario: string | null;
+  fechaRegistro: string;
+};
+
 export type CreditoPagoRow = {
   id: number;
   fechaPago: string;
@@ -687,6 +850,9 @@ export type CreditoPagoRow = {
   saldoFavor: number;
   medioPago: string | null;
   referenciaPago: string | null;
+  tipoRecaudo: string;
+  periodoNomina: string | null;
+  estadoPago: string;
   observacion: string | null;
   usuario: string | null;
   soportes: number;
@@ -724,8 +890,25 @@ export type FirmaCreditoRow = {
   fechaFirma: string | null;
 };
 
+export type EvaluacionCreditoAutomatica = {
+  recomendacion: 'APROBAR' | 'REVISAR' | 'RECHAZAR';
+  puntaje: number;
+  nivelRiesgo: 'BAJO' | 'MEDIO' | 'ALTO';
+  bloqueos: string[];
+  alertas: string[];
+  positivos: string[];
+  metricas: {
+    ingresoBase: number | null;
+    cuota: number;
+    usoCapacidad: number | null;
+    cargos: number;
+    relacionCargos: number;
+  };
+};
+
 export type CreditoExpediente = {
   credito: CreditoRow;
+  evaluacionAutomatica?: EvaluacionCreditoAutomatica;
   sugerenciaCalendario?: {
     periodicidad: string;
     diaCorte: number;
@@ -741,12 +924,16 @@ export type CreditoExpediente = {
   documentos: CreditoDocumentoRow[];
   etapas: CreditoEtapaRow[];
   liquidacion: CreditoLiquidacionRow[];
+  liquidacionDefinitiva: CreditoLiquidacionDefinitivaRow | null;
+  liquidacionesDefinitivas: CreditoLiquidacionDefinitivaRow[];
   historial: CreditoHistorialRow[];
+  evaluaciones: CreditoEvaluacionRow[];
   decisiones: CreditoDecisionRow[];
   desembolsos: CreditoDesembolsoRow[];
   fondeos: CreditoFondeoRow[];
   cuotas: CreditoCuotaRow[];
   pagos: CreditoPagoRow[];
+  extracto: CreditoExtractoRow[];
   perfilCliente: {
     portal: {
       id: number | null;
@@ -805,6 +992,15 @@ export type SimulacionCredito = {
     cuotaEstimada: number;
     totalIntereses: number;
     totalPagar: number;
+  };
+  evaluacion?: {
+    aprobado: boolean;
+    requiereRevision: boolean;
+    alertas: string[];
+    bloqueos: string[];
+    reglas: { porcentajeEndeudamientoMaximo: number; antiguedadMinimaMeses: number; requiereEmpleadoActivo: boolean; bloqueaEmbargos: boolean };
+    empleado: { id: number; nombre: string | null; salario: number; neto: number; estado: string | null; tieneEmbargos: boolean; antiguedadMeses: number | null } | null;
+    capacidad: { base: number; cuota: number; capacidadMaxima: number; disponible: number; usoCapacidad: number | null } | null;
   };
   atributos: Array<{
     id: number;
@@ -931,6 +1127,14 @@ export const api = {
     const suffix = query.size ? `?${query.toString()}` : '';
     return request<DashboardGerencial>(`/api/v1/dashboard/gerencial${suffix}`, {}, token);
   },
+  getReporteOperativo: (token: string, filters: { fechaInicio?: string; fechaFin?: string; idEmpresa?: string; idProducto?: string; estado?: string }) => {
+    const query = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) query.set(key, value);
+    });
+    const suffix = query.size ? `?${query.toString()}` : '';
+    return request<OperativoReporte>(`/api/v1/dashboard/operativo${suffix}`, {}, token);
+  },
   getReporteCartera: (token: string, filters: { fechaInicio?: string; fechaFin?: string; idEmpresa?: string; idProducto?: string; idSocio?: string; estado?: string }) => {
     const query = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
@@ -1026,18 +1230,40 @@ export const api = {
     request<ComercialRow>(`/api/v1/comerciales/vendedores/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ activo }) }, token),
   listProductosCreditoCatalogs: (token: string) => request<ProductosCreditoCatalogs>('/api/v1/productos-creditos/catalogos', {}, token),
   listProductosCredito: (token: string) => request<ProductoCreditoRow[]>('/api/v1/productos-creditos', {}, token),
+  createTipoCalculoCredito: (token: string, body: unknown) => request<FormulaCalculoRow>('/api/v1/productos-creditos/formulas', { method: 'POST', body: JSON.stringify(body) }, token),
+  listParametrosFinancieros: (token: string) => request<ParametroFinancieroRow[]>('/api/v1/productos-creditos/parametros', {}, token),
+  createParametroFinanciero: (token: string, body: unknown) => request<ParametroFinancieroRow>('/api/v1/productos-creditos/parametros', { method: 'POST', body: JSON.stringify(body) }, token),
   createProductoCredito: (token: string, body: unknown) => request<ProductoCreditoRow>('/api/v1/productos-creditos', { method: 'POST', body: JSON.stringify(body) }, token),
+  updateProductoCredito: (token: string, id: number, body: unknown) => request<ProductoCreditoRow>(`/api/v1/productos-creditos/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  updateProductoCreditoEstado: (token: string, id: number, activo: boolean) => request<ProductoCreditoRow>(`/api/v1/productos-creditos/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ activo }) }, token),
+  createProductoCreditoVersion: (token: string, id: number) => request<ProductoCreditoRow>(`/api/v1/productos-creditos/${id}/versiones`, { method: 'POST' }, token),
+  deleteProductoCredito: (token: string, id: number) => request<{ deleted: boolean }>(`/api/v1/productos-creditos/${id}`, { method: 'DELETE' }, token),
   listProductoAtributos: (token: string, productoId: number) => request<ProductoAtributoRow[]>(`/api/v1/productos-creditos/${productoId}/atributos`, {}, token),
   createProductoAtributo: (token: string, productoId: number, body: unknown) =>
     request<ProductoAtributoRow[]>(`/api/v1/productos-creditos/${productoId}/atributos`, { method: 'POST', body: JSON.stringify(body) }, token),
+  updateProductoAtributo: (token: string, productoId: number, atributoId: number, body: unknown) =>
+    request<ProductoAtributoRow[]>(`/api/v1/productos-creditos/${productoId}/atributos/${atributoId}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deleteProductoAtributo: (token: string, productoId: number, atributoId: number) =>
+    request<ProductoAtributoRow[]>(`/api/v1/productos-creditos/${productoId}/atributos/${atributoId}`, { method: 'DELETE' }, token),
+  listProductoConvenios: (token: string, productoId: number) => request<ProductoConvenioRow[]>(`/api/v1/productos-creditos/${productoId}/convenios`, {}, token),
+  saveProductoConvenio: (token: string, productoId: number, body: unknown) =>
+    request<ProductoConvenioRow[]>(`/api/v1/productos-creditos/${productoId}/convenios`, { method: 'POST', body: JSON.stringify(body) }, token),
+  deleteProductoConvenio: (token: string, productoId: number, convenioId: number) =>
+    request<ProductoConvenioRow[]>(`/api/v1/productos-creditos/${productoId}/convenios/${convenioId}`, { method: 'DELETE' }, token),
   listProductoDocumentos: (token: string, productoId: number) => request<ProductoDocumentoRow[]>(`/api/v1/productos-creditos/${productoId}/documentos`, {}, token),
   createProductoDocumento: (token: string, productoId: number, body: unknown) =>
     request<ProductoDocumentoRow[]>(`/api/v1/productos-creditos/${productoId}/documentos`, { method: 'POST', body: JSON.stringify(body) }, token),
+  updateProductoDocumento: (token: string, productoId: number, documentoId: number, body: unknown) =>
+    request<ProductoDocumentoRow[]>(`/api/v1/productos-creditos/${productoId}/documentos/${documentoId}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deleteProductoDocumento: (token: string, productoId: number, documentoId: number) =>
+    request<ProductoDocumentoRow[]>(`/api/v1/productos-creditos/${productoId}/documentos/${documentoId}`, { method: 'DELETE' }, token),
   listProductoEtapas: (token: string, productoId: number) => request<ProductoEtapaRow[]>(`/api/v1/productos-creditos/${productoId}/etapas`, {}, token),
   createProductoEtapa: (token: string, productoId: number, body: unknown) =>
     request<ProductoEtapaRow[]>(`/api/v1/productos-creditos/${productoId}/etapas`, { method: 'POST', body: JSON.stringify(body) }, token),
   updateProductoEtapa: (token: string, productoId: number, etapaId: number, body: unknown) =>
     request<ProductoEtapaRow[]>(`/api/v1/productos-creditos/${productoId}/etapas/${etapaId}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deleteProductoEtapa: (token: string, productoId: number, etapaId: number) =>
+    request<ProductoEtapaRow[]>(`/api/v1/productos-creditos/${productoId}/etapas/${etapaId}`, { method: 'DELETE' }, token),
   listCreditosCatalogs: (token: string) => request<CreditosCatalogs>('/api/v1/creditos/catalogos', {}, token),
   listCreditos: (token: string) => request<CreditoRow[]>('/api/v1/creditos', {}, token),
   simularCredito: (token: string, body: unknown) => request<SimulacionCredito>('/api/v1/creditos/simular', { method: 'POST', body: JSON.stringify(body) }, token),
@@ -1045,15 +1271,29 @@ export const api = {
   listCreditoDocumentos: (token: string, creditoId: number) => request<CreditoDocumentoRow[]>(`/api/v1/creditos/${creditoId}/documentos`, {}, token),
   listCreditoEtapas: (token: string, creditoId: number) => request<CreditoEtapaRow[]>(`/api/v1/creditos/${creditoId}/etapas`, {}, token),
   getCreditoExpediente: (token: string, creditoId: number) => request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/expediente`, {}, token),
+  registrarEvaluacionCredito: (token: string, creditoId: number, body: unknown) =>
+    request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/evaluacion`, { method: 'POST', body: JSON.stringify(body) }, token),
+  registrarLiquidacionDefinitiva: (token: string, creditoId: number, body: unknown) =>
+    request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/liquidacion-definitiva`, { method: 'POST', body: JSON.stringify(body) }, token),
+  anularLiquidacionDefinitiva: (token: string, liquidacionId: number, body: unknown) =>
+    request<CreditoExpediente>(`/api/v1/creditos/liquidaciones/${liquidacionId}/anulacion`, { method: 'POST', body: JSON.stringify(body) }, token),
   decideCredito: (token: string, creditoId: number, body: unknown) =>
     request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/decision`, { method: 'POST', body: JSON.stringify(body) }, token),
   registrarDesembolso: (token: string, creditoId: number, body: unknown) =>
     request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/desembolso`, { method: 'POST', body: JSON.stringify(body) }, token),
+  anularDesembolsoCredito: (token: string, desembolsoId: number, body: unknown) =>
+    request<CreditoExpediente>(`/api/v1/creditos/desembolsos/${desembolsoId}/anulacion`, { method: 'POST', body: JSON.stringify(body) }, token),
+  causarCredito: (token: string, creditoId: number, body: unknown) =>
+    request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/causacion`, { method: 'POST', body: JSON.stringify(body) }, token),
   listOpcionesFondeo: (token: string) => request<FondeoDisponibleRow[]>('/api/v1/creditos/fondeo/opciones', {}, token),
   asignarFondeoCredito: (token: string, creditoId: number, body: unknown) =>
     request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/fondeo`, { method: 'POST', body: JSON.stringify(body) }, token),
   registrarPagoCredito: (token: string, creditoId: number, body: unknown) =>
     request<CreditoExpediente>(`/api/v1/creditos/${creditoId}/pagos`, { method: 'POST', body: JSON.stringify(body) }, token),
+  reversarPagoCredito: (token: string, pagoId: number, body: unknown) =>
+    request<CreditoExpediente>(`/api/v1/creditos/pagos/${pagoId}/reverso`, { method: 'POST', body: JSON.stringify(body) }, token),
+  registrarRecaudoMasivo: (token: string, body: unknown) =>
+    request<RecaudoMasivoResultado>('/api/v1/creditos/recaudos/masivo', { method: 'POST', body: JSON.stringify(body) }, token),
   uploadCreditoPagoSoporte: async (token: string, pagoId: number, file: File) => {
     const data = new FormData();
     data.append('file', file);
@@ -1126,3 +1366,4 @@ export const api = {
   simularPortalCredito: (token: string, body: unknown) => request<SimulacionCredito>('/api/v1/portal/simular', { method: 'POST', body: JSON.stringify(body) }, token),
   crearSolicitudPortal: (token: string, body: unknown) => request<CreditoRow>('/api/v1/portal/solicitudes', { method: 'POST', body: JSON.stringify(body) }, token)
 };
+
