@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { RichDocumentEditor } from './RichDocumentEditor';
 import { PdfFieldMapper } from './PdfFieldMapper';
+import { FormStepper, type StepItem } from './FormStepper';
 import {
   api,
   type AddressCatalogs,
@@ -4433,29 +4434,48 @@ function App() {
 
               {portalMode === 'registro' ? (
                 <form className="portal-form" onSubmit={handlePortalRegister}>
-                  <div className="form-section">
-                    <h3>Documento</h3>
-                    <div className="field-grid two-cols">
-                      <select value={portalRegisterForm.idTipoIdentificacion} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
-                        <option value="">Tipo documento</option>
-                        {portalCatalogs.tiposIdentificacion.map((item) => <option key={item.id} value={item.id}>{item.sigla} - {item.descripcion}</option>)}
-                      </select>
-                      <input value={portalRegisterForm.identificacion} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Numero de identificacion *" />
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <h3>Datos personales</h3>
-                    <div className="field-grid two-cols">
-                      <input value={portalRegisterForm.primerNombre} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
-                      <input value={portalRegisterForm.segundoNombre} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
-                      <input value={portalRegisterForm.primerApellido} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido" />
-                      <input value={portalRegisterForm.segundoApellido} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
-                      <input value={portalRegisterForm.telefono} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono" />
-                      <input value={portalRegisterForm.correo} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico *" />
-                      <input type="password" autoComplete="new-password" value={portalRegisterForm.password} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, password: event.target.value }))} placeholder="Contrasena *" />
-                    </div>
-                  </div>
-                  <button type="submit" disabled={loading}>{loading ? 'Registrando...' : 'Registrarse'}</button>
+                  <FormStepper
+                    steps={[
+                      {
+                        id: 'doc',
+                        title: 'Documento',
+                        subtitle: 'Identificación',
+                        content: (
+                          <div className="form-section">
+                            <h3>Documento e Identificación</h3>
+                            <div className="field-grid two-cols">
+                              <select value={portalRegisterForm.idTipoIdentificacion} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
+                                <option value="">Tipo documento</option>
+                                {portalCatalogs.tiposIdentificacion.map((item) => <option key={item.id} value={item.id}>{item.sigla} - {item.descripcion}</option>)}
+                              </select>
+                              <input value={portalRegisterForm.identificacion} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Numero de identificacion *" />
+                            </div>
+                          </div>
+                        )
+                      },
+                      {
+                        id: 'personal',
+                        title: 'Datos personales',
+                        subtitle: 'Nombres y contacto',
+                        content: (
+                          <div className="form-section">
+                            <h3>Datos personales y contraseña</h3>
+                            <div className="field-grid two-cols">
+                              <input value={portalRegisterForm.primerNombre} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
+                              <input value={portalRegisterForm.segundoNombre} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
+                              <input value={portalRegisterForm.primerApellido} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido" />
+                              <input value={portalRegisterForm.segundoApellido} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
+                              <input value={portalRegisterForm.telefono} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono" />
+                              <input value={portalRegisterForm.correo} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico *" />
+                              <input type="password" autoComplete="new-password" value={portalRegisterForm.password} onChange={(event) => setPortalRegisterForm((current) => ({ ...current, password: event.target.value }))} placeholder="Contrasena *" />
+                            </div>
+                          </div>
+                        )
+                      }
+                    ]}
+                    submitButtonText={loading ? 'Registrando...' : 'Registrarse'}
+                    submitButtonDisabled={loading}
+                  />
                 </form>
               ) : portalMode === 'login' ? (
                 <form className="portal-form" onSubmit={handlePortalLogin}>
@@ -4884,130 +4904,167 @@ function App() {
               <form className="surface pagaduria-form" onSubmit={handleCreateEmpresa}>
                 <div className="surface-title">
                   <h2>Crear empresa</h2>
-                  <button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar empresa'}</button>
                 </div>
 
-                <div className="form-section">
-                  <h3>Informacion general</h3>
-                  <div className="field-grid four-cols">
-                    <input value={empresaForm.nit} onChange={(event) => setEmpresaForm((current) => ({ ...current, nit: event.target.value }))} placeholder="NIT *" />
-                    <input value={empresaForm.razonSocial} onChange={(event) => setEmpresaForm((current) => ({ ...current, razonSocial: event.target.value }))} placeholder="Razon social *" />
-                    <input value={empresaForm.vendedor} onChange={(event) => setEmpresaForm((current) => ({ ...current, vendedor: event.target.value }))} placeholder="Vendedor" />
-                    <input value={empresaForm.domicilio} onChange={(event) => setEmpresaForm((current) => ({ ...current, domicilio: event.target.value }))} placeholder="Domicilio" />
-                    <input value={empresaForm.correo} onChange={(event) => setEmpresaForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo" />
-                    <input value={empresaForm.telefono} onChange={(event) => setEmpresaForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono" />
-                    <input value={empresaForm.codigo} onChange={(event) => setEmpresaForm((current) => ({ ...current, codigo: event.target.value }))} placeholder="Codigo" />
-                    <input value={empresaForm.naturaleza} onChange={(event) => setEmpresaForm((current) => ({ ...current, naturaleza: event.target.value }))} placeholder="Naturaleza" />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Representante y contacto</h3>
-                  <div className="field-grid four-cols">
-                    <input value={empresaForm.representanteLegal} onChange={(event) => setEmpresaForm((current) => ({ ...current, representanteLegal: event.target.value }))} placeholder="Representante legal" />
-                    <input value={empresaForm.tipoIdentificacionRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, tipoIdentificacionRepresentante: event.target.value }))} placeholder="D.I. representante" />
-                    <input value={empresaForm.identificacionRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, identificacionRepresentante: event.target.value }))} placeholder="Identificacion representante" />
-                    <input value={empresaForm.telefonoRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, telefonoRepresentante: event.target.value }))} placeholder="Telefono representante" />
-                    <input value={empresaForm.correoRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, correoRepresentante: event.target.value }))} placeholder="Correo representante" />
-                    <input value={empresaForm.contactoCargo} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoCargo: event.target.value }))} placeholder="Cargo contacto" />
-                    <input value={empresaForm.contactoNombre} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoNombre: event.target.value }))} placeholder="Nombre contacto" />
-                    <input value={empresaForm.contactoCorreo} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoCorreo: event.target.value }))} placeholder="Correo contacto" />
-                    <input value={empresaForm.contactoTelefono} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoTelefono: event.target.value }))} placeholder="Telefono contacto" />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Direccion principal</h3>
-                  {!addressCatalogs.tiposVia.length && (
-                    <div className="address-preview">No se han cargado los catalogos de direccion. Revisa la sesion o reinicia la API.</div>
-                  )}
-                  <div className="field-grid four-cols">
-                    <select value={empresaForm.direccion.idTipoVia} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
-                      <option value="">Tipo de via *</option>
-                      {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={empresaForm.direccion.numPrincipal} onChange={(event) => updatePrincipalNumber(event.target.value)} placeholder="Numero principal, ej. 59B" />
-                    <select value={empresaForm.direccion.idLetraPrincipal} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
-                      <option value="">Letra principal</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={empresaForm.direccion.bis} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, bis: event.target.value } }))} placeholder="Bis" />
-                    <select value={empresaForm.direccion.letraBis} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, letraBis: event.target.value } }))}>
-                      <option value="">Letra bis</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={empresaForm.direccion.cuadrantePrincipal} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, cuadrantePrincipal: event.target.value } }))} placeholder="Cuadrante principal" />
-                    <input value={empresaForm.direccion.numSecundario} onChange={(event) => updateSecondaryNumber(event.target.value)} placeholder="Numero secundario, ej. 120A" />
-                    <select value={empresaForm.direccion.idLetraSecundaria} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
-                      <option value="">Letra secundaria</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={empresaForm.direccion.cuadranteSecundario} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, cuadranteSecundario: event.target.value } }))} placeholder="Cuadrante secundario" />
-                    <input value={empresaForm.direccion.complemento} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
-                    <input value={empresaForm.direccion.barrio} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
-                    <div className="city-search" onBlur={() => window.setTimeout(() => setCityComboOpen(false), 120)}>
-                      <input
-                        value={citySearchValue}
-                        onFocus={() => setCityComboOpen(true)}
-                        onChange={(event) => {
-                          setCitySearch(event.target.value);
-                          setCityComboOpen(true);
-                          setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: '' } }));
-                        }}
-                        placeholder="Ciudad *"
-                      />
-                      {cityComboOpen && (
-                        <div className="city-results">
-                          {(citySearchValue ? filteredCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(item.id) } }));
-                                setCitySearch('');
-                                setCityComboOpen(false);
-                              }}
-                            >
-                              {item.nombre}
-                            </button>
-                          ))}
-                          {citySearchValue && !filteredCities.length && <span>No hay coincidencias</span>}
+                <FormStepper
+                  steps={[
+                    {
+                      id: 'general',
+                      title: 'Información general',
+                      subtitle: 'Datos básicos de la empresa',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion general</h3>
+                          <div className="field-grid four-cols">
+                            <input value={empresaForm.nit} onChange={(event) => setEmpresaForm((current) => ({ ...current, nit: event.target.value }))} placeholder="NIT *" />
+                            <input value={empresaForm.razonSocial} onChange={(event) => setEmpresaForm((current) => ({ ...current, razonSocial: event.target.value }))} placeholder="Razon social *" />
+                            <input value={empresaForm.vendedor} onChange={(event) => setEmpresaForm((current) => ({ ...current, vendedor: event.target.value }))} placeholder="Vendedor" />
+                            <input value={empresaForm.domicilio} onChange={(event) => setEmpresaForm((current) => ({ ...current, domicilio: event.target.value }))} placeholder="Domicilio" />
+                            <input value={empresaForm.correo} onChange={(event) => setEmpresaForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo" />
+                            <input value={empresaForm.telefono} onChange={(event) => setEmpresaForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono" />
+                            <input value={empresaForm.codigo} onChange={(event) => setEmpresaForm((current) => ({ ...current, codigo: event.target.value }))} placeholder="Codigo" />
+                            <input value={empresaForm.naturaleza} onChange={(event) => setEmpresaForm((current) => ({ ...current, naturaleza: event.target.value }))} placeholder="Naturaleza" />
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="address-preview">{selectedAddressText || 'La direccion se ira armando con los campos seleccionados.'}</div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Calendario de nomina y libranza</h3>
-                  <div className="field-grid four-cols">
-                    <select value={empresaForm.periodicidadNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, periodicidadNomina: event.target.value }))}>
-                      <option value="MENSUAL">Nomina mensual</option>
-                      <option value="QUINCENAL">Nomina quincenal</option>
-                    </select>
-                    <input value={empresaForm.diaCorteNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, diaCorteNomina: event.target.value }))} placeholder="Dia corte nomina" />
-                    <input value={empresaForm.diaPagoNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, diaPagoNomina: event.target.value }))} placeholder="Dia pago nomina" />
-                    <input value={empresaForm.segundoDiaPagoNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, segundoDiaPagoNomina: event.target.value }))} placeholder="Segundo dia pago" />
-                    <input value={empresaForm.diaDescuentoLibranza} onChange={(event) => setEmpresaForm((current) => ({ ...current, diaDescuentoLibranza: event.target.value }))} placeholder="Dia descuento libranza" />
-                    <label className="inline-check"><input type="checkbox" checked={empresaForm.ajustarFinSemana} onChange={(event) => setEmpresaForm((current) => ({ ...current, ajustarFinSemana: event.target.checked }))} />Ajustar fin de semana</label>
-                    <input value={empresaForm.observacionCalendario} onChange={(event) => setEmpresaForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Observacion calendario" />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Informacion financiera y camara de comercio</h3>
-                  <div className="field-grid four-cols">
-                    <input type="date" value={empresaForm.fechaConstitucion} onChange={(event) => setEmpresaForm((current) => ({ ...current, fechaConstitucion: event.target.value }))} />
-                    <input value={empresaForm.capitalSociedad} onChange={(event) => setEmpresaForm((current) => ({ ...current, capitalSociedad: event.target.value }))} placeholder="Capital de sociedad" />
-                    <input type="date" value={empresaForm.fechaVenta} onChange={(event) => setEmpresaForm((current) => ({ ...current, fechaVenta: event.target.value }))} />
-                    <input value={empresaForm.ventasFecha} onChange={(event) => setEmpresaForm((current) => ({ ...current, ventasFecha: event.target.value }))} placeholder="Ventas de la fecha" />
-                    <input value={empresaForm.camaraNumero} onChange={(event) => setEmpresaForm((current) => ({ ...current, camaraNumero: event.target.value }))} placeholder="Camara numero" />
-                    <input value={empresaForm.camaraLibro} onChange={(event) => setEmpresaForm((current) => ({ ...current, camaraLibro: event.target.value }))} placeholder="Libro" />
-                    <input value={empresaForm.camaraCiudad} onChange={(event) => setEmpresaForm((current) => ({ ...current, camaraCiudad: event.target.value }))} placeholder="Ciudad camara" />
-                  </div>
-                </div>
+                      )
+                    },
+                    {
+                      id: 'representante',
+                      title: 'Representante y contacto',
+                      subtitle: 'Rep. legal y contacto',
+                      content: (
+                        <div className="form-section">
+                          <h3>Representante y contacto</h3>
+                          <div className="field-grid four-cols">
+                            <input value={empresaForm.representanteLegal} onChange={(event) => setEmpresaForm((current) => ({ ...current, representanteLegal: event.target.value }))} placeholder="Representante legal" />
+                            <input value={empresaForm.tipoIdentificacionRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, tipoIdentificacionRepresentante: event.target.value }))} placeholder="D.I. representante" />
+                            <input value={empresaForm.identificacionRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, identificacionRepresentante: event.target.value }))} placeholder="Identificacion representante" />
+                            <input value={empresaForm.telefonoRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, telefonoRepresentante: event.target.value }))} placeholder="Telefono representante" />
+                            <input value={empresaForm.correoRepresentante} onChange={(event) => setEmpresaForm((current) => ({ ...current, correoRepresentante: event.target.value }))} placeholder="Correo representante" />
+                            <input value={empresaForm.contactoCargo} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoCargo: event.target.value }))} placeholder="Cargo contacto" />
+                            <input value={empresaForm.contactoNombre} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoNombre: event.target.value }))} placeholder="Nombre contacto" />
+                            <input value={empresaForm.contactoCorreo} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoCorreo: event.target.value }))} placeholder="Correo contacto" />
+                            <input value={empresaForm.contactoTelefono} onChange={(event) => setEmpresaForm((current) => ({ ...current, contactoTelefono: event.target.value }))} placeholder="Telefono contacto" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'direccion',
+                      title: 'Dirección principal',
+                      subtitle: 'Ubicación física',
+                      content: (
+                        <div className="form-section">
+                          <h3>Direccion principal</h3>
+                          {!addressCatalogs.tiposVia.length && (
+                            <div className="address-preview">No se han cargado los catalogos de direccion. Revisa la sesion o reinicia la API.</div>
+                          )}
+                          <div className="field-grid four-cols">
+                            <select value={empresaForm.direccion.idTipoVia} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
+                              <option value="">Tipo de via *</option>
+                              {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={empresaForm.direccion.numPrincipal} onChange={(event) => updatePrincipalNumber(event.target.value)} placeholder="Numero principal, ej. 59B" />
+                            <select value={empresaForm.direccion.idLetraPrincipal} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
+                              <option value="">Letra principal</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={empresaForm.direccion.bis} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, bis: event.target.value } }))} placeholder="Bis" />
+                            <select value={empresaForm.direccion.letraBis} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, letraBis: event.target.value } }))}>
+                              <option value="">Letra bis</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={empresaForm.direccion.cuadrantePrincipal} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, cuadrantePrincipal: event.target.value } }))} placeholder="Cuadrante principal" />
+                            <input value={empresaForm.direccion.numSecundario} onChange={(event) => updateSecondaryNumber(event.target.value)} placeholder="Numero secundario, ej. 120A" />
+                            <select value={empresaForm.direccion.idLetraSecundaria} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
+                              <option value="">Letra secundaria</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={empresaForm.direccion.cuadranteSecundario} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, cuadranteSecundario: event.target.value } }))} placeholder="Cuadrante secundario" />
+                            <input value={empresaForm.direccion.complemento} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
+                            <input value={empresaForm.direccion.barrio} onChange={(event) => setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
+                            <div className="city-search" onBlur={() => window.setTimeout(() => setCityComboOpen(false), 120)}>
+                              <input
+                                value={citySearchValue}
+                                onFocus={() => setCityComboOpen(true)}
+                                onChange={(event) => {
+                                  setCitySearch(event.target.value);
+                                  setCityComboOpen(true);
+                                  setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: '' } }));
+                                }}
+                                placeholder="Ciudad *"
+                              />
+                              {cityComboOpen && (
+                                <div className="city-results">
+                                  {(citySearchValue ? filteredCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
+                                    <button
+                                      key={item.id}
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => {
+                                        setEmpresaForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(item.id) } }));
+                                        setCitySearch('');
+                                        setCityComboOpen(false);
+                                      }}
+                                    >
+                                      {item.nombre}
+                                    </button>
+                                  ))}
+                                  {citySearchValue && !filteredCities.length && <span>No hay coincidencias</span>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="address-preview">{selectedAddressText || 'La direccion se ira armando con los campos seleccionados.'}</div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'calendario',
+                      title: 'Nómina y libranza',
+                      subtitle: 'Fechas y periodicidad',
+                      content: (
+                        <div className="form-section">
+                          <h3>Calendario de nomina y libranza</h3>
+                          <div className="field-grid four-cols">
+                            <select value={empresaForm.periodicidadNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, periodicidadNomina: event.target.value }))}>
+                              <option value="MENSUAL">Nomina mensual</option>
+                              <option value="QUINCENAL">Nomina quincenal</option>
+                            </select>
+                            <input value={empresaForm.diaCorteNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, diaCorteNomina: event.target.value }))} placeholder="Dia corte nomina" />
+                            <input value={empresaForm.diaPagoNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, diaPagoNomina: event.target.value }))} placeholder="Dia pago nomina" />
+                            <input value={empresaForm.segundoDiaPagoNomina} onChange={(event) => setEmpresaForm((current) => ({ ...current, segundoDiaPagoNomina: event.target.value }))} placeholder="Segundo dia pago" />
+                            <input value={empresaForm.diaDescuentoLibranza} onChange={(event) => setEmpresaForm((current) => ({ ...current, diaDescuentoLibranza: event.target.value }))} placeholder="Dia descuento libranza" />
+                            <label className="inline-check"><input type="checkbox" checked={empresaForm.ajustarFinSemana} onChange={(event) => setEmpresaForm((current) => ({ ...current, ajustarFinSemana: event.target.checked }))} />Ajustar fin de semana</label>
+                            <input value={empresaForm.observacionCalendario} onChange={(event) => setEmpresaForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Observacion calendario" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'legal',
+                      title: 'Financiera y Cámara',
+                      subtitle: 'Cámara de comercio y capital',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion financiera y camara de comercio</h3>
+                          <div className="field-grid four-cols">
+                            <input type="date" value={empresaForm.fechaConstitucion} onChange={(event) => setEmpresaForm((current) => ({ ...current, fechaConstitucion: event.target.value }))} />
+                            <input value={empresaForm.capitalSociedad} onChange={(event) => setEmpresaForm((current) => ({ ...current, capitalSociedad: event.target.value }))} placeholder="Capital de sociedad" />
+                            <input type="date" value={empresaForm.fechaVenta} onChange={(event) => setEmpresaForm((current) => ({ ...current, fechaVenta: event.target.value }))} />
+                            <input value={empresaForm.ventasFecha} onChange={(event) => setEmpresaForm((current) => ({ ...current, ventasFecha: event.target.value }))} placeholder="Ventas de la fecha" />
+                            <input value={empresaForm.camaraNumero} onChange={(event) => setEmpresaForm((current) => ({ ...current, camaraNumero: event.target.value }))} placeholder="Camara numero" />
+                            <input value={empresaForm.camaraLibro} onChange={(event) => setEmpresaForm((current) => ({ ...current, camaraLibro: event.target.value }))} placeholder="Libro" />
+                            <input value={empresaForm.camaraCiudad} onChange={(event) => setEmpresaForm((current) => ({ ...current, camaraCiudad: event.target.value }))} placeholder="Ciudad camara" />
+                          </div>
+                        </div>
+                      )
+                    }
+                  ]}
+                  submitButtonText={loading ? 'Guardando...' : 'Guardar empresa'}
+                  submitButtonDisabled={loading}
+                  showSubmitAlways={true}
+                />
               </form>
             )}
 
@@ -5085,49 +5142,91 @@ function App() {
                   <span>{empleadosEmpresa.length} empleados</span>
                 </div>
                 <form className="employee-form" onSubmit={handleCreateEmpleado}>
-                  <select value={empleadoForm.idTipoIdentificacion} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
-                    <option value="">Tipo documento</option>
-                    {identificationTypes.map((type) => (
-                      <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>
-                    ))}
-                  </select>
-                  <input value={empleadoForm.identificacion} onChange={(event) => setEmpleadoForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Identificacion" />
-                  <input value={empleadoForm.primerNombre} onChange={(event) => setEmpleadoForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre" />
-                  <input value={empleadoForm.segundoNombre} onChange={(event) => setEmpleadoForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
-                  <input value={empleadoForm.primerApellido} onChange={(event) => setEmpleadoForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido" />
-                  <input value={empleadoForm.segundoApellido} onChange={(event) => setEmpleadoForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
-                  <input value={empleadoForm.correo} onChange={(event) => setEmpleadoForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo" />
-                  <input value={empleadoForm.telefono} onChange={(event) => setEmpleadoForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono" />
-                  <input value={empleadoForm.cargo} onChange={(event) => setEmpleadoForm((current) => ({ ...current, cargo: event.target.value }))} placeholder="Cargo" />
-                  <select value={empleadoForm.idTipoContrato} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoContrato: event.target.value }))}>
-                    <option value="">Tipo de contrato</option>
-                    {employeeCatalogs.tiposContrato.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <input value={empleadoForm.salario} onChange={(event) => setEmpleadoForm((current) => ({ ...current, salario: event.target.value }))} placeholder="Salario" />
-                  <select value={empleadoForm.idBanco} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idBanco: event.target.value }))}>
-                    <option value="">Entidad bancaria</option>
-                    {employeeCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <select value={empleadoForm.idTipoCuenta} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
-                    <option value="">Tipo de cuenta</option>
-                    {employeeCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <input value={empleadoForm.cuentaNomina} onChange={(event) => setEmpleadoForm((current) => ({ ...current, cuentaNomina: event.target.value }))} placeholder="Cuenta de nomina" />
-                  <label className="inline-check">
-                    <input type="checkbox" checked={empleadoForm.tieneEmbargos} onChange={(event) => setEmpleadoForm((current) => ({ ...current, tieneEmbargos: event.target.checked }))} />
-                    Tiene embargos
-                  </label>
-                  <select value={empleadoForm.idEstadoCivil} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idEstadoCivil: event.target.value }))}>
-                    <option value="">Estado civil</option>
-                    {employeeCatalogs.estadosCivil.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <input value={empleadoForm.personasCargo} onChange={(event) => setEmpleadoForm((current) => ({ ...current, personasCargo: event.target.value }))} placeholder="Personas a cargo" />
-                  <select value={empleadoForm.idTipoVivienda} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoVivienda: event.target.value }))}>
-                    <option value="">Tipo de vivienda</option>
-                    {employeeCatalogs.tiposVivienda.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select>
-                  <input type="date" value={empleadoForm.fechaIngreso} onChange={(event) => setEmpleadoForm((current) => ({ ...current, fechaIngreso: event.target.value }))} />
-                  <button type="submit" disabled={!selectedEmpresaId || loading}>Guardar empleado</button>
+                  <FormStepper
+                    steps={[
+                      {
+                        id: 'personal',
+                        title: 'Identificación y nombres',
+                        subtitle: 'Datos personales',
+                        content: (
+                          <div className="form-section">
+                            <h3>Identificación y Datos Personales</h3>
+                            <div className="field-grid four-cols">
+                              <select value={empleadoForm.idTipoIdentificacion} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
+                                <option value="">Tipo documento</option>
+                                {identificationTypes.map((type) => (
+                                  <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>
+                                ))}
+                              </select>
+                              <input value={empleadoForm.identificacion} onChange={(event) => setEmpleadoForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Identificacion" />
+                              <input value={empleadoForm.primerNombre} onChange={(event) => setEmpleadoForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre" />
+                              <input value={empleadoForm.segundoNombre} onChange={(event) => setEmpleadoForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
+                              <input value={empleadoForm.primerApellido} onChange={(event) => setEmpleadoForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido" />
+                              <input value={empleadoForm.segundoApellido} onChange={(event) => setEmpleadoForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
+                              <input value={empleadoForm.correo} onChange={(event) => setEmpleadoForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo" />
+                              <input value={empleadoForm.telefono} onChange={(event) => setEmpleadoForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono" />
+                            </div>
+                          </div>
+                        )
+                      },
+                      {
+                        id: 'laboral',
+                        title: 'Información laboral',
+                        subtitle: 'Cargo, contrato y salario',
+                        content: (
+                          <div className="form-section">
+                            <h3>Información Laboral y Contrato</h3>
+                            <div className="field-grid four-cols">
+                              <input value={empleadoForm.cargo} onChange={(event) => setEmpleadoForm((current) => ({ ...current, cargo: event.target.value }))} placeholder="Cargo" />
+                              <select value={empleadoForm.idTipoContrato} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoContrato: event.target.value }))}>
+                                <option value="">Tipo de contrato</option>
+                                {employeeCatalogs.tiposContrato.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <input value={empleadoForm.salario} onChange={(event) => setEmpleadoForm((current) => ({ ...current, salario: event.target.value }))} placeholder="Salario" />
+                              <input type="date" value={empleadoForm.fechaIngreso} onChange={(event) => setEmpleadoForm((current) => ({ ...current, fechaIngreso: event.target.value }))} />
+                              <label className="inline-check">
+                                <input type="checkbox" checked={empleadoForm.tieneEmbargos} onChange={(event) => setEmpleadoForm((current) => ({ ...current, tieneEmbargos: event.target.checked }))} />
+                                Tiene embargos
+                              </label>
+                            </div>
+                          </div>
+                        )
+                      },
+                      {
+                        id: 'bancaria',
+                        title: 'Banco y hogar',
+                        subtitle: 'Nómina, estado civil y vivienda',
+                        content: (
+                          <div className="form-section">
+                            <h3>Información Bancaria y Estado Civil</h3>
+                            <div className="field-grid four-cols">
+                              <select value={empleadoForm.idBanco} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idBanco: event.target.value }))}>
+                                <option value="">Entidad bancaria</option>
+                                {employeeCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <select value={empleadoForm.idTipoCuenta} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
+                                <option value="">Tipo de cuenta</option>
+                                {employeeCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <input value={empleadoForm.cuentaNomina} onChange={(event) => setEmpleadoForm((current) => ({ ...current, cuentaNomina: event.target.value }))} placeholder="Cuenta de nomina" />
+                              <select value={empleadoForm.idEstadoCivil} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idEstadoCivil: event.target.value }))}>
+                                <option value="">Estado civil</option>
+                                {employeeCatalogs.estadosCivil.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <input value={empleadoForm.personasCargo} onChange={(event) => setEmpleadoForm((current) => ({ ...current, personasCargo: event.target.value }))} placeholder="Personas a cargo" />
+                              <select value={empleadoForm.idTipoVivienda} onChange={(event) => setEmpleadoForm((current) => ({ ...current, idTipoVivienda: event.target.value }))}>
+                                <option value="">Tipo de vivienda</option>
+                                {employeeCatalogs.tiposVivienda.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        )
+                      }
+                    ]}
+                    submitButtonText={loading ? 'Guardando...' : 'Guardar empleado'}
+                    submitButtonDisabled={!selectedEmpresaId || loading}
+                    showSubmitAlways={true}
+                  />
                 </form>
 
                 <div className="bulk-box">
@@ -5201,114 +5300,140 @@ function App() {
               <form className="surface pagaduria-form" onSubmit={handleCreateSocio}>
                 <div className="surface-title">
                   <h2>Crear socio</h2>
-                  <button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar socio'}</button>
-                </div>
-                <div className="form-section">
-                  <h3>Informacion general</h3>
-                  <div className="field-grid four-cols">
-                    <select value={socioForm.idTipoIdentificacion} onChange={(event) => setSocioForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
-                      <option value="">Tipo documento *</option>
-                      {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
-                    </select>
-                    <input value={socioForm.identificacion} onChange={(event) => setSocioForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Identificacion *" />
-                    <input value={socioForm.primerNombre} onChange={(event) => setSocioForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
-                    <input value={socioForm.segundoNombre} onChange={(event) => setSocioForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
-                    <input value={socioForm.primerApellido} onChange={(event) => setSocioForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido *" />
-                    <input value={socioForm.segundoApellido} onChange={(event) => setSocioForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
-                    <input value={socioForm.telefono} onChange={(event) => setSocioForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono *" />
-                    <input value={socioForm.correo} onChange={(event) => setSocioForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo *" />
-                    <input type="date" value={socioForm.fechaNacimiento} onChange={(event) => setSocioForm((current) => ({ ...current, fechaNacimiento: event.target.value }))} />
-                  </div>
                 </div>
 
-                <div className="form-section">
-                  <h3>Direccion principal</h3>
-                  <div className="field-grid four-cols">
-                    <select value={socioForm.direccion.idTipoVia} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
-                      <option value="">Tipo de via *</option>
-                      {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={socioForm.direccion.numPrincipal} onChange={(event) => updateSocioPrincipalNumber(event.target.value)} placeholder="Numero principal, ej. 59B" />
-                    <select value={socioForm.direccion.idLetraPrincipal} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
-                      <option value="">Letra principal</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={socioForm.direccion.bis} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, bis: event.target.value } }))} placeholder="Bis" />
-                    <select value={socioForm.direccion.letraBis} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, letraBis: event.target.value } }))}>
-                      <option value="">Letra bis</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={socioForm.direccion.cuadrantePrincipal} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, cuadrantePrincipal: event.target.value } }))} placeholder="Cuadrante principal" />
-                    <input value={socioForm.direccion.numSecundario} onChange={(event) => updateSocioSecondaryNumber(event.target.value)} placeholder="Numero secundario, ej. 120A" />
-                    <select value={socioForm.direccion.idLetraSecundaria} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
-                      <option value="">Letra secundaria</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={socioForm.direccion.cuadranteSecundario} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, cuadranteSecundario: event.target.value } }))} placeholder="Cuadrante secundario" />
-                    <input value={socioForm.direccion.complemento} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
-                    <input value={socioForm.direccion.barrio} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
-                    <div
-                      className="city-search"
-                      onBlur={() => window.setTimeout(() => {
-                        const typedCity = socioCitySearch.trim().toLowerCase();
-                        const matchedCity = typedCity
-                          ? addressCatalogs.ciudades.find((item) => item.nombre.trim().toLowerCase() === typedCity)
-                          : null;
-                        if (matchedCity) {
-                          setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(matchedCity.id) } }));
-                          setSocioCitySearch('');
-                        }
-                        setSocioCityComboOpen(false);
-                      }, 120)}
-                    >
-                      <input
-                        value={socioCitySearchValue}
-                        onFocus={() => setSocioCityComboOpen(true)}
-                        onChange={(event) => {
-                          setSocioCitySearch(event.target.value);
-                          setSocioCityComboOpen(true);
-                          setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: '' } }));
-                        }}
-                        placeholder="Ciudad *"
-                      />
-                      {socioCityComboOpen && (
-                        <div className="city-results">
-                          {(socioCitySearchValue ? filteredSocioCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(item.id) } }));
-                                setSocioCitySearch('');
-                                setSocioCityComboOpen(false);
-                              }}
-                            >
-                              {item.nombre}
-                            </button>
-                          ))}
-                          {socioCitySearchValue && !filteredSocioCities.length && <span>No hay coincidencias</span>}
+                <FormStepper
+                  steps={[
+                    {
+                      id: 'general',
+                      title: 'Identificación y contacto',
+                      subtitle: 'Datos personales del socio',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion general</h3>
+                          <div className="field-grid four-cols">
+                            <select value={socioForm.idTipoIdentificacion} onChange={(event) => setSocioForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
+                              <option value="">Tipo documento *</option>
+                              {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
+                            </select>
+                            <input value={socioForm.identificacion} onChange={(event) => setSocioForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Identificacion *" />
+                            <input value={socioForm.primerNombre} onChange={(event) => setSocioForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
+                            <input value={socioForm.segundoNombre} onChange={(event) => setSocioForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
+                            <input value={socioForm.primerApellido} onChange={(event) => setSocioForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido *" />
+                            <input value={socioForm.segundoApellido} onChange={(event) => setSocioForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
+                            <input value={socioForm.telefono} onChange={(event) => setSocioForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Telefono *" />
+                            <input value={socioForm.correo} onChange={(event) => setSocioForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo *" />
+                            <input type="date" value={socioForm.fechaNacimiento} onChange={(event) => setSocioForm((current) => ({ ...current, fechaNacimiento: event.target.value }))} />
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="address-preview">{selectedSocioAddressText || 'La direccion del socio se ira armando con los campos seleccionados.'}</div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Informacion financiera</h3>
-                  <div className="field-grid four-cols">
-                    <select value={socioForm.idBanco} onChange={(event) => setSocioForm((current) => ({ ...current, idBanco: event.target.value }))}>
-                      <option value="">Entidad bancaria</option>
-                      {sociosCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <select value={socioForm.idTipoCuenta} onChange={(event) => setSocioForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
-                      <option value="">Tipo de cuenta</option>
-                      {sociosCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={socioForm.numeroCuenta} onChange={(event) => setSocioForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Cuenta de ahorros / bancaria" />
-                  </div>
-                </div>
+                      )
+                    },
+                    {
+                      id: 'direccion',
+                      title: 'Dirección principal',
+                      subtitle: 'Ubicación de residencia',
+                      content: (
+                        <div className="form-section">
+                          <h3>Direccion principal</h3>
+                          <div className="field-grid four-cols">
+                            <select value={socioForm.direccion.idTipoVia} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
+                              <option value="">Tipo de via *</option>
+                              {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={socioForm.direccion.numPrincipal} onChange={(event) => updateSocioPrincipalNumber(event.target.value)} placeholder="Numero principal, ej. 59B" />
+                            <select value={socioForm.direccion.idLetraPrincipal} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
+                              <option value="">Letra principal</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={socioForm.direccion.bis} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, bis: event.target.value } }))} placeholder="Bis" />
+                            <select value={socioForm.direccion.letraBis} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, letraBis: event.target.value } }))}>
+                              <option value="">Letra bis</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={socioForm.direccion.cuadrantePrincipal} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, cuadrantePrincipal: event.target.value } }))} placeholder="Cuadrante principal" />
+                            <input value={socioForm.direccion.numSecundario} onChange={(event) => updateSocioSecondaryNumber(event.target.value)} placeholder="Numero secundario, ej. 120A" />
+                            <select value={socioForm.direccion.idLetraSecundaria} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
+                              <option value="">Letra secundaria</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={socioForm.direccion.cuadranteSecundario} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, cuadranteSecundario: event.target.value } }))} placeholder="Cuadrante secundario" />
+                            <input value={socioForm.direccion.complemento} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
+                            <input value={socioForm.direccion.barrio} onChange={(event) => setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
+                            <div
+                              className="city-search"
+                              onBlur={() => window.setTimeout(() => {
+                                const typedCity = socioCitySearch.trim().toLowerCase();
+                                const matchedCity = typedCity
+                                  ? addressCatalogs.ciudades.find((item) => item.nombre.trim().toLowerCase() === typedCity)
+                                  : null;
+                                if (matchedCity) {
+                                  setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(matchedCity.id) } }));
+                                  setSocioCitySearch('');
+                                }
+                                setSocioCityComboOpen(false);
+                              }, 120)}
+                            >
+                              <input
+                                value={socioCitySearchValue}
+                                onFocus={() => setSocioCityComboOpen(true)}
+                                onChange={(event) => {
+                                  setSocioCitySearch(event.target.value);
+                                  setSocioCityComboOpen(true);
+                                  setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: '' } }));
+                                }}
+                                placeholder="Ciudad *"
+                              />
+                              {socioCityComboOpen && (
+                                <div className="city-results">
+                                  {(socioCitySearchValue ? filteredSocioCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
+                                    <button
+                                      key={item.id}
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => {
+                                        setSocioForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(item.id) } }));
+                                        setSocioCitySearch('');
+                                        setSocioCityComboOpen(false);
+                                      }}
+                                    >
+                                      {item.nombre}
+                                    </button>
+                                  ))}
+                                  {socioCitySearchValue && !filteredSocioCities.length && <span>No hay coincidencias</span>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="address-preview">{selectedSocioAddressText || 'La direccion del socio se ira armando con los campos seleccionados.'}</div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'bancaria',
+                      title: 'Información financiera',
+                      subtitle: 'Datos de la cuenta bancaria',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion financiera</h3>
+                          <div className="field-grid four-cols">
+                            <select value={socioForm.idBanco} onChange={(event) => setSocioForm((current) => ({ ...current, idBanco: event.target.value }))}>
+                              <option value="">Entidad bancaria</option>
+                              {sociosCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={socioForm.idTipoCuenta} onChange={(event) => setSocioForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
+                              <option value="">Tipo de cuenta</option>
+                              {sociosCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={socioForm.numeroCuenta} onChange={(event) => setSocioForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Cuenta de ahorros / bancaria" />
+                          </div>
+                        </div>
+                      )
+                    }
+                  ]}
+                  submitButtonText={loading ? 'Guardando...' : 'Guardar socio'}
+                  submitButtonDisabled={loading}
+                  showSubmitAlways={true}
+                />
               </form>
             )}
 
@@ -5460,191 +5585,226 @@ function App() {
               <form className="surface pagaduria-form" onSubmit={handleCreateAliado}>
                 <div className="surface-title">
                   <h2>Crear aliado comercial</h2>
-                  <button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar aliado'}</button>
                 </div>
 
-                <div className="form-section">
-                  <h3>Informacion personal</h3>
-                  <div className="field-grid four-cols">
-                    <input value={aliadoForm.logoUrl} onChange={(event) => setAliadoForm((current) => ({ ...current, logoUrl: event.target.value }))} placeholder="URL del logo" />
-                    <select value={aliadoForm.idTipoIdentificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
-                      <option value="">Tipo documento *</option>
-                      {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
-                    </select>
-                    <input value={aliadoForm.identificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Numero de identificacion *" />
-                    <input value={aliadoForm.primerNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
-                    <input value={aliadoForm.segundoNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
-                    <input value={aliadoForm.primerApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido *" />
-                    <input value={aliadoForm.segundoApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
-                    <input type="date" value={aliadoForm.fechaNacimiento} onChange={(event) => setAliadoForm((current) => ({ ...current, fechaNacimiento: event.target.value }))} />
-                    <input value={aliadoForm.telefono} onChange={(event) => setAliadoForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Numero de telefono *" />
-                    <input value={aliadoForm.correo} onChange={(event) => setAliadoForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico *" />
-                  </div>
-                </div>
-
-                <div className="content-grid pagaduria-grid">
-                  <div className="form-section">
-                    <h3>Domicilio</h3>
-                    <div className="field-grid three-cols">
-                      <select value={aliadoForm.direccion.idTipoVia} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
-                        <option value="">Tipo de via *</option>
-                        {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <input value={aliadoForm.direccion.numPrincipal} onChange={(event) => updateAliadoPrincipalNumber(event.target.value)} placeholder="Primer numero de via, ej. 59B" />
-                      <input value={aliadoForm.direccion.numSecundario} onChange={(event) => updateAliadoSecondaryNumber(event.target.value)} placeholder="Segundo numero de via, ej. 120A" />
-                      <select value={aliadoForm.direccion.idLetraPrincipal} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
-                        <option value="">Letra principal</option>
-                        {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <select value={aliadoForm.direccion.idLetraSecundaria} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
-                        <option value="">Letra secundaria</option>
-                        {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <input value={aliadoForm.direccion.complemento} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
-                      <input value={aliadoForm.direccion.barrio} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
-                      <div className="city-search" onBlur={() => window.setTimeout(() => setAliadoCityComboOpen(false), 120)}>
-                        <input
-                          value={aliadoCitySearchValue}
-                          onFocus={() => setAliadoCityComboOpen(true)}
-                          onChange={(event) => {
-                            setAliadoCitySearch(event.target.value);
-                            setAliadoCityComboOpen(true);
-                            setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: '' } }));
-                          }}
-                          placeholder="Ciudad *"
-                        />
-                        {aliadoCityComboOpen && (
-                          <div className="city-results">
-                            {(aliadoCitySearchValue ? filteredAliadoCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onMouseDown={(event) => event.preventDefault()}
-                                onClick={() => {
-                                  setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(item.id) } }));
-                                  setAliadoCitySearch('');
-                                  setAliadoCityComboOpen(false);
-                                }}
-                              >
-                                {item.nombre}
-                              </button>
-                            ))}
-                            {aliadoCitySearchValue && !filteredAliadoCities.length && <span>No hay coincidencias</span>}
+                <FormStepper
+                  steps={[
+                    {
+                      id: 'personal',
+                      title: 'Información del aliado',
+                      subtitle: 'Datos de contacto y logo',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion personal</h3>
+                          <div className="field-grid four-cols">
+                            <input value={aliadoForm.logoUrl} onChange={(event) => setAliadoForm((current) => ({ ...current, logoUrl: event.target.value }))} placeholder="URL del logo" />
+                            <select value={aliadoForm.idTipoIdentificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
+                              <option value="">Tipo documento *</option>
+                              {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
+                            </select>
+                            <input value={aliadoForm.identificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Numero de identificacion *" />
+                            <input value={aliadoForm.primerNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
+                            <input value={aliadoForm.segundoNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
+                            <input value={aliadoForm.primerApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido *" />
+                            <input value={aliadoForm.segundoApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
+                            <input type="date" value={aliadoForm.fechaNacimiento} onChange={(event) => setAliadoForm((current) => ({ ...current, fechaNacimiento: event.target.value }))} />
+                            <input value={aliadoForm.telefono} onChange={(event) => setAliadoForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Numero de telefono *" />
+                            <input value={aliadoForm.correo} onChange={(event) => setAliadoForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico *" />
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="address-preview">{selectedAliadoAddressText || 'La direccion del aliado se ira armando con los campos seleccionados.'}</div>
-                  </div>
-
-                  <div className="form-section">
-                    <h3>Informacion bancaria</h3>
-                    <div className="field-grid three-cols">
-                      <select value={aliadoForm.idBanco} onChange={(event) => setAliadoForm((current) => ({ ...current, idBanco: event.target.value }))}>
-                        <option value="">Entidad bancaria *</option>
-                        {aliadosCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <select value={aliadoForm.idTipoCuenta} onChange={(event) => setAliadoForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
-                        <option value="">Tipo de cuenta *</option>
-                        {aliadosCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <input value={aliadoForm.numeroCuenta} onChange={(event) => setAliadoForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta *" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Representante legal</h3>
-                  <div className="field-grid four-cols">
-                    <select value={aliadoForm.representante.idTipoIdentificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, idTipoIdentificacion: event.target.value } }))}>
-                      <option value="">Tipo de documento</option>
-                      {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
-                    </select>
-                    <input value={aliadoForm.representante.identificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, identificacion: event.target.value } }))} placeholder="Numero de identificacion" />
-                    <input value={aliadoForm.representante.primerNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, primerNombre: event.target.value } }))} placeholder="Primer nombre" />
-                    <input value={aliadoForm.representante.segundoNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, segundoNombre: event.target.value } }))} placeholder="Segundo nombre" />
-                    <input value={aliadoForm.representante.primerApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, primerApellido: event.target.value } }))} placeholder="Primer apellido" />
-                    <input value={aliadoForm.representante.segundoApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, segundoApellido: event.target.value } }))} placeholder="Segundo apellido" />
-                    <select value={aliadoForm.representante.genero} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, genero: event.target.value } }))}>
-                      <option value="">Genero</option>
-                      {aliadosCatalogs.generos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={aliadoForm.representante.telefono} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, telefono: event.target.value } }))} placeholder="Numero de telefono" />
-                    <input value={aliadoForm.representante.correo} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, correo: event.target.value } }))} placeholder="Correo electronico" />
-                    <div className="city-search" onBlur={() => window.setTimeout(() => setAliadoRepCityComboOpen(false), 120)}>
-                      <input
-                        value={aliadoRepCitySearchValue}
-                        onFocus={() => setAliadoRepCityComboOpen(true)}
-                        onChange={(event) => {
-                          setAliadoRepCitySearch(event.target.value);
-                          setAliadoRepCityComboOpen(true);
-                          setAliadoForm((current) => ({ ...current, representante: { ...current.representante, idCiudad: '' } }));
-                        }}
-                        placeholder="Ciudad"
-                      />
-                      {aliadoRepCityComboOpen && (
-                        <div className="city-results">
-                          {(aliadoRepCitySearchValue ? filteredAliadoRepCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setAliadoForm((current) => ({ ...current, representante: { ...current.representante, idCiudad: String(item.id) } }));
-                                setAliadoRepCitySearch('');
-                                setAliadoRepCityComboOpen(false);
-                              }}
-                            >
-                              {item.nombre}
-                            </button>
-                          ))}
-                          {aliadoRepCitySearchValue && !filteredAliadoRepCities.length && <span>No hay coincidencias</span>}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Camara de comercio</h3>
-                  <div className="field-grid four-cols">
-                    <input value={aliadoForm.camara.numero} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, numero: event.target.value } }))} placeholder="Numero" />
-                    <input value={aliadoForm.camara.libro} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, libro: event.target.value } }))} placeholder="Libro" />
-                    <div className="city-search" onBlur={() => window.setTimeout(() => setAliadoCamaraCityComboOpen(false), 120)}>
-                      <input
-                        value={aliadoCamaraCitySearchValue}
-                        onFocus={() => setAliadoCamaraCityComboOpen(true)}
-                        onChange={(event) => {
-                          setAliadoCamaraCitySearch(event.target.value);
-                          setAliadoCamaraCityComboOpen(true);
-                          setAliadoForm((current) => ({ ...current, camara: { ...current.camara, idCiudad: '' } }));
-                        }}
-                        placeholder="Ciudad camara"
-                      />
-                      {aliadoCamaraCityComboOpen && (
-                        <div className="city-results">
-                          {(aliadoCamaraCitySearchValue ? filteredAliadoCamaraCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onMouseDown={(event) => event.preventDefault()}
-                              onClick={() => {
-                                setAliadoForm((current) => ({ ...current, camara: { ...current.camara, idCiudad: String(item.id) } }));
-                                setAliadoCamaraCitySearch('');
-                                setAliadoCamaraCityComboOpen(false);
-                              }}
-                            >
-                              {item.nombre}
-                            </button>
-                          ))}
-                          {aliadoCamaraCitySearchValue && !filteredAliadoCamaraCities.length && <span>No hay coincidencias</span>}
+                      )
+                    },
+                    {
+                      id: 'domicilio',
+                      title: 'Domicilio',
+                      subtitle: 'Dirección principal',
+                      content: (
+                        <div className="form-section">
+                          <h3>Domicilio</h3>
+                          <div className="field-grid three-cols">
+                            <select value={aliadoForm.direccion.idTipoVia} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
+                              <option value="">Tipo de via *</option>
+                              {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={aliadoForm.direccion.numPrincipal} onChange={(event) => updateAliadoPrincipalNumber(event.target.value)} placeholder="Primer numero de via, ej. 59B" />
+                            <input value={aliadoForm.direccion.numSecundario} onChange={(event) => updateAliadoSecondaryNumber(event.target.value)} placeholder="Segundo numero de via, ej. 120A" />
+                            <select value={aliadoForm.direccion.idLetraPrincipal} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
+                              <option value="">Letra principal</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={aliadoForm.direccion.idLetraSecundaria} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
+                              <option value="">Letra secundaria</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={aliadoForm.direccion.complemento} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
+                            <input value={aliadoForm.direccion.barrio} onChange={(event) => setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
+                            <div className="city-search" onBlur={() => window.setTimeout(() => setAliadoCityComboOpen(false), 120)}>
+                              <input
+                                value={aliadoCitySearchValue}
+                                onFocus={() => setAliadoCityComboOpen(true)}
+                                onChange={(event) => {
+                                  setAliadoCitySearch(event.target.value);
+                                  setAliadoCityComboOpen(true);
+                                  setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: '' } }));
+                                }}
+                                placeholder="Ciudad *"
+                              />
+                              {aliadoCityComboOpen && (
+                                <div className="city-results">
+                                  {(aliadoCitySearchValue ? filteredAliadoCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
+                                    <button
+                                      key={item.id}
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => {
+                                        setAliadoForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: String(item.id) } }));
+                                        setAliadoCitySearch('');
+                                        setAliadoCityComboOpen(false);
+                                      }}
+                                    >
+                                      {item.nombre}
+                                    </button>
+                                  ))}
+                                  {aliadoCitySearchValue && !filteredAliadoCities.length && <span>No hay coincidencias</span>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="address-preview">{selectedAliadoAddressText || 'La direccion del aliado se ira armando con los campos seleccionados.'}</div>
                         </div>
-                      )}
-                    </div>
-                    <input value={aliadoForm.camara.rees} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, rees: event.target.value } }))} placeholder="REES" />
-                    <input value={aliadoForm.camara.runeol} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, runeol: event.target.value } }))} placeholder="RUNEOL" />
-                  </div>
-                </div>
+                      )
+                    },
+                    {
+                      id: 'bancaria',
+                      title: 'Información bancaria',
+                      subtitle: 'Cuenta bancaria',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion bancaria</h3>
+                          <div className="field-grid three-cols">
+                            <select value={aliadoForm.idBanco} onChange={(event) => setAliadoForm((current) => ({ ...current, idBanco: event.target.value }))}>
+                              <option value="">Entidad bancaria *</option>
+                              {aliadosCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={aliadoForm.idTipoCuenta} onChange={(event) => setAliadoForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
+                              <option value="">Tipo de cuenta *</option>
+                              {aliadosCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={aliadoForm.numeroCuenta} onChange={(event) => setAliadoForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta *" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'representante',
+                      title: 'Representante legal',
+                      subtitle: 'Datos de representación',
+                      content: (
+                        <div className="form-section">
+                          <h3>Representante legal</h3>
+                          <div className="field-grid four-cols">
+                            <select value={aliadoForm.representante.idTipoIdentificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, idTipoIdentificacion: event.target.value } }))}>
+                              <option value="">Tipo de documento</option>
+                              {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
+                            </select>
+                            <input value={aliadoForm.representante.identificacion} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, identificacion: event.target.value } }))} placeholder="Numero de identificacion" />
+                            <input value={aliadoForm.representante.primerNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, primerNombre: event.target.value } }))} placeholder="Primer nombre" />
+                            <input value={aliadoForm.representante.segundoNombre} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, segundoNombre: event.target.value } }))} placeholder="Segundo nombre" />
+                            <input value={aliadoForm.representante.primerApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, primerApellido: event.target.value } }))} placeholder="Primer apellido" />
+                            <input value={aliadoForm.representante.segundoApellido} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, segundoApellido: event.target.value } }))} placeholder="Segundo apellido" />
+                            <select value={aliadoForm.representante.genero} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, genero: event.target.value } }))}>
+                              <option value="">Genero</option>
+                              {aliadosCatalogs.generos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={aliadoForm.representante.telefono} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, telefono: event.target.value } }))} placeholder="Numero de telefono" />
+                            <input value={aliadoForm.representante.correo} onChange={(event) => setAliadoForm((current) => ({ ...current, representante: { ...current.representante, correo: event.target.value } }))} placeholder="Correo electronico" />
+                            <div className="city-search" onBlur={() => window.setTimeout(() => setAliadoRepCityComboOpen(false), 120)}>
+                              <input
+                                value={aliadoRepCitySearchValue}
+                                onFocus={() => setAliadoRepCityComboOpen(true)}
+                                onChange={(event) => {
+                                  setAliadoRepCitySearch(event.target.value);
+                                  setAliadoRepCityComboOpen(true);
+                                  setAliadoForm((current) => ({ ...current, representante: { ...current.representante, idCiudad: '' } }));
+                                }}
+                                placeholder="Ciudad"
+                              />
+                              {aliadoRepCityComboOpen && (
+                                <div className="city-results">
+                                  {(aliadoRepCitySearchValue ? filteredAliadoRepCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
+                                    <button
+                                      key={item.id}
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => {
+                                        setAliadoForm((current) => ({ ...current, representante: { ...current.representante, idCiudad: String(item.id) } }));
+                                        setAliadoRepCitySearch('');
+                                        setAliadoRepCityComboOpen(false);
+                                      }}
+                                    >
+                                      {item.nombre}
+                                    </button>
+                                  ))}
+                                  {aliadoRepCitySearchValue && !filteredAliadoRepCities.length && <span>No hay coincidencias</span>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'camara',
+                      title: 'Cámara de comercio',
+                      subtitle: 'Registros y REES',
+                      content: (
+                        <div className="form-section">
+                          <h3>Camara de comercio</h3>
+                          <div className="field-grid four-cols">
+                            <input value={aliadoForm.camara.numero} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, numero: event.target.value } }))} placeholder="Numero" />
+                            <input value={aliadoForm.camara.libro} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, libro: event.target.value } }))} placeholder="Libro" />
+                            <div className="city-search" onBlur={() => window.setTimeout(() => setAliadoCamaraCityComboOpen(false), 120)}>
+                              <input
+                                value={aliadoCamaraCitySearchValue}
+                                onFocus={() => setAliadoCamaraCityComboOpen(true)}
+                                onChange={(event) => {
+                                  setAliadoCamaraCitySearch(event.target.value);
+                                  setAliadoCamaraCityComboOpen(true);
+                                  setAliadoForm((current) => ({ ...current, camara: { ...current.camara, idCiudad: '' } }));
+                                }}
+                                placeholder="Ciudad camara"
+                              />
+                              {aliadoCamaraCityComboOpen && (
+                                <div className="city-results">
+                                  {(aliadoCamaraCitySearchValue ? filteredAliadoCamaraCities : addressCatalogs.ciudades.slice(0, 25)).map((item) => (
+                                    <button
+                                      key={item.id}
+                                      type="button"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => {
+                                        setAliadoForm((current) => ({ ...current, camara: { ...current.camara, idCiudad: String(item.id) } }));
+                                        setAliadoCamaraCitySearch('');
+                                        setAliadoCamaraCityComboOpen(false);
+                                      }}
+                                    >
+                                      {item.nombre}
+                                    </button>
+                                  ))}
+                                  {aliadoCamaraCitySearchValue && !filteredAliadoCamaraCities.length && <span>No hay coincidencias</span>}
+                                </div>
+                              )}
+                            </div>
+                            <input value={aliadoForm.camara.rees} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, rees: event.target.value } }))} placeholder="REES" />
+                            <input value={aliadoForm.camara.runeol} onChange={(event) => setAliadoForm((current) => ({ ...current, camara: { ...current.camara, runeol: event.target.value } }))} placeholder="RUNEOL" />
+                          </div>
+                        </div>
+                      )
+                    }
+                  ]}
+                  submitButtonText={loading ? 'Guardando...' : 'Guardar aliado'}
+                  submitButtonDisabled={loading}
+                  showSubmitAlways={true}
+                />
               </form>
             )}
 
@@ -5706,93 +5866,130 @@ function App() {
               <form className="surface pagaduria-form" onSubmit={handleCreateLibranzera}>
                 <div className="surface-title">
                   <h2>Crear empresa libranzera</h2>
-                  <button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar libranzera'}</button>
                 </div>
 
-                <div className="form-section">
-                  <h3>Informacion del operador de libranza</h3>
-                  <div className="field-grid four-cols">
-                    <input value={libranzeraForm.nit} onChange={(event) => setLibranzeraForm((current) => ({ ...current, nit: event.target.value }))} placeholder="Nit *" />
-                    <input value={libranzeraForm.razonSocial} onChange={(event) => setLibranzeraForm((current) => ({ ...current, razonSocial: event.target.value }))} placeholder="Razon social o nombre *" />
-                    <input value={libranzeraForm.domicilio} onChange={(event) => setLibranzeraForm((current) => ({ ...current, domicilio: event.target.value }))} placeholder="Domicilio" />
-                    <input value={libranzeraForm.sitioWeb} onChange={(event) => setLibranzeraForm((current) => ({ ...current, sitioWeb: event.target.value }))} placeholder="Sitio web" />
-                    <input value={libranzeraForm.correo} onChange={(event) => setLibranzeraForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico" />
-                    <input value={libranzeraForm.telefono} onChange={(event) => setLibranzeraForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Numero de telefono" />
-                    <input value={libranzeraForm.telefonoCallcenter} onChange={(event) => setLibranzeraForm((current) => ({ ...current, telefonoCallcenter: event.target.value }))} placeholder="Telefono callcenter" />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Camara de comercio</h3>
-                  <div className="field-grid four-cols">
-                    <input value={libranzeraForm.camaraNumero} onChange={(event) => setLibranzeraForm((current) => ({ ...current, camaraNumero: event.target.value }))} placeholder="Numero" />
-                    <input value={libranzeraForm.camaraLibro} onChange={(event) => setLibranzeraForm((current) => ({ ...current, camaraLibro: event.target.value }))} placeholder="Libro" />
-                    <select value={libranzeraForm.camaraIdCiudad} onChange={(event) => setLibranzeraForm((current) => ({ ...current, camaraIdCiudad: event.target.value }))}>
-                      <option value="">Ciudad</option>
-                      {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input type="date" value={libranzeraForm.fechaConstitucion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, fechaConstitucion: event.target.value }))} />
-                    <input value={libranzeraForm.ciiu} onChange={(event) => setLibranzeraForm((current) => ({ ...current, ciiu: event.target.value }))} placeholder="CIIU" />
-                    <input value={libranzeraForm.runeol} onChange={(event) => setLibranzeraForm((current) => ({ ...current, runeol: event.target.value }))} placeholder="RUNEOL" />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Representante legal</h3>
-                  <div className="field-grid four-cols">
-                    <select value={libranzeraForm.representanteLegal.idTipoIdentificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, idTipoIdentificacion: event.target.value } }))}>
-                      <option value="">Tipo documento</option>
-                      {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
-                    </select>
-                    <input value={libranzeraForm.representanteLegal.identificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, identificacion: event.target.value } }))} placeholder="Numero documento" />
-                    <input value={libranzeraForm.representanteLegal.nombre} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, nombre: event.target.value } }))} placeholder="Nombre" />
-                    <select value={libranzeraForm.representanteLegal.genero} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, genero: event.target.value } }))}>
-                      <option value="">Genero</option>
-                      {comercialesCatalogs.generos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <select value={libranzeraForm.representanteLegal.idCiudad} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, idCiudad: event.target.value } }))}>
-                      <option value="">Ciudad</option>
-                      {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Representante de cartera</h3>
-                  <div className="field-grid four-cols">
-                    <select value={libranzeraForm.representanteCartera.idTipoIdentificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, idTipoIdentificacion: event.target.value } }))}>
-                      <option value="">Tipo documento</option>
-                      {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
-                    </select>
-                    <input value={libranzeraForm.representanteCartera.identificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, identificacion: event.target.value } }))} placeholder="Numero documento" />
-                    <input value={libranzeraForm.representanteCartera.nombre} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, nombre: event.target.value } }))} placeholder="Nombre" />
-                    <select value={libranzeraForm.representanteCartera.genero} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, genero: event.target.value } }))}>
-                      <option value="">Genero</option>
-                      {comercialesCatalogs.generos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <select value={libranzeraForm.representanteCartera.idCiudad} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, idCiudad: event.target.value } }))}>
-                      <option value="">Ciudad</option>
-                      {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={libranzeraForm.representanteCartera.telefono} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, telefono: event.target.value } }))} placeholder="Telefono" />
-                    <input value={libranzeraForm.representanteCartera.correo} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, correo: event.target.value } }))} placeholder="Correo" />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Medio de pago principal</h3>
-                  <div className="field-grid four-cols">
-                    <select value={libranzeraForm.idBanco} onChange={(event) => setLibranzeraForm((current) => ({ ...current, idBanco: event.target.value }))}>
-                      <option value="">Entidad bancaria</option>
-                      {comercialesCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <select value={libranzeraForm.idTipoCuenta} onChange={(event) => setLibranzeraForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
-                      <option value="">Tipo de cuenta</option>
-                      {comercialesCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={libranzeraForm.numeroCuenta} onChange={(event) => setLibranzeraForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta" />
-                  </div>
-                </div>
+                <FormStepper
+                  steps={[
+                    {
+                      id: 'operador',
+                      title: 'Operador de libranza',
+                      subtitle: 'NIT y datos básicos',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion del operador de libranza</h3>
+                          <div className="field-grid four-cols">
+                            <input value={libranzeraForm.nit} onChange={(event) => setLibranzeraForm((current) => ({ ...current, nit: event.target.value }))} placeholder="Nit *" />
+                            <input value={libranzeraForm.razonSocial} onChange={(event) => setLibranzeraForm((current) => ({ ...current, razonSocial: event.target.value }))} placeholder="Razon social o nombre *" />
+                            <input value={libranzeraForm.domicilio} onChange={(event) => setLibranzeraForm((current) => ({ ...current, domicilio: event.target.value }))} placeholder="Domicilio" />
+                            <input value={libranzeraForm.sitioWeb} onChange={(event) => setLibranzeraForm((current) => ({ ...current, sitioWeb: event.target.value }))} placeholder="Sitio web" />
+                            <input value={libranzeraForm.correo} onChange={(event) => setLibranzeraForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico" />
+                            <input value={libranzeraForm.telefono} onChange={(event) => setLibranzeraForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Numero de telefono" />
+                            <input value={libranzeraForm.telefonoCallcenter} onChange={(event) => setLibranzeraForm((current) => ({ ...current, telefonoCallcenter: event.target.value }))} placeholder="Telefono callcenter" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'camara',
+                      title: 'Cámara de comercio',
+                      subtitle: 'Matrícula y RUNEOL',
+                      content: (
+                        <div className="form-section">
+                          <h3>Camara de comercio</h3>
+                          <div className="field-grid four-cols">
+                            <input value={libranzeraForm.camaraNumero} onChange={(event) => setLibranzeraForm((current) => ({ ...current, camaraNumero: event.target.value }))} placeholder="Numero" />
+                            <input value={libranzeraForm.camaraLibro} onChange={(event) => setLibranzeraForm((current) => ({ ...current, camaraLibro: event.target.value }))} placeholder="Libro" />
+                            <select value={libranzeraForm.camaraIdCiudad} onChange={(event) => setLibranzeraForm((current) => ({ ...current, camaraIdCiudad: event.target.value }))}>
+                              <option value="">Ciudad</option>
+                              {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input type="date" value={libranzeraForm.fechaConstitucion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, fechaConstitucion: event.target.value }))} />
+                            <input value={libranzeraForm.ciiu} onChange={(event) => setLibranzeraForm((current) => ({ ...current, ciiu: event.target.value }))} placeholder="CIIU" />
+                            <input value={libranzeraForm.runeol} onChange={(event) => setLibranzeraForm((current) => ({ ...current, runeol: event.target.value }))} placeholder="RUNEOL" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'representanteLegal',
+                      title: 'Representante legal',
+                      subtitle: 'Rep. legal',
+                      content: (
+                        <div className="form-section">
+                          <h3>Representante legal</h3>
+                          <div className="field-grid four-cols">
+                            <select value={libranzeraForm.representanteLegal.idTipoIdentificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, idTipoIdentificacion: event.target.value } }))}>
+                              <option value="">Tipo documento</option>
+                              {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
+                            </select>
+                            <input value={libranzeraForm.representanteLegal.identificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, identificacion: event.target.value } }))} placeholder="Numero documento" />
+                            <input value={libranzeraForm.representanteLegal.nombre} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, nombre: event.target.value } }))} placeholder="Nombre" />
+                            <select value={libranzeraForm.representanteLegal.genero} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, genero: event.target.value } }))}>
+                              <option value="">Genero</option>
+                              {comercialesCatalogs.generos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={libranzeraForm.representanteLegal.idCiudad} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteLegal: { ...current.representanteLegal, idCiudad: event.target.value } }))}>
+                              <option value="">Ciudad</option>
+                              {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'representanteCartera',
+                      title: 'Representante de cartera',
+                      subtitle: 'Contacto de cobranzas',
+                      content: (
+                        <div className="form-section">
+                          <h3>Representante de cartera</h3>
+                          <div className="field-grid four-cols">
+                            <select value={libranzeraForm.representanteCartera.idTipoIdentificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, idTipoIdentificacion: event.target.value } }))}>
+                              <option value="">Tipo documento</option>
+                              {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
+                            </select>
+                            <input value={libranzeraForm.representanteCartera.identificacion} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, identificacion: event.target.value } }))} placeholder="Numero documento" />
+                            <input value={libranzeraForm.representanteCartera.nombre} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, nombre: event.target.value } }))} placeholder="Nombre" />
+                            <select value={libranzeraForm.representanteCartera.genero} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, genero: event.target.value } }))}>
+                              <option value="">Genero</option>
+                              {comercialesCatalogs.generos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={libranzeraForm.representanteCartera.idCiudad} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, idCiudad: event.target.value } }))}>
+                              <option value="">Ciudad</option>
+                              {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={libranzeraForm.representanteCartera.telefono} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, telefono: event.target.value } }))} placeholder="Telefono" />
+                            <input value={libranzeraForm.representanteCartera.correo} onChange={(event) => setLibranzeraForm((current) => ({ ...current, representanteCartera: { ...current.representanteCartera, correo: event.target.value } }))} placeholder="Correo" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'pago',
+                      title: 'Medio de pago',
+                      subtitle: 'Cuenta bancaria',
+                      content: (
+                        <div className="form-section">
+                          <h3>Medio de pago principal</h3>
+                          <div className="field-grid four-cols">
+                            <select value={libranzeraForm.idBanco} onChange={(event) => setLibranzeraForm((current) => ({ ...current, idBanco: event.target.value }))}>
+                              <option value="">Entidad bancaria</option>
+                              {comercialesCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={libranzeraForm.idTipoCuenta} onChange={(event) => setLibranzeraForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
+                              <option value="">Tipo de cuenta</option>
+                              {comercialesCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={libranzeraForm.numeroCuenta} onChange={(event) => setLibranzeraForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta" />
+                          </div>
+                        </div>
+                      )
+                    }
+                  ]}
+                  submitButtonText={loading ? 'Guardando...' : 'Guardar libranzera'}
+                  submitButtonDisabled={loading}
+                  showSubmitAlways={true}
+                />
               </form>
             )}
 
@@ -5800,102 +5997,131 @@ function App() {
               <form className="surface pagaduria-form" onSubmit={handleCreateComercial}>
                 <div className="surface-title">
                   <h2>{selectedComercialId ? 'Editar asesor' : 'Crear asesor'}</h2>
-                  <div className="row-actions">
-                    {selectedComercialId && (
-                      <button type="button" className="ghost" onClick={() => { setSelectedComercialId(null); setComercialForm(initialComercialForm); }}>
-                        Cancelar
-                      </button>
-                    )}
-                    <button type="submit" disabled={loading}>{loading ? 'Guardando...' : selectedComercialId ? 'Guardar cambios' : 'Guardar asesor'}</button>
-                  </div>
+                  {selectedComercialId && (
+                    <button type="button" className="ghost" onClick={() => { setSelectedComercialId(null); setComercialForm(initialComercialForm); }}>
+                      Cancelar edición
+                    </button>
+                  )}
                 </div>
 
-                <div className="form-section">
-                  <h3>Informacion personal</h3>
-                  <div className="field-grid four-cols">
-                    <select value={comercialForm.idLibranzera} onChange={(event) => setComercialForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
-                      <option value="">Libranzera *</option>
-                      {comercialesCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <select value={comercialForm.idTipoIdentificacion} onChange={(event) => setComercialForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
-                      <option value="">Tipo documento *</option>
-                      {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
-                    </select>
-                    <input value={comercialForm.identificacion} onChange={(event) => setComercialForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Numero de identificacion *" />
-                    <input value={comercialForm.primerNombre} onChange={(event) => setComercialForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
-                    <input value={comercialForm.segundoNombre} onChange={(event) => setComercialForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
-                    <input value={comercialForm.primerApellido} onChange={(event) => setComercialForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido *" />
-                    <input value={comercialForm.segundoApellido} onChange={(event) => setComercialForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
-                    <input type="date" value={comercialForm.fechaNacimiento} onChange={(event) => setComercialForm((current) => ({ ...current, fechaNacimiento: event.target.value }))} />
-                    <input value={comercialForm.telefono} onChange={(event) => setComercialForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Numero de telefono *" />
-                    <input value={comercialForm.correo} onChange={(event) => setComercialForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico *" />
-                    <input value={comercialForm.codigoVendedor} onChange={(event) => setComercialForm((current) => ({ ...current, codigoVendedor: event.target.value }))} placeholder="Codigo de asesor *" />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Rol y comision</h3>
-                  <div className="field-grid four-cols">
-                    <select value={comercialForm.idRolVendedor} onChange={(event) => setComercialForm((current) => ({ ...current, idRolVendedor: event.target.value }))}>
-                      <option value="">Rol del asesor</option>
-                      {comercialesCatalogs.rolesVendedor.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <select value={comercialForm.tipoComision} onChange={(event) => setComercialForm((current) => ({ ...current, tipoComision: event.target.value }))}>
-                      <option value="PORCENTAJE">Comision por porcentaje</option>
-                      <option value="VALOR_FIJO">Comision por valor fijo</option>
-                    </select>
-                    <input value={comercialForm.valorComision} onChange={(event) => setComercialForm((current) => ({ ...current, valorComision: event.target.value }))} placeholder={comercialForm.tipoComision === 'PORCENTAJE' ? 'Porcentaje de comision %' : 'Valor fijo de comision'} />
-                  </div>
-                </div>
-
-                <div className="form-section">
-                  <h3>Domicilio</h3>
-                  <div className="field-grid four-cols">
-                    <select value={comercialForm.direccion.idTipoVia} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
-                      <option value="">Tipo de via</option>
-                      {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={comercialForm.direccion.numPrincipal} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, numPrincipal: event.target.value } }))} placeholder="Numero principal, ej. 30B" />
-                    <select value={comercialForm.direccion.idLetraPrincipal} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
-                      <option value="">Letra principal</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={comercialForm.direccion.bis} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, bis: event.target.value } }))} placeholder="Bis" />
-                    <select value={comercialForm.direccion.letraBis} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, letraBis: event.target.value } }))}>
-                      <option value="">Letra bis</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={comercialForm.direccion.cuadrantePrincipal} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, cuadrantePrincipal: event.target.value } }))} placeholder="Cuadrante principal" />
-                    <input value={comercialForm.direccion.numSecundario} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, numSecundario: event.target.value } }))} placeholder="Numero secundario, ej. 196C" />
-                    <select value={comercialForm.direccion.idLetraSecundaria} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
-                      <option value="">Letra secundaria</option>
-                      {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={comercialForm.direccion.cuadranteSecundario} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, cuadranteSecundario: event.target.value } }))} placeholder="Cuadrante secundario" />
-                    <input value={comercialForm.direccion.complemento} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
-                    <input value={comercialForm.direccion.barrio} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
-                    <select value={comercialForm.direccion.idCiudad} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: event.target.value } }))}>
-                      <option value="">Ciudad</option>
-                      {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                  </div>
-                  {comercialDireccionCompuesta && <div className="address-preview">{comercialDireccionCompuesta}</div>}
-                </div>
-
-                <div className="form-section">
-                  <h3>Informacion bancaria</h3>
-                  <div className="field-grid four-cols">
-                    <select value={comercialForm.idBanco} onChange={(event) => setComercialForm((current) => ({ ...current, idBanco: event.target.value }))}>
-                      <option value="">Entidad bancaria</option>
-                      {comercialesCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <select value={comercialForm.idTipoCuenta} onChange={(event) => setComercialForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
-                      <option value="">Tipo de cuenta</option>
-                      {comercialesCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select>
-                    <input value={comercialForm.numeroCuenta} onChange={(event) => setComercialForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta" />
-                  </div>
-                </div>
+                <FormStepper
+                  steps={[
+                    {
+                      id: 'personal',
+                      title: 'Datos del asesor',
+                      subtitle: 'Libranzera e identificación',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion personal</h3>
+                          <div className="field-grid four-cols">
+                            <select value={comercialForm.idLibranzera} onChange={(event) => setComercialForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
+                              <option value="">Libranzera *</option>
+                              {comercialesCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={comercialForm.idTipoIdentificacion} onChange={(event) => setComercialForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
+                              <option value="">Tipo documento *</option>
+                              {identificationTypes.map((type) => <option key={type.id} value={type.id}>{type.sigla} - {type.descripcion}</option>)}
+                            </select>
+                            <input value={comercialForm.identificacion} onChange={(event) => setComercialForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Numero de identificacion *" />
+                            <input value={comercialForm.primerNombre} onChange={(event) => setComercialForm((current) => ({ ...current, primerNombre: event.target.value }))} placeholder="Primer nombre *" />
+                            <input value={comercialForm.segundoNombre} onChange={(event) => setComercialForm((current) => ({ ...current, segundoNombre: event.target.value }))} placeholder="Segundo nombre" />
+                            <input value={comercialForm.primerApellido} onChange={(event) => setComercialForm((current) => ({ ...current, primerApellido: event.target.value }))} placeholder="Primer apellido *" />
+                            <input value={comercialForm.segundoApellido} onChange={(event) => setComercialForm((current) => ({ ...current, segundoApellido: event.target.value }))} placeholder="Segundo apellido" />
+                            <input type="date" value={comercialForm.fechaNacimiento} onChange={(event) => setComercialForm((current) => ({ ...current, fechaNacimiento: event.target.value }))} />
+                            <input value={comercialForm.telefono} onChange={(event) => setComercialForm((current) => ({ ...current, telefono: event.target.value }))} placeholder="Numero de telefono *" />
+                            <input value={comercialForm.correo} onChange={(event) => setComercialForm((current) => ({ ...current, correo: event.target.value }))} placeholder="Correo electronico *" />
+                            <input value={comercialForm.codigoVendedor} onChange={(event) => setComercialForm((current) => ({ ...current, codigoVendedor: event.target.value }))} placeholder="Codigo de asesor *" />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'rol',
+                      title: 'Rol y comisión',
+                      subtitle: 'Comisión y rol',
+                      content: (
+                        <div className="form-section">
+                          <h3>Rol y comision</h3>
+                          <div className="field-grid four-cols">
+                            <select value={comercialForm.idRolVendedor} onChange={(event) => setComercialForm((current) => ({ ...current, idRolVendedor: event.target.value }))}>
+                              <option value="">Rol del asesor</option>
+                              {comercialesCatalogs.rolesVendedor.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={comercialForm.tipoComision} onChange={(event) => setComercialForm((current) => ({ ...current, tipoComision: event.target.value }))}>
+                              <option value="PORCENTAJE">Comision por porcentaje</option>
+                              <option value="VALOR_FIJO">Comision por valor fijo</option>
+                            </select>
+                            <input value={comercialForm.valorComision} onChange={(event) => setComercialForm((current) => ({ ...current, valorComision: event.target.value }))} placeholder={comercialForm.tipoComision === 'PORCENTAJE' ? 'Porcentaje de comision %' : 'Valor fijo de comision'} />
+                          </div>
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'domicilio',
+                      title: 'Domicilio',
+                      subtitle: 'Dirección principal',
+                      content: (
+                        <div className="form-section">
+                          <h3>Domicilio</h3>
+                          <div className="field-grid four-cols">
+                            <select value={comercialForm.direccion.idTipoVia} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idTipoVia: event.target.value } }))}>
+                              <option value="">Tipo de via</option>
+                              {addressCatalogs.tiposVia.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={comercialForm.direccion.numPrincipal} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, numPrincipal: event.target.value } }))} placeholder="Numero principal, ej. 30B" />
+                            <select value={comercialForm.direccion.idLetraPrincipal} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraPrincipal: event.target.value } }))}>
+                              <option value="">Letra principal</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={comercialForm.direccion.bis} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, bis: event.target.value } }))} placeholder="Bis" />
+                            <select value={comercialForm.direccion.letraBis} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, letraBis: event.target.value } }))}>
+                              <option value="">Letra bis</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={comercialForm.direccion.cuadrantePrincipal} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, cuadrantePrincipal: event.target.value } }))} placeholder="Cuadrante principal" />
+                            <input value={comercialForm.direccion.numSecundario} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, numSecundario: event.target.value } }))} placeholder="Numero secundario, ej. 196C" />
+                            <select value={comercialForm.direccion.idLetraSecundaria} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idLetraSecundaria: event.target.value } }))}>
+                              <option value="">Letra secundaria</option>
+                              {addressCatalogs.letras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={comercialForm.direccion.cuadranteSecundario} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, cuadranteSecundario: event.target.value } }))} placeholder="Cuadrante secundario" />
+                            <input value={comercialForm.direccion.complemento} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, complemento: event.target.value } }))} placeholder="Complemento" />
+                            <input value={comercialForm.direccion.barrio} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, barrio: event.target.value } }))} placeholder="Barrio" />
+                            <select value={comercialForm.direccion.idCiudad} onChange={(event) => setComercialForm((current) => ({ ...current, direccion: { ...current.direccion, idCiudad: event.target.value } }))}>
+                              <option value="">Ciudad</option>
+                              {addressCatalogs.ciudades.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                          </div>
+                          {comercialDireccionCompuesta && <div className="address-preview">{comercialDireccionCompuesta}</div>}
+                        </div>
+                      )
+                    },
+                    {
+                      id: 'bancaria',
+                      title: 'Información bancaria',
+                      subtitle: 'Cuenta de consignación',
+                      content: (
+                        <div className="form-section">
+                          <h3>Informacion bancaria</h3>
+                          <div className="field-grid four-cols">
+                            <select value={comercialForm.idBanco} onChange={(event) => setComercialForm((current) => ({ ...current, idBanco: event.target.value }))}>
+                              <option value="">Entidad bancaria</option>
+                              {comercialesCatalogs.bancos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <select value={comercialForm.idTipoCuenta} onChange={(event) => setComercialForm((current) => ({ ...current, idTipoCuenta: event.target.value }))}>
+                              <option value="">Tipo de cuenta</option>
+                              {comercialesCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            </select>
+                            <input value={comercialForm.numeroCuenta} onChange={(event) => setComercialForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta" />
+                          </div>
+                        </div>
+                      )
+                    }
+                  ]}
+                  submitButtonText={loading ? 'Guardando...' : selectedComercialId ? 'Guardar cambios' : 'Guardar asesor'}
+                  submitButtonDisabled={loading}
+                  showSubmitAlways={true}
+                />
               </form>
             )}
 
@@ -6183,52 +6409,75 @@ function App() {
               <section className="content-grid credit-product-grid">
                 <form className="surface pagaduria-form" onSubmit={handleCreateCredito}>
                   <div className="surface-title">
-                    <h2>Radicar credito</h2>
-                    <div className="inline-actions">
-                      <button type="button" disabled={loading} onClick={handleSimularCredito}>Simular</button>
-                      <button type="submit" disabled={loading}>{loading ? 'Radicando...' : 'Guardar solicitud'}</button>
-                    </div>
+                    <h2>Radicar crédito</h2>
                   </div>
-                  <div className="form-section">
-                    <h3>Producto y origen</h3>
-                    <div className="field-grid four-cols">
-                      <select value={creditoForm.idProductoCredito} onChange={(event) => setCreditoForm((current) => ({ ...current, idProductoCredito: event.target.value }))}>
-                        <option value="">Producto de credito *</option>
-                        {creditosCatalogs.productos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <select value={creditoForm.idLibranzera} onChange={(event) => setCreditoForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
-                        <option value="">Libranzera</option>
-                        {creditosCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <select value={creditoForm.idEmpresa} onChange={(event) => setCreditoForm((current) => ({ ...current, idEmpresa: event.target.value }))}>
-                        <option value="">Empresa</option>
-                        {creditosCatalogs.empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <select value={creditoForm.idComercial} onChange={(event) => setCreditoForm((current) => ({ ...current, idComercial: event.target.value }))}>
-                        <option value="">Comercial</option>
-                        {creditosCatalogs.comerciales.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <h3>Cliente y condiciones</h3>
-                    <div className="field-grid four-cols">
-                      <select value={creditoForm.idEmpleadoEmpresa} onChange={(event) => setCreditoForm((current) => ({ ...current, idEmpleadoEmpresa: event.target.value }))}>
-                        <option value="">Empleado asociado</option>
-                        {creditosCatalogs.empleados.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select>
-                      <input value={creditoForm.identificacionCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, identificacionCliente: event.target.value }))} placeholder="Identificacion cliente *" />
-                      <input value={creditoForm.nombreCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, nombreCliente: event.target.value }))} placeholder="Nombre cliente *" />
-                      <input value={creditoForm.telefonoCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, telefonoCliente: event.target.value }))} placeholder="Telefono" />
-                      <input value={creditoForm.correoCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, correoCliente: event.target.value }))} placeholder="Correo" />
-                      <input value={creditoForm.montoSolicitado} onChange={(event) => setCreditoForm((current) => ({ ...current, montoSolicitado: event.target.value }))} placeholder="Monto solicitado *" />
-                      <select value={creditoForm.plazo} onChange={(event) => setCreditoForm((current) => ({ ...current, plazo: event.target.value }))}>
-                        <option value="">Plazo *</option>
-                        {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
-                      </select>
-                      <input value={creditoForm.tasa} onChange={(event) => setCreditoForm((current) => ({ ...current, tasa: event.target.value }))} placeholder="Tasa %" />
-                    </div>
-                  </div>
+
+                  <FormStepper
+                    steps={[
+                      {
+                        id: 'origen',
+                        title: 'Producto y origen',
+                        subtitle: 'Selección de entidad y comercial',
+                        content: (
+                          <div className="form-section">
+                            <h3>Producto y origen</h3>
+                            <div className="field-grid four-cols">
+                              <select value={creditoForm.idProductoCredito} onChange={(event) => setCreditoForm((current) => ({ ...current, idProductoCredito: event.target.value }))}>
+                                <option value="">Producto de credito *</option>
+                                {creditosCatalogs.productos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <select value={creditoForm.idLibranzera} onChange={(event) => setCreditoForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
+                                <option value="">Libranzera</option>
+                                {creditosCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <select value={creditoForm.idEmpresa} onChange={(event) => setCreditoForm((current) => ({ ...current, idEmpresa: event.target.value }))}>
+                                <option value="">Empresa</option>
+                                {creditosCatalogs.empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <select value={creditoForm.idComercial} onChange={(event) => setCreditoForm((current) => ({ ...current, idComercial: event.target.value }))}>
+                                <option value="">Comercial</option>
+                                {creditosCatalogs.comerciales.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        )
+                      },
+                      {
+                        id: 'cliente',
+                        title: 'Cliente y condiciones',
+                        subtitle: 'Datos de solicitud y plazo',
+                        content: (
+                          <div className="form-section">
+                            <h3>Cliente y condiciones</h3>
+                            <div className="field-grid four-cols">
+                              <select value={creditoForm.idEmpleadoEmpresa} onChange={(event) => setCreditoForm((current) => ({ ...current, idEmpleadoEmpresa: event.target.value }))}>
+                                <option value="">Empleado asociado</option>
+                                {creditosCatalogs.empleados.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select>
+                              <input value={creditoForm.identificacionCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, identificacionCliente: event.target.value }))} placeholder="Identificacion cliente *" />
+                              <input value={creditoForm.nombreCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, nombreCliente: event.target.value }))} placeholder="Nombre cliente *" />
+                              <input value={creditoForm.telefonoCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, telefonoCliente: event.target.value }))} placeholder="Telefono" />
+                              <input value={creditoForm.correoCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, correoCliente: event.target.value }))} placeholder="Correo" />
+                              <input value={creditoForm.montoSolicitado} onChange={(event) => setCreditoForm((current) => ({ ...current, montoSolicitado: event.target.value }))} placeholder="Monto solicitado *" />
+                              <select value={creditoForm.plazo} onChange={(event) => setCreditoForm((current) => ({ ...current, plazo: event.target.value }))}>
+                                <option value="">Plazo *</option>
+                                {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
+                              </select>
+                              <input value={creditoForm.tasa} onChange={(event) => setCreditoForm((current) => ({ ...current, tasa: event.target.value }))} placeholder="Tasa %" />
+                            </div>
+                          </div>
+                        )
+                      }
+                    ]}
+                    submitButtonText={loading ? 'Radicando...' : 'Guardar solicitud'}
+                    submitButtonDisabled={loading}
+                    showSubmitAlways={true}
+                    extraHeaderActions={
+                      <button type="button" className="stepper-btn stepper-btn-prev" disabled={loading} onClick={handleSimularCredito}>
+                        📊 Simular crédito
+                      </button>
+                    }
+                  />
                 </form>
 
                 {creditoSimulacion && (
@@ -6903,100 +7152,137 @@ function App() {
                 <form className="surface pagaduria-form" onSubmit={handleSaveProductoCredito}>
                   <div className="surface-title">
                     <h2>{editingProductoCreditoId ? 'Editar producto de credito' : 'Crear producto de credito'}</h2>
-                    <div className="inline-actions">
-                      {editingProductoCreditoId && <button type="button" className="ghost-button" onClick={handleCancelProductoCreditoEdit}>Cancelar</button>}
-                      <button type="submit" disabled={loading}>{loading ? 'Guardando...' : editingProductoCreditoId ? 'Guardar cambios' : 'Guardar producto'}</button>
-                    </div>
+                    {editingProductoCreditoId && (
+                      <button type="button" className="ghost-button" onClick={handleCancelProductoCreditoEdit}>
+                        Cancelar edición
+                      </button>
+                    )}
                   </div>
-                  <div className="form-section">
-                    <h3>Informacion general</h3>
-                    <div className="field-grid four-cols">
-                      <label className="product-field"><span>Nombre *</span><input value={productoCreditoForm.nombre} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Libranza Plus" /></label>
-                      <label className="product-field"><span>Tipo de credito *</span><select value={productoCreditoForm.idTipoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idTipoCredito: event.target.value }))}>
-                        <option value="">Tipo de credito *</option>
-                        {productosCreditoCatalogs.tiposCredito.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select></label>
-                      <label className="product-field"><span>Tipo de tasa *</span><select value={productoCreditoForm.tipoTasa} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tipoTasa: event.target.value }))}>
-                        <option value="FIJA">Fija</option>
-                        <option value="DIFERENCIAL">Diferencial</option>
-                        <option value="VARIABLE">Variable</option>
-                      </select></label>
-                      <label className="product-field"><span>Libranzera</span><select value={productoCreditoForm.idLibranzera} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
-                        <option value="">Libranzera</option>
-                        {productosCreditoCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                      </select></label>
-                      <label className="product-field"><span>Tope minimo</span><input value={productoCreditoForm.montoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMinimo: event.target.value }))} placeholder="Monto minimo aprobado" /><small>Monto minimo que puede solicitarse.</small></label>
-                      <label className="product-field"><span>Tope maximo</span><input value={productoCreditoForm.montoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMaximo: event.target.value }))} placeholder="Monto maximo aprobado" /><small>Limite superior del producto.</small></label>
-                      <label className="product-field"><span>Salario minimo</span><input value={productoCreditoForm.salarioMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMinimo: event.target.value }))} placeholder="Ingreso minimo requerido" /></label>
-                      <label className="product-field"><span>Salario maximo</span><input value={productoCreditoForm.salarioMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMaximo: event.target.value }))} placeholder="Ingreso maximo permitido" /></label>
-                      <label className="product-field"><span>Plazo minimo</span><select value={productoCreditoForm.plazoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMinimo: event.target.value }))}>
-                        <option value="">Sin minimo</option>
-                        {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
-                      </select></label>
-                      <label className="product-field"><span>Plazo maximo</span><select value={productoCreditoForm.plazoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMaximo: event.target.value }))}>
-                        <option value="">Sin maximo</option>
-                        {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
-                      </select></label>
-                      <label className="product-field"><span>Modelo de plazo</span><select value={productoCreditoForm.modeloPlazo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, modeloPlazo: event.target.value }))}>
-                        <option value="MESES">Meses</option>
-                        <option value="DIAS">Dias</option>
-                        <option value="CUOTAS">Cuotas</option>
-                      </select></label>
-                      <label className="product-field"><span>Codeudores requeridos</span><input value={productoCreditoForm.numeroCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, numeroCodeudores: event.target.value }))} placeholder="0" /></label>
-                    </div>
-                    <div className="field-grid four-cols">
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteCreditoMultiple} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteCreditoMultiple: event.target.checked }))} />Credito multiple</label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.interesAjustable} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, interesAjustable: event.target.checked }))} />Interes ajustable</label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRefinanciacion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRefinanciacion: event.target.checked }))} />Refinanciacion</label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRetanqueo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRetanqueo: event.target.checked }))} />Retanqueo</label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.requiereCodeudor} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, requiereCodeudor: event.target.checked }))} />Codeudor</label>
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <h3>Regla base de cartera</h3>
-                    <div className="field-grid four-cols">
-                      <label className="product-field"><span>Periodicidad</span><select value={productoCreditoForm.periodicidad} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodicidad: event.target.value }))}>
-                        <option value="MENSUAL">Mensual</option>
-                        <option value="QUINCENAL">Quincenal</option>
-                      </select></label>
-                      <label className="product-field"><span>Dia de corte</span><input value={productoCreditoForm.diaCorte} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaCorte: event.target.value }))} placeholder="25" /></label>
-                      <label className="product-field"><span>Dia pago oportuno</span><input value={productoCreditoForm.diaPagoOportuno} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaPagoOportuno: event.target.value }))} placeholder="30" /></label>
-                      <label className="product-field"><span>Mora despues de dias</span><input value={productoCreditoForm.moraDespuesVencimiento} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, moraDespuesVencimiento: event.target.value }))} placeholder="0" /></label>
-                      <label className="product-field"><span>Tasa mora mensual %</span><input value={productoCreditoForm.tasaMoraMensual} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tasaMoraMensual: event.target.value }))} placeholder="2" /></label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.primeraCuotaMesSiguiente} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, primeraCuotaMesSiguiente: event.target.checked }))} />Primera cuota mes siguiente</label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.ajustarFinSemana} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, ajustarFinSemana: event.target.checked }))} />Ajustar fin de semana</label>
-                      <label className="product-field"><span>Observacion calendario</span><input value={productoCreditoForm.observacionCalendario} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Regla especial" /></label>
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <h3>Reglas de libranza</h3>
-                    <div className="field-grid four-cols">
-                      <label className="product-field"><span>Endeudamiento maximo %</span><input value={productoCreditoForm.porcentajeEndeudamientoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, porcentajeEndeudamientoMaximo: event.target.value }))} placeholder="40" /><small>Porcentaje de salario/neto permitido para la cuota.</small></label>
-                      <label className="product-field"><span>Antiguedad minima</span><input value={productoCreditoForm.antiguedadMinimaMeses} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, antiguedadMinimaMeses: event.target.value }))} placeholder="0" /><small>Meses minimos vinculado a la empresa.</small></label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.requiereEmpleadoActivo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, requiereEmpleadoActivo: event.target.checked }))} />Empleado activo</label>
-                      <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.bloqueaEmbargos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, bloqueaEmbargos: event.target.checked }))} />Bloquear embargos</label>
-                    </div>
-                  </div>
-                  <div className="form-section">
-                    <h3>Formatos y descripcion</h3>
-                    <div className="field-grid four-cols">
-                      <label className="product-field"><span>Formato de credito</span><select value={productoCreditoForm.formatoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCredito: event.target.value }))}>
-                        <option value="NO">No</option>
-                        <option value="SI">Si</option>
-                      </select></label>
-                      <label className="product-field"><span>Formato de requisitos</span><select value={productoCreditoForm.formatoRequisitos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoRequisitos: event.target.value }))}>
-                        <option value="NO">No</option>
-                        <option value="SI">Si</option>
-                      </select></label>
-                      <label className="product-field"><span>Formato codeudores</span><select value={productoCreditoForm.formatoCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCodeudores: event.target.value }))}>
-                        <option value="NO">No</option>
-                        <option value="SI">Si</option>
-                      </select></label>
-                      <label className="product-field"><span>Proveedor firma</span><input value={productoCreditoForm.proveedorFirma} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, proveedorFirma: event.target.value }))} placeholder="Proveedor" /></label>
-                      <label className="product-field"><span>Periodo de gracia</span><input value={productoCreditoForm.periodoGracia} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodoGracia: event.target.value }))} placeholder="0" /></label>
-                    </div>
-                    <textarea value={productoCreditoForm.descripcion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />
-                  </div>
+
+                  <FormStepper
+                    steps={[
+                      {
+                        id: 'general',
+                        title: 'Información general',
+                        subtitle: 'Topes, plazos y salario',
+                        content: (
+                          <div className="form-section">
+                            <h3>Informacion general</h3>
+                            <div className="field-grid four-cols">
+                              <label className="product-field"><span>Nombre *</span><input value={productoCreditoForm.nombre} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Libranza Plus" /></label>
+                              <label className="product-field"><span>Tipo de credito *</span><select value={productoCreditoForm.idTipoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idTipoCredito: event.target.value }))}>
+                                <option value="">Tipo de credito *</option>
+                                {productosCreditoCatalogs.tiposCredito.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select></label>
+                              <label className="product-field"><span>Tipo de tasa *</span><select value={productoCreditoForm.tipoTasa} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tipoTasa: event.target.value }))}>
+                                <option value="FIJA">Fija</option>
+                                <option value="DIFERENCIAL">Diferencial</option>
+                                <option value="VARIABLE">Variable</option>
+                              </select></label>
+                              <label className="product-field"><span>Libranzera</span><select value={productoCreditoForm.idLibranzera} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
+                                <option value="">Libranzera</option>
+                                {productosCreditoCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                              </select></label>
+                              <label className="product-field"><span>Tope minimo</span><input value={productoCreditoForm.montoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMinimo: event.target.value }))} placeholder="Monto minimo aprobado" /><small>Monto minimo que puede solicitarse.</small></label>
+                              <label className="product-field"><span>Tope maximo</span><input value={productoCreditoForm.montoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMaximo: event.target.value }))} placeholder="Monto maximo aprobado" /><small>Limite superior del producto.</small></label>
+                              <label className="product-field"><span>Salario minimo</span><input value={productoCreditoForm.salarioMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMinimo: event.target.value }))} placeholder="Ingreso minimo requerido" /></label>
+                              <label className="product-field"><span>Salario maximo</span><input value={productoCreditoForm.salarioMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMaximo: event.target.value }))} placeholder="Ingreso maximo permitido" /></label>
+                              <label className="product-field"><span>Plazo minimo</span><select value={productoCreditoForm.plazoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMinimo: event.target.value }))}>
+                                <option value="">Sin minimo</option>
+                                {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
+                              </select></label>
+                              <label className="product-field"><span>Plazo maximo</span><select value={productoCreditoForm.plazoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMaximo: event.target.value }))}>
+                                <option value="">Sin maximo</option>
+                                {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
+                              </select></label>
+                              <label className="product-field"><span>Modelo de plazo</span><select value={productoCreditoForm.modeloPlazo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, modeloPlazo: event.target.value }))}>
+                                <option value="MESES">Meses</option>
+                                <option value="DIAS">Dias</option>
+                                <option value="CUOTAS">Cuotas</option>
+                              </select></label>
+                              <label className="product-field"><span>Codeudores requeridos</span><input value={productoCreditoForm.numeroCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, numeroCodeudores: event.target.value }))} placeholder="0" /></label>
+                            </div>
+                            <div className="field-grid four-cols">
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteCreditoMultiple} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteCreditoMultiple: event.target.checked }))} />Credito multiple</label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.interesAjustable} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, interesAjustable: event.target.checked }))} />Interes ajustable</label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRefinanciacion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRefinanciacion: event.target.checked }))} />Refinanciacion</label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRetanqueo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRetanqueo: event.target.checked }))} />Retanqueo</label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.requiereCodeudor} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, requiereCodeudor: event.target.checked }))} />Codeudor</label>
+                            </div>
+                          </div>
+                        )
+                      },
+                      {
+                        id: 'cartera',
+                        title: 'Regla base de cartera',
+                        subtitle: 'Mora y periodicidad',
+                        content: (
+                          <div className="form-section">
+                            <h3>Regla base de cartera</h3>
+                            <div className="field-grid four-cols">
+                              <label className="product-field"><span>Periodicidad</span><select value={productoCreditoForm.periodicidad} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodicidad: event.target.value }))}>
+                                <option value="MENSUAL">Mensual</option>
+                                <option value="QUINCENAL">Quincenal</option>
+                              </select></label>
+                              <label className="product-field"><span>Dia de corte</span><input value={productoCreditoForm.diaCorte} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaCorte: event.target.value }))} placeholder="25" /></label>
+                              <label className="product-field"><span>Dia pago oportuno</span><input value={productoCreditoForm.diaPagoOportuno} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, diaPagoOportuno: event.target.value }))} placeholder="30" /></label>
+                              <label className="product-field"><span>Mora despues de dias</span><input value={productoCreditoForm.moraDespuesVencimiento} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, moraDespuesVencimiento: event.target.value }))} placeholder="0" /></label>
+                              <label className="product-field"><span>Tasa mora mensual %</span><input value={productoCreditoForm.tasaMoraMensual} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, tasaMoraMensual: event.target.value }))} placeholder="2" /></label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.primeraCuotaMesSiguiente} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, primeraCuotaMesSiguiente: event.target.checked }))} />Primera cuota mes siguiente</label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.ajustarFinSemana} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, ajustarFinSemana: event.target.checked }))} />Ajustar fin de semana</label>
+                              <label className="product-field"><span>Observacion calendario</span><input value={productoCreditoForm.observacionCalendario} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Regla especial" /></label>
+                            </div>
+                          </div>
+                        )
+                      },
+                      {
+                        id: 'libranza',
+                        title: 'Reglas de libranza',
+                        subtitle: 'Endeudamiento y embargos',
+                        content: (
+                          <div className="form-section">
+                            <h3>Reglas de libranza</h3>
+                            <div className="field-grid four-cols">
+                              <label className="product-field"><span>Endeudamiento maximo %</span><input value={productoCreditoForm.porcentajeEndeudamientoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, porcentajeEndeudamientoMaximo: event.target.value }))} placeholder="40" /><small>Porcentaje de salario/neto permitido para la cuota.</small></label>
+                              <label className="product-field"><span>Antiguedad minima</span><input value={productoCreditoForm.antiguedadMinimaMeses} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, antiguedadMinimaMeses: event.target.value }))} placeholder="0" /><small>Meses minimos vinculado a la empresa.</small></label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.requiereEmpleadoActivo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, requiereEmpleadoActivo: event.target.checked }))} />Empleado activo</label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.bloqueaEmbargos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, bloqueaEmbargos: event.target.checked }))} />Bloquear embargos</label>
+                            </div>
+                          </div>
+                        )
+                      },
+                      {
+                        id: 'formatos',
+                        title: 'Formatos y descripción',
+                        subtitle: 'Firma y detalles',
+                        content: (
+                          <div className="form-section">
+                            <h3>Formatos y descripcion</h3>
+                            <div className="field-grid four-cols">
+                              <label className="product-field"><span>Formato de credito</span><select value={productoCreditoForm.formatoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCredito: event.target.value }))}>
+                                <option value="NO">No</option>
+                                <option value="SI">Si</option>
+                              </select></label>
+                              <label className="product-field"><span>Formato de requisitos</span><select value={productoCreditoForm.formatoRequisitos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoRequisitos: event.target.value }))}>
+                                <option value="NO">No</option>
+                                <option value="SI">Si</option>
+                              </select></label>
+                              <label className="product-field"><span>Formato codeudores</span><select value={productoCreditoForm.formatoCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCodeudores: event.target.value }))}>
+                                <option value="NO">No</option>
+                                <option value="SI">Si</option>
+                              </select></label>
+                              <label className="product-field"><span>Proveedor firma</span><input value={productoCreditoForm.proveedorFirma} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, proveedorFirma: event.target.value }))} placeholder="Proveedor" /></label>
+                              <label className="product-field"><span>Periodo de gracia</span><input value={productoCreditoForm.periodoGracia} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodoGracia: event.target.value }))} placeholder="0" /></label>
+                            </div>
+                            <textarea value={productoCreditoForm.descripcion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />
+                          </div>
+                        )
+                      }
+                    ]}
+                    submitButtonText={loading ? 'Guardando...' : editingProductoCreditoId ? 'Guardar cambios' : 'Guardar producto'}
+                    submitButtonDisabled={loading}
+                    showSubmitAlways={true}
+                  />
                 </form>
 
                 <section className="surface employees-panel">
