@@ -7679,64 +7679,75 @@ function App() {
             {productosCreditoTab === 'atributos' && (
               <section className="surface employees-panel">
                 <div className="surface-title">
-                  <h2>Atributos de {selectedProductoCredito?.nombre ?? 'producto'}</h2>
-                  <span>{productoAtributos.length} registros</span>
+                  <h2>Atributos Asignados a {selectedProductoCredito?.nombre ?? 'producto'}</h2>
+                  <span>{productoAtributos.length} asignaciones</span>
                 </div>
-                <form className="employee-form attribute-form formula-builder" onSubmit={handleCreateFormulaCalculo}>
-                  <label className="product-field"><span>Crear nueva formula</span><input value={formulaCalculoForm.nombre} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. CUOTA * %" /></label>
-                  <label className="product-field"><span>Base</span><select value={formulaCalculoForm.baseCalculo} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, baseCalculo: event.target.value }))}><option value="VALOR_CREDITO">Valor credito</option><option value="VALOR_DESEMBOLSO">Valor desembolso</option><option value="SALDO">Saldo</option><option value="SMLMV">SMLMV</option><option value="CUOTA">Cuota</option><option value="VALOR">Valor</option></select></label>
-                  <label className="product-field"><span>Operacion</span><select value={formulaCalculoForm.operacion} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, operacion: event.target.value, requierePorcentaje: event.target.value === 'PORCENTAJE', requiereValor: event.target.value !== 'PORCENTAJE', requiereValor2: event.target.value === 'BASE_POR_VALOR_DIV_VALOR2' }))}><option value="PORCENTAJE">Porcentaje</option><option value="VALOR_FIJO">Valor fijo</option><option value="VALOR_POR_PLAZO">Valor por plazo</option><option value="BASE_POR_VALOR_DIV_VALOR2">Base * valor / valor2</option></select></label>
-                  <label className="inline-check"><input type="checkbox" checked={formulaCalculoForm.aplicaMinimo} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMinimo: event.target.checked }))} />Minimo</label>
-                  <label className="inline-check"><input type="checkbox" checked={formulaCalculoForm.aplicaMaximo} onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMaximo: event.target.checked }))} />Maximo</label>
-                  <button type="submit" disabled={loading}>Crear formula</button>
-                </form>
+
                 <form className="employee-form attribute-form" onSubmit={handleSaveProductoAtributo}>
-                  <label className="product-field"><span>Concepto (tbl_atributos)</span><select onChange={(event) => {
-                    const selectedId = Number(event.target.value);
-                    if (!selectedId) return;
-                    const item = tblAtributosList.find((a) => a.id === selectedId);
-                    if (!item) return;
-                    const tipoAtributoObj = productosCreditoCatalogs.tiposAtributo.find((t) => t.nombre.toUpperCase() === item.aplicaA.toUpperCase());
-                    const tipoCalculoObj = productosCreditoCatalogs.tiposCalculo.find((c) => c.nombre.toLowerCase().includes(item.tipoFormula.toLowerCase()) || item.tipoFormula.toLowerCase().includes(c.nombre.toLowerCase()));
-                    setProductoAtributoForm((current) => ({
-                      ...current,
-                      nombre: item.nombre,
-                      idTipoAtributo: tipoAtributoObj ? String(tipoAtributoObj.id) : current.idTipoAtributo,
-                      idTipoCalculo: tipoCalculoObj ? String(tipoCalculoObj.id) : current.idTipoCalculo,
-                      valor: String(item.valorDefault),
-                      porcentaje: String(item.porcentajeDefault),
-                      minimo: String(item.minimoDefault),
-                      maximo: String(item.maximoDefault),
-                      proveedor: item.proveedorDefault,
-                      prioridad: String(item.prioridadDefault),
-                      aplicaIva: item.aplicaIvaDefault,
-                      obligatorio: item.obligatorioDefault
-                    }));
-                  }}>
-                    <option value="">-- Cargar de tbl_atributos --</option>
-                    {tblAtributosList.filter((a) => a.activo).map((item) => (
-                      <option key={item.id} value={item.id}>{item.nombre} ({item.aplicaA})</option>
-                    ))}
-                  </select></label>
-                  <label className="product-field"><span>Aplica a *</span><select value={productoAtributoForm.idTipoAtributo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoAtributo: event.target.value }))}>
-                    <option value="">Selecciona</option>
-                    {productosCreditoCatalogs.tiposAtributo.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select></label>
-                  <label className="product-field"><span>Tipo de formula *</span><select value={productoAtributoForm.idTipoCalculo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: event.target.value }))}>
-                    <option value="">Selecciona formula</option>
-                    {productosCreditoCatalogs.tiposCalculo.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select></label>
-                  <label className="product-field"><span>Nombre *</span><input value={productoAtributoForm.nombre} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Fianza" /></label>
-                  <label className="product-field"><span>Valor</span><input value={productoAtributoForm.valor} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, valor: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field full-col" style={{ gridColumn: 'span 2' }}>
+                    <span>Seleccionar Atributo (tbl_atributos) *</span>
+                    <select onChange={(event) => {
+                      const selectedId = Number(event.target.value);
+                      if (!selectedId) return;
+                      const item = tblAtributosList.find((a) => a.id === selectedId);
+                      if (!item) return;
+                      const tipoAtributoObj = productosCreditoCatalogs.tiposAtributo.find((t) => t.nombre.toUpperCase() === item.aplicaA.toUpperCase());
+                      const tipoCalculoObj = productosCreditoCatalogs.tiposCalculo.find((c) => c.nombre.toLowerCase().includes(item.tipoFormula.toLowerCase()) || item.tipoFormula.toLowerCase().includes(c.nombre.toLowerCase()));
+                      setProductoAtributoForm((current) => ({
+                        ...current,
+                        nombre: item.nombre,
+                        idTipoAtributo: tipoAtributoObj ? String(tipoAtributoObj.id) : (productosCreditoCatalogs.tiposAtributo[0]?.id ? String(productosCreditoCatalogs.tiposAtributo[0].id) : '1'),
+                        idTipoCalculo: tipoCalculoObj ? String(tipoCalculoObj.id) : (productosCreditoCatalogs.tiposCalculo[0]?.id ? String(productosCreditoCatalogs.tiposCalculo[0].id) : '1'),
+                        valor: String(item.valorDefault),
+                        porcentaje: String(item.porcentajeDefault),
+                        minimo: String(item.minimoDefault),
+                        maximo: String(item.maximoDefault),
+                        proveedor: item.proveedorDefault,
+                        prioridad: String(item.prioridadDefault),
+                        aplicaIva: item.aplicaIvaDefault,
+                        obligatorio: item.obligatorioDefault
+                      }));
+                    }}>
+                      <option value="">-- Selecciona concepto de tbl_atributos --</option>
+                      {tblAtributosList.filter((a) => a.activo).map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.nombre} ({item.aplicaA} - {item.tipoFormula})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="product-field">
+                    <span>Nombre *</span>
+                    <input value={productoAtributoForm.nombre} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Atributo seleccionado" readOnly style={{ background: '#f5f7fa', cursor: 'not-allowed' }} />
+                  </label>
+                  <label className="product-field">
+                    <span>Aplica a *</span>
+                    <select value={productoAtributoForm.idTipoAtributo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoAtributo: event.target.value }))}>
+                      <option value="">Selecciona</option>
+                      {productosCreditoCatalogs.tiposAtributo.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                    </select>
+                  </label>
+                  <label className="product-field">
+                    <span>Tipo de formula *</span>
+                    <select value={productoAtributoForm.idTipoCalculo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: event.target.value }))}>
+                      <option value="">Selecciona formula</option>
+                      {productosCreditoCatalogs.tiposCalculo.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                    </select>
+                  </label>
+
+                  <label className="product-field"><span>Valor ($)</span><input value={productoAtributoForm.valor} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, valor: event.target.value }))} placeholder="0" /></label>
                   <label className="product-field"><span>Valor 2</span><input value={productoAtributoForm.valor2} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, valor2: event.target.value }))} placeholder="Divisor/base 2" /></label>
-                  <label className="product-field"><span>Porcentaje</span><input value={productoAtributoForm.porcentaje} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, porcentaje: event.target.value }))} placeholder="0" /></label>
+                  <label className="product-field"><span>Porcentaje (%)</span><input value={productoAtributoForm.porcentaje} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, porcentaje: event.target.value }))} placeholder="0" /></label>
                   <label className="product-field"><span>Minimo</span><input value={productoAtributoForm.minimo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, minimo: event.target.value }))} placeholder="0" /></label>
                   <label className="product-field"><span>Maximo</span><input value={productoAtributoForm.maximo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, maximo: event.target.value }))} placeholder="0" /></label>
                   <label className="product-field"><span>Proveedor / fianza</span><input value={productoAtributoForm.proveedor} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, proveedor: event.target.value }))} placeholder="Beneficiario" /></label>
                   <label className="product-field compact-number"><span>Prioridad</span><input value={productoAtributoForm.prioridad} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, prioridad: event.target.value }))} placeholder="1" /></label>
-                  <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.aplicaIva} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, aplicaIva: event.target.checked }))} />IVA</label>
-                  <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.obligatorio} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, obligatorio: event.target.checked }))} />Obligatorio</label>
-                  <button type="submit" disabled={!selectedProductoCreditoId || loading}>{editingProductoAtributoId ? 'Guardar atributo' : 'Agregar atributo'}</button>
+                  
+                  <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.aplicaIva} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, aplicaIva: event.target.checked }))} /> IVA</label>
+                  <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.obligatorio} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, obligatorio: event.target.checked }))} /> Obligatorio</label>
+
+                  <button type="submit" disabled={!selectedProductoCreditoId || loading}>{editingProductoAtributoId ? 'Guardar atributo' : 'Asignar atributo'}</button>
                   {editingProductoAtributoId && <button type="button" className="ghost-button" onClick={handleCancelProductoAtributoEdit}>Cancelar</button>}
                 </form>
                 <div className="table-wrap"><table><thead><tr><th>Nombre</th><th>Tipo</th><th>Calculo</th><th>Valor</th><th>%</th><th>IVA</th><th>Acciones</th></tr></thead><tbody>{productoAtributos.map((item) => <tr key={item.id}><td>{item.nombre}</td><td>{item.tipoAtributo}</td><td>{item.tipoCalculo}</td><td>{item.valor ?? '-'}</td><td>{item.porcentaje ?? '-'}</td><td>{item.aplicaIva ? 'Si' : 'No'}</td><td><span className="row-actions compact-actions"><button type="button" onClick={() => handleEditProductoAtributo(item)}>Editar</button><button type="button" className="danger" onClick={() => handleDeleteProductoAtributo(item)}>Eliminar</button></span></td></tr>)}</tbody></table></div>
