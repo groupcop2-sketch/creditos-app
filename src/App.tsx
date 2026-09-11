@@ -849,6 +849,8 @@ type TblAtributoItem = {
   activo: boolean;
 };
 
+
+
 type TblAtributoFormState = {
   nombre: string;
   descripcion: string;
@@ -8038,8 +8040,8 @@ function App() {
 
                       <label className="product-field">
                         <span>Tipo de fórmula *</span>
-                        <select 
-                          value={tblAtributoForm.tipoFormula} 
+                        <select
+                          value={tblAtributoForm.tipoFormula}
                           onChange={(e) => {
                             const selectedFormula = e.target.value;
                             let autoOp = tblAtributoForm.operacion;
