@@ -1093,23 +1093,37 @@ export type PortalCreditosResponse = {
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string) {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers ?? {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    });
+  } catch {
+    throw Object.assign(new Error('No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.'), {
+      status: 0
+    });
+  }
 
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
+  let payload: { message?: string; issues?: Array<{ path?: string[]; message?: string }> } | null = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = null;
+    }
+  }
 
   if (!response.ok) {
     const issueMessage = Array.isArray(payload?.issues)
-      ? payload.issues.map((issue: { path?: string[]; message?: string }) => `${issue.path?.join('.') || 'campo'}: ${issue.message}`).join(' | ')
+      ? payload.issues.map((issue) => `${issue.path?.join('.') || 'campo'}: ${issue.message}`).join(' | ')
       : null;
-    const message = issueMessage || payload?.message || 'Error inesperado';
+    const message = issueMessage || payload?.message || `Error ${response.status} al procesar la solicitud`;
     const error = new Error(message) as Error & { status?: number; details?: unknown };
     error.status = response.status;
     error.details = payload;

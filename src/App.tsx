@@ -7,6 +7,8 @@ import {
 import { RichDocumentEditor } from './RichDocumentEditor';
 import { PdfFieldMapper } from './PdfFieldMapper';
 import { FormStepper, type StepItem } from './FormStepper';
+import { FeedbackAlert, type FeedbackTone } from './FeedbackAlert';
+import { getAuthErrorMessage } from './feedback';
 import {
   api,
   type AddressCatalogs,
@@ -1083,6 +1085,12 @@ function App() {
   const [portalSimulacion, setPortalSimulacion] = useState<SimulacionCredito | null>(null);
   const [portalDetalleVisible, setPortalDetalleVisible] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<FeedbackTone>('info');
+
+  const notify = (text: string, tone: FeedbackTone = 'info') => {
+    setMessage(text);
+    setMessageTone(tone);
+  };
   const [loading, setLoading] = useState(false);
   const isPortalRoute = window.location.pathname.startsWith('/portal');
   const [themeMode, setThemeMode] = useState<ThemeMode>(() =>
@@ -2367,20 +2375,25 @@ function App() {
 
   const handleLogin = async (event: FormEvent) => {
     event.preventDefault();
+    const username = authForm.username.trim();
+    const password = authForm.password;
+
+    if (!username || !password) {
+      notify('Ingresa tu usuario y contraseña para continuar.', 'error');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
-
-
     try {
-      const response = await api.login(authForm.username, authForm.password);
+      const response = await api.login(username, password);
       const nextSession = { token: response.token, user: response.user };
       setSession(nextSession);
       localStorage.setItem('creditos.token', response.token);
       localStorage.setItem('creditos.user', JSON.stringify(response.user));
       setAuthForm({ username: '', password: '' });
-      setMessage('Sesion iniciada');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo iniciar sesion');
+      notify(getAuthErrorMessage(error, 'No se pudo iniciar sesión.'), 'error');
     } finally {
       setLoading(false);
     }
@@ -2396,13 +2409,13 @@ function App() {
     setCatalogModules([]);
     setUserModules([]);
     setIdentificationTypes([]);
-    setMessage('Sesion cerrada');
+    notify('Sesión cerrada.', 'success');
   };
 
   const handlePortalRegister = async (event: FormEvent) => {
     event.preventDefault();
     if (portalRegisterForm.password.length < 8) {
-      setMessage('La contrasena debe tener minimo 8 caracteres');
+      notify('La contraseña debe tener mínimo 8 caracteres.', 'error');
       return;
     }
     setLoading(true);
@@ -2421,11 +2434,11 @@ function App() {
       });
       setPortalRegisterForm(initialPortalRegisterForm);
       setPortalMode('login');
-      setMessage(response.confirmationToken
+      notify(response.confirmationToken
         ? `Registro creado. No se pudo confirmar envio SMTP; activa en desarrollo con /portal?confirm=${response.confirmationToken}`
-        : 'Registro creado. Revisa tu correo para activar la cuenta.');
+        : 'Registro creado. Revisa tu correo para activar la cuenta.', 'success');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo registrar el cliente');
+      notify(error instanceof Error ? error.message : 'No se pudo registrar el cliente', 'error');
     } finally {
       setLoading(false);
     }
@@ -2450,9 +2463,9 @@ function App() {
       localStorage.setItem('creditos.portal.cliente', JSON.stringify(cliente));
       setPortalCliente(cliente);
       setPortalRegisterForm(initialPortalRegisterForm);
-      setMessage('Informacion laboral guardada. Ya puedes gestionar tu credito.');
+      notify('Informacion laboral guardada. Ya puedes gestionar tu credito.', 'success');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo guardar la informacion laboral');
+      notify(error instanceof Error ? error.message : 'No se pudo guardar la informacion laboral', 'error');
     } finally {
       setLoading(false);
     }
@@ -2460,17 +2473,24 @@ function App() {
 
   const handlePortalLogin = async (event: FormEvent) => {
     event.preventDefault();
+    const identificacion = portalLoginForm.identificacion.trim();
+    const password = portalLoginForm.password;
+
+    if (!identificacion || !password) {
+      notify('Ingresa tu identificación o correo y tu contraseña para continuar.', 'error');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
     try {
-      const response = await api.loginPortalClient(portalLoginForm.identificacion, portalLoginForm.password);
+      const response = await api.loginPortalClient(identificacion, password);
       localStorage.setItem('creditos.portal.token', response.token);
       localStorage.setItem('creditos.portal.cliente', JSON.stringify(response.cliente));
       setPortalCliente(response.cliente);
       setPortalLoginForm(initialPortalLoginForm);
-      setMessage('Sesion de cliente iniciada');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo iniciar sesion en el portal');
+      notify(getAuthErrorMessage(error, 'No se pudo iniciar sesión en el portal.'), 'error');
     } finally {
       setLoading(false);
     }
@@ -2482,11 +2502,11 @@ function App() {
     try {
       const cliente = await api.confirmPortalEmail(token);
       setPortalMode('login');
-      setMessage(`Cuenta activada para ${cliente.nombreCompleto}. Ya puedes iniciar sesion.`);
+      notify(`Cuenta activada para ${cliente.nombreCompleto}. Ya puedes iniciar sesion.`, 'success');
       window.history.replaceState({}, '', '/portal');
     } catch (error) {
       setPortalMode('login');
-      setMessage(error instanceof Error ? error.message : 'No se pudo activar la cuenta');
+      notify(error instanceof Error ? error.message : 'No se pudo activar la cuenta', 'error');
     } finally {
       setLoading(false);
     }
@@ -2498,12 +2518,12 @@ function App() {
     setMessage('');
     try {
       const response = await api.forgotPortalPassword(portalForgotForm.correo);
-      setMessage(response.resetUrl
+      notify(response.resetUrl
         ? `Enlace de recuperacion generado: ${response.resetUrl}`
-        : 'Si el correo existe, enviaremos las instrucciones de recuperacion.');
+        : 'Si el correo existe, enviaremos las instrucciones de recuperacion.', 'success');
       setPortalMode('login');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo solicitar la recuperacion');
+      notify(error instanceof Error ? error.message : 'No se pudo solicitar la recuperacion', 'error');
     } finally {
       setLoading(false);
     }
@@ -2512,7 +2532,7 @@ function App() {
   const handlePortalResetPassword = async (event: FormEvent) => {
     event.preventDefault();
     if (portalForgotForm.password.length < 8) {
-      setMessage('La nueva contrasena debe tener minimo 8 caracteres');
+      notify('La nueva contraseña debe tener mínimo 8 caracteres.', 'error');
       return;
     }
     setLoading(true);
@@ -2521,9 +2541,9 @@ function App() {
       await api.resetPortalPassword(portalForgotForm.token, portalForgotForm.password);
       setPortalForgotForm(initialPortalForgotForm);
       setPortalMode('login');
-      setMessage('Contrasena actualizada. Ya puedes iniciar sesion.');
+      notify('Contraseña actualizada. Ya puedes iniciar sesión.', 'success');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo actualizar la contrasena');
+      notify(error instanceof Error ? error.message : 'No se pudo actualizar la contrasena', 'error');
     } finally {
       setLoading(false);
     }
@@ -2537,7 +2557,7 @@ function App() {
     setPortalSimulacion(null);
     setPortalCreditoForm(initialPortalCreditoForm);
     setPortalMode('login');
-    setMessage('Sesion cerrada correctamente');
+    notify('Sesión cerrada correctamente.', 'success');
     window.history.replaceState({}, '', '/portal');
   };
 
@@ -4505,8 +4525,29 @@ function App() {
               ) : portalMode === 'login' ? (
                 <form className="portal-form" onSubmit={handlePortalLogin}>
                   <div className="field-grid">
-                    <input value={portalLoginForm.identificacion} onChange={(event) => setPortalLoginForm((current) => ({ ...current, identificacion: event.target.value }))} placeholder="Identificacion o correo" />
-                    <input type="password" autoComplete="current-password" value={portalLoginForm.password} onChange={(event) => setPortalLoginForm((current) => ({ ...current, password: event.target.value }))} placeholder="Contrasena" />
+                    <input
+                      value={portalLoginForm.identificacion}
+                      autoComplete="username"
+                      aria-invalid={Boolean(message && messageTone === 'error')}
+                      className={message && messageTone === 'error' ? 'input-invalid' : undefined}
+                      onChange={(event) => {
+                        setPortalLoginForm((current) => ({ ...current, identificacion: event.target.value }));
+                        if (message) setMessage('');
+                      }}
+                      placeholder="Identificacion o correo"
+                    />
+                    <input
+                      type="password"
+                      autoComplete="current-password"
+                      value={portalLoginForm.password}
+                      aria-invalid={Boolean(message && messageTone === 'error')}
+                      className={message && messageTone === 'error' ? 'input-invalid' : undefined}
+                      onChange={(event) => {
+                        setPortalLoginForm((current) => ({ ...current, password: event.target.value }));
+                        if (message) setMessage('');
+                      }}
+                      placeholder="Contrasena"
+                    />
                     <button type="submit" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</button>
                   </div>
                 </form>
@@ -4538,7 +4579,7 @@ function App() {
               )}
             </section>
           )}
-          {message && <p className="form-message">{message}</p>}
+          <FeedbackAlert message={message} tone={messageTone} onDismiss={() => setMessage('')} />
         </section>
       </div>
     );
@@ -4584,7 +4625,13 @@ function App() {
               Usuario o correo
               <input
                 value={authForm.username}
-                onChange={(event) => setAuthForm((current) => ({ ...current, username: event.target.value }))}
+                autoComplete="username"
+                aria-invalid={Boolean(message && messageTone === 'error')}
+                className={message && messageTone === 'error' ? 'input-invalid' : undefined}
+                onChange={(event) => {
+                  setAuthForm((current) => ({ ...current, username: event.target.value }));
+                  if (message) setMessage('');
+                }}
                 placeholder="admin o correo@dominio.com"
               />
             </label>
@@ -4592,13 +4639,19 @@ function App() {
               Contrasena
               <input
                 type="password"
+                autoComplete="current-password"
                 value={authForm.password}
-                onChange={(event) => setAuthForm((current) => ({ ...current, password: event.target.value }))}
+                aria-invalid={Boolean(message && messageTone === 'error')}
+                className={message && messageTone === 'error' ? 'input-invalid' : undefined}
+                onChange={(event) => {
+                  setAuthForm((current) => ({ ...current, password: event.target.value }));
+                  if (message) setMessage('');
+                }}
                 placeholder="********"
               />
             </label>
             <button type="submit" disabled={loading}>{loading ? 'Ingresando...' : 'Ingresar'}</button>
-            <p className="message-line">{message}</p>
+            <FeedbackAlert message={message} tone={messageTone} onDismiss={() => setMessage('')} />
           </form>
         </section>
       </div>
