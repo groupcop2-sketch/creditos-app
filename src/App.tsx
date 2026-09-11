@@ -838,6 +838,7 @@ type TblAtributoItem = {
   aplicaA: string;
   tipoFormula: string;
   valorDefault: number;
+  valor2Default?: number;
   porcentajeDefault: number;
   minimoDefault: number;
   maximoDefault: number;
@@ -3259,6 +3260,7 @@ function App() {
       aplicaA: tblAtributoForm.aplicaA,
       tipoFormula: tblAtributoForm.tipoFormula,
       valorDefault: Number(tblAtributoForm.valorDefault) || 0,
+      valor2Default: Number(tblAtributoForm.valor2Default) || 0,
       porcentajeDefault: Number(tblAtributoForm.porcentajeDefault) || 0,
       minimoDefault: Number(tblAtributoForm.minimoDefault) || 0,
       maximoDefault: Number(tblAtributoForm.maximoDefault) || 0,
