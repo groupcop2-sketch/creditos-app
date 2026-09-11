@@ -820,7 +820,14 @@ select:focus {
 }
 
 .side-nav {
+  align-self: start;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--color-primary-dark) 88%, #000 12%), var(--color-primary)),
     var(--color-primary);
@@ -832,6 +839,7 @@ select:focus {
 }
 
 .brand-block {
+  flex-shrink: 0;
   min-height: 72px;
   display: flex;
   align-items: center;
@@ -860,8 +868,25 @@ select:focus {
 }
 
 .module-nav {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
+  align-content: start;
   padding: 8px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
+}
+
+.module-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.module-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .module-link {
@@ -909,11 +934,13 @@ select:focus {
 }
 
 .user-card {
+  flex-shrink: 0;
   margin-top: auto;
   padding: 16px;
   display: grid;
   gap: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--color-primary-dark) 55%, transparent);
 }
 
 .ghost-button {
@@ -3080,10 +3107,17 @@ th {
   }
 
   .side-nav {
+    position: static;
+    height: auto;
     min-height: auto;
+    max-height: none;
+    overflow: visible;
   }
 
   .module-nav {
+    flex: none;
+    min-height: 0;
+    overflow: visible;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
