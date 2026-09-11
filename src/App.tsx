@@ -853,7 +853,9 @@ type TblAtributoFormState = {
   descripcion: string;
   aplicaA: string;
   tipoFormula: string;
+  operacion: string;
   valorDefault: string;
+  valor2Default: string;
   porcentajeDefault: string;
   minimoDefault: string;
   maximoDefault: string;
@@ -868,7 +870,9 @@ const initialTblAtributoForm: TblAtributoFormState = {
   descripcion: '',
   aplicaA: 'CREDITO',
   tipoFormula: 'Porcentaje',
+  operacion: 'Porcentaje',
   valorDefault: '0',
+  valor2Default: '0',
   porcentajeDefault: '0',
   minimoDefault: '0',
   maximoDefault: '0',
@@ -3279,12 +3283,24 @@ function App() {
 
   const handleEditTblAtributo = (item: TblAtributoItem) => {
     setEditingTblAtributoId(item.id);
+    let autoOp = 'Porcentaje';
+    if (item.tipoFormula.includes('%') || item.porcentajeDefault > 0) {
+      autoOp = 'Porcentaje';
+    } else if (item.tipoFormula.toUpperCase().includes('VALOR FIJO')) {
+      autoOp = 'Valor fijo';
+    } else if (item.tipoFormula.toUpperCase().includes('MANUAL')) {
+      autoOp = 'Manual';
+    } else if (item.tipoFormula.includes('/') || item.tipoFormula.includes('VALOR2')) {
+      autoOp = 'Base * valor / valor2';
+    }
     setTblAtributoForm({
       nombre: item.nombre,
       descripcion: item.descripcion,
       aplicaA: item.aplicaA,
       tipoFormula: item.tipoFormula,
+      operacion: autoOp,
       valorDefault: String(item.valorDefault),
+      valor2Default: String(item.valor2Default ?? '0'),
       porcentajeDefault: String(item.porcentajeDefault),
       minimoDefault: String(item.minimoDefault),
       maximoDefault: String(item.maximoDefault),
@@ -7970,14 +7986,73 @@ function App() {
                       </button>
                     </div>
                   </div>
+
                   <div className="form-section">
-                    <h3>Información del Concepto y Reglas por Defecto</h3>
+                    <h3>Información</h3>
                     <div className="field-grid four-cols">
-                      <label className="product-field"><span>Nombre *</span><input value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA CREDITO" /></label>
-                      <label className="product-field"><span>Aplica a *</span><select value={tblAtributoForm.aplicaA} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaA: e.target.value }))}><option value="CREDITO">CREDITO</option><option value="CUOTA">CUOTA</option><option value="DESEMBOLSO">DESEMBOLSO</option></select></label>
+                      <label className="product-field" style={{ gridColumn: 'span 2' }}>
+                        <span>Nombre *</span>
+                        <input value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA DE CREDITOS COOPHUMANA" />
+                      </label>
+                      <label className="product-field compact-number">
+                        <span>Prioridad *</span>
+                        <input value={tblAtributoForm.prioridadDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, prioridadDefault: e.target.value }))} placeholder="1" />
+                      </label>
                       <label className="product-field">
-                        <span>Tipo de Fórmula *</span>
-                        <select value={tblAtributoForm.tipoFormula} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, tipoFormula: e.target.value }))}>
+                        <span>IVA *</span>
+                        <select value={tblAtributoForm.aplicaIvaDefault ? 'SI' : 'NO'} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaIvaDefault: e.target.value === 'SI' }))}>
+                          <option value="SI">SI</option>
+                          <option value="NO">NO</option>
+                        </select>
+                      </label>
+                      <label className="product-field full-col" style={{ gridColumn: 'span 2' }}>
+                        <span>Proveedor / Beneficiario</span>
+                        <input value={tblAtributoForm.proveedorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, proveedorDefault: e.target.value }))} placeholder="Ej. 900528910 COOPHUMANA / P&S SOLUCIONES" />
+                      </label>
+                      <label className="product-field full-col" style={{ gridColumn: 'span 2' }}>
+                        <span>Descripción / Detalle</span>
+                        <input value={tblAtributoForm.descripcion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, descripcion: e.target.value }))} placeholder="Descripción opcional del concepto" />
+                      </label>
+                      <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', marginTop: '4px' }}>
+                        <label className="inline-check">
+                          <input type="checkbox" checked={tblAtributoForm.obligatorioDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, obligatorioDefault: e.target.checked }))} />
+                          Facturar / Obligatorio
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-section" style={{ marginTop: '20px' }}>
+                    <h3>Tipos de Fórmulas</h3>
+                    <div className="field-grid four-cols">
+                      <label className="product-field">
+                        <span>Aplica a (Base) *</span>
+                        <select value={tblAtributoForm.aplicaA} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaA: e.target.value }))}>
+                          <option value="CREDITO">CRÉDITO</option>
+                          <option value="CUOTA">CUOTA</option>
+                          <option value="DESEMBOLSO">DESEMBOLSO</option>
+                        </select>
+                      </label>
+
+                      <label className="product-field">
+                        <span>Tipo de fórmula *</span>
+                        <select 
+                          value={tblAtributoForm.tipoFormula} 
+                          onChange={(e) => {
+                            const selectedFormula = e.target.value;
+                            let autoOp = tblAtributoForm.operacion;
+                            if (selectedFormula.includes('%') || selectedFormula.toUpperCase().includes('PORCENTAJE')) {
+                              autoOp = 'Porcentaje';
+                            } else if (selectedFormula.toUpperCase().includes('VALOR FIJO')) {
+                              autoOp = 'Valor fijo';
+                            } else if (selectedFormula.toUpperCase().includes('MANUAL')) {
+                              autoOp = 'Manual';
+                            } else if (selectedFormula.includes('/') || selectedFormula.includes('VALOR2')) {
+                              autoOp = 'Base * valor / valor2';
+                            }
+                            setTblAtributoForm((cur) => ({ ...cur, tipoFormula: selectedFormula, operacion: autoOp }));
+                          }}
+                        >
                           <option value="">-- Seleccionar Tipo de Fórmula --</option>
                           {customFormulas.map((formula) => (
                             <option key={formula} value={formula}>
@@ -7993,17 +8068,52 @@ function App() {
                             ))}
                         </select>
                       </label>
-                      <label className="product-field"><span>Proveedor por Defecto</span><input value={tblAtributoForm.proveedorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, proveedorDefault: e.target.value }))} placeholder="Ej. Aseguradora / DIAN / P&S" /></label>
-                      <label className="product-field"><span>Valor por Defecto</span><input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="0" /></label>
-                      <label className="product-field"><span>Porcentaje Defecto (%)</span><input value={tblAtributoForm.porcentajeDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, porcentajeDefault: e.target.value }))} placeholder="0.0" /></label>
-                      <label className="product-field"><span>Mínimo Defecto</span><input value={tblAtributoForm.minimoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, minimoDefault: e.target.value }))} placeholder="0" /></label>
-                      <label className="product-field"><span>Máximo Defecto</span><input value={tblAtributoForm.maximoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, maximoDefault: e.target.value }))} placeholder="0" /></label>
-                      <label className="product-field compact-number"><span>Prioridad</span><input value={tblAtributoForm.prioridadDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, prioridadDefault: e.target.value }))} placeholder="1" /></label>
-                      <label className="product-field full-col" style={{ gridColumn: 'span 3' }}><span>Descripción / Detalle</span><input value={tblAtributoForm.descripcion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, descripcion: e.target.value }))} placeholder="Descripción opcional del concepto" /></label>
-                    </div>
-                    <div className="field-grid" style={{ marginTop: '12px', display: 'flex', gap: '16px' }}>
-                      <label className="inline-check"><input type="checkbox" checked={tblAtributoForm.aplicaIvaDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaIvaDefault: e.target.checked }))} /> IVA por Defecto</label>
-                      <label className="inline-check"><input type="checkbox" checked={tblAtributoForm.obligatorioDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, obligatorioDefault: e.target.checked }))} /> Obligatorio por Defecto</label>
+
+                      <label className="product-field">
+                        <span>Operación *</span>
+                        <select value={tblAtributoForm.operacion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, operacion: e.target.value }))}>
+                          <option value="Porcentaje">Porcentaje</option>
+                          <option value="Valor fijo">Valor fijo</option>
+                          <option value="Manual">Manual</option>
+                          <option value="Base * valor / valor2">Base * valor / valor2</option>
+                        </select>
+                      </label>
+
+                      {tblAtributoForm.operacion === 'Porcentaje' && (
+                        <label className="product-field">
+                          <span>Porcentaje (%) *</span>
+                          <input value={tblAtributoForm.porcentajeDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, porcentajeDefault: e.target.value }))} placeholder="Ej. 10.0" />
+                        </label>
+                      )}
+
+                      {(tblAtributoForm.operacion === 'Valor fijo' || tblAtributoForm.operacion === 'Manual') && (
+                        <label className="product-field">
+                          <span>Valor ($) *</span>
+                          <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 15000" />
+                        </label>
+                      )}
+
+                      {tblAtributoForm.operacion === 'Base * valor / valor2' && (
+                        <>
+                          <label className="product-field">
+                            <span>Valor (Multiplicador) *</span>
+                            <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 1000" />
+                          </label>
+                          <label className="product-field">
+                            <span>Valor 2 (Divisor) *</span>
+                            <input value={tblAtributoForm.valor2Default} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valor2Default: e.target.value }))} placeholder="Ej. 100" />
+                          </label>
+                        </>
+                      )}
+
+                      <label className="product-field">
+                        <span>Mínimo Defecto</span>
+                        <input value={tblAtributoForm.minimoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, minimoDefault: e.target.value }))} placeholder="0" />
+                      </label>
+                      <label className="product-field">
+                        <span>Máximo Defecto</span>
+                        <input value={tblAtributoForm.maximoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, maximoDefault: e.target.value }))} placeholder="0" />
+                      </label>
                     </div>
                   </div>
                 </form>
