@@ -3525,3 +3525,23 @@ th {
   cursor: not-allowed;
 }
 
+.product-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.product-field > span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #475569);
+  margin-bottom: 2px;
+}
+
+.product-field > small {
+  font-size: 0.7rem;
+  color: var(--text-muted, #64748b);
+}
+
+
