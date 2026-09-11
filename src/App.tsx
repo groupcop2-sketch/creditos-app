@@ -60,7 +60,7 @@ type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
 type AliadosTab = 'registro' | 'directorio';
 type ComercialesTab = 'libranzera' | 'vendedor' | 'directorio';
-type ProductosCreditoTab = 'solicitudes' | 'general' | 'atributos' | 'convenios' | 'documentos' | 'etapas' | 'parametros';
+type ProductosCreditoTab = 'solicitudes' | 'general' | 'atributos' | 'convenios' | 'documentos' | 'etapas' | 'parametros' | 'tblAtributos';
 type ThemeMode = 'light' | 'dark';
 type PaletteKey = 'azul' | 'verde' | 'vino' | 'grafito';
 
@@ -829,6 +829,65 @@ const initialFormulaCalculoForm: FormulaCalculoFormState = {
   aplicaMaximo: true
 };
 
+type TblAtributoItem = {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  aplicaA: string;
+  tipoFormula: string;
+  valorDefault: number;
+  porcentajeDefault: number;
+  minimoDefault: number;
+  maximoDefault: number;
+  proveedorDefault: string;
+  prioridadDefault: number;
+  aplicaIvaDefault: boolean;
+  obligatorioDefault: boolean;
+  activo: boolean;
+};
+
+type TblAtributoFormState = {
+  nombre: string;
+  descripcion: string;
+  aplicaA: string;
+  tipoFormula: string;
+  valorDefault: string;
+  porcentajeDefault: string;
+  minimoDefault: string;
+  maximoDefault: string;
+  proveedorDefault: string;
+  prioridadDefault: string;
+  aplicaIvaDefault: boolean;
+  obligatorioDefault: boolean;
+};
+
+const initialTblAtributoForm: TblAtributoFormState = {
+  nombre: '',
+  descripcion: '',
+  aplicaA: 'CREDITO',
+  tipoFormula: 'Porcentaje',
+  valorDefault: '0',
+  porcentajeDefault: '0',
+  minimoDefault: '0',
+  maximoDefault: '0',
+  proveedorDefault: '',
+  prioridadDefault: '1',
+  aplicaIvaDefault: false,
+  obligatorioDefault: false
+};
+
+const INITIAL_TBL_ATRIBUTOS: TblAtributoItem[] = [
+  { id: 1, nombre: 'FIANZA CREDITO', descripcion: 'Cobertura de fianza sobre el monto del crédito', aplicaA: 'CREDITO', tipoFormula: 'Manual', valorDefault: 0, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Beneficiario', prioridadDefault: 1, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
+  { id: 2, nombre: 'AVAL CREDITO', descripcion: 'Garantía de aval otorgado por fondo de garantías', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 2.5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Fianzacredito', prioridadDefault: 1, aplicaIvaDefault: true, obligatorioDefault: true, activo: true },
+  { id: 3, nombre: 'SEGURO DE VIDA DEUDORES', descripcion: 'Póliza de seguro de vida para amparo de deudores', aplicaA: 'CUOTA', tipoFormula: 'Valor fijo', valorDefault: 5000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Aseguradora', prioridadDefault: 2, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
+  { id: 4, nombre: 'ESTUDIO DE CREDITO', descripcion: 'Cargo único por análisis crediticio y verificación', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 25000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'P&S Soluciones', prioridadDefault: 3, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 5, nombre: 'PLATAFORMA Y TECNOLOGIA', descripcion: 'Costo de uso de plataforma digital y procesamiento', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 15000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Sistema', prioridadDefault: 4, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 6, nombre: 'COMISION POR MIPYME', descripcion: 'Comisión mipyme aplicable según ley', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 1.5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Entidad', prioridadDefault: 5, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 7, nombre: 'GASTOS DE COBRANZA', descripcion: 'Recargo administrativo por gestión de mora', aplicaA: 'CUOTA', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 5.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Cartera', prioridadDefault: 6, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 8, nombre: 'IVA SOBRE CARGOS', descripcion: 'Impuesto al valor agregado aplicable a comisiones', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 19.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'DIAN', prioridadDefault: 7, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
+  { id: 9, nombre: 'GMF / 4 X 1000', descripcion: 'Gravamen a los movimientos financieros', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 0.4, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Banco', prioridadDefault: 8, aplicaIvaDefault: false, obligatorioDefault: false, activo: true }
+];
+
 const initialParametroFinancieroForm: ParametroFinancieroFormState = {
   codigo: '',
   nombre: '',
@@ -1154,6 +1213,9 @@ function App() {
   const [libranzeras, setLibranzeras] = useState<LibranzeraRow[]>([]);
   const [comerciales, setComerciales] = useState<ComercialRow[]>([]);
   const [productosCreditoTab, setProductosCreditoTab] = useState<ProductosCreditoTab>('general');
+  const [tblAtributosList, setTblAtributosList] = useState<TblAtributoItem[]>(INITIAL_TBL_ATRIBUTOS);
+  const [tblAtributoForm, setTblAtributoForm] = useState<TblAtributoFormState>(initialTblAtributoForm);
+  const [editingTblAtributoId, setEditingTblAtributoId] = useState<number | null>(null);
   const [productoCreditoForm, setProductoCreditoForm] = useState<ProductoCreditoFormState>(initialProductoCreditoForm);
   const [productoAtributoForm, setProductoAtributoForm] = useState<ProductoAtributoFormState>(initialProductoAtributoForm);
   const [editingProductoCreditoId, setEditingProductoCreditoId] = useState<number | null>(null);
@@ -3130,6 +3192,75 @@ function App() {
     if ((formula.includes('%') || formula.includes('porcentaje')) && !productoAtributoForm.porcentaje) errors.push('Esta formula requiere porcentaje.');
     if (formula.includes('valor fijo') && !productoAtributoForm.valor) errors.push('La formula de valor fijo requiere valor.');
     return errors;
+  };
+
+  const handleSaveTblAtributo = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!tblAtributoForm.nombre.trim()) {
+      setMessage('El nombre del atributo es obligatorio.');
+      return;
+    }
+
+    const nuevoAtributo: TblAtributoItem = {
+      id: editingTblAtributoId ?? Date.now(),
+      nombre: tblAtributoForm.nombre.trim().toUpperCase(),
+      descripcion: tblAtributoForm.descripcion.trim(),
+      aplicaA: tblAtributoForm.aplicaA,
+      tipoFormula: tblAtributoForm.tipoFormula,
+      valorDefault: Number(tblAtributoForm.valorDefault) || 0,
+      porcentajeDefault: Number(tblAtributoForm.porcentajeDefault) || 0,
+      minimoDefault: Number(tblAtributoForm.minimoDefault) || 0,
+      maximoDefault: Number(tblAtributoForm.maximoDefault) || 0,
+      proveedorDefault: tblAtributoForm.proveedorDefault.trim(),
+      prioridadDefault: Number(tblAtributoForm.prioridadDefault) || 1,
+      aplicaIvaDefault: tblAtributoForm.aplicaIvaDefault,
+      obligatorioDefault: tblAtributoForm.obligatorioDefault,
+      activo: true
+    };
+
+    if (editingTblAtributoId) {
+      setTblAtributosList((cur) => cur.map((item) => (item.id === editingTblAtributoId ? nuevoAtributo : item)));
+      setEditingTblAtributoId(null);
+      setMessage('Atributo maestro actualizado correctamente');
+    } else {
+      setTblAtributosList((cur) => [nuevoAtributo, ...cur]);
+      setMessage('Atributo maestro registrado correctamente en tbl_atributos');
+    }
+
+    setTblAtributoForm(initialTblAtributoForm);
+  };
+
+  const handleEditTblAtributo = (item: TblAtributoItem) => {
+    setEditingTblAtributoId(item.id);
+    setTblAtributoForm({
+      nombre: item.nombre,
+      descripcion: item.descripcion,
+      aplicaA: item.aplicaA,
+      tipoFormula: item.tipoFormula,
+      valorDefault: String(item.valorDefault),
+      porcentajeDefault: String(item.porcentajeDefault),
+      minimoDefault: String(item.minimoDefault),
+      maximoDefault: String(item.maximoDefault),
+      proveedorDefault: item.proveedorDefault,
+      prioridadDefault: String(item.prioridadDefault),
+      aplicaIvaDefault: item.aplicaIvaDefault,
+      obligatorioDefault: item.obligatorioDefault
+    });
+  };
+
+  const handleCancelTblAtributoEdit = () => {
+    setEditingTblAtributoId(null);
+    setTblAtributoForm(initialTblAtributoForm);
+  };
+
+  const handleToggleTblAtributoEstado = (id: number) => {
+    setTblAtributosList((cur) => cur.map((item) => (item.id === id ? { ...item, activo: !item.activo } : item)));
+    setMessage('Estado del atributo actualizado en tbl_atributos');
+  };
+
+  const handleDeleteTblAtributo = (id: number) => {
+    setTblAtributosList((cur) => cur.filter((item) => item.id !== id));
+    setMessage('Atributo eliminado de tbl_atributos');
   };
 
   const buildProductoCreditoPayload = () => ({
@@ -6586,7 +6717,7 @@ function App() {
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
             <div className="config-tabs">
-              {(['solicitudes', 'general', 'atributos', 'convenios', 'documentos', 'etapas', 'parametros'] as ProductosCreditoTab[]).map((tab) => (
+              {(['solicitudes', 'general', 'atributos', 'tblAtributos', 'convenios', 'documentos', 'etapas', 'parametros'] as ProductosCreditoTab[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -6597,6 +6728,7 @@ function App() {
                     solicitudes: 'Solicitudes',
                     general: 'Productos',
                     atributos: 'Condiciones y cargos',
+                    tblAtributos: 'Catálogo Atributos',
                     convenios: 'Convenios',
                     documentos: 'Documentacion',
                     etapas: 'Flujo del credito',
@@ -6606,7 +6738,7 @@ function App() {
               ))}
             </div>
 
-            {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && (
+            {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && (
               <div className="product-context-bar">
                 <div>
                   <span className="section-kicker">Producto en configuracion</span>
@@ -7559,6 +7691,33 @@ function App() {
                   <button type="submit" disabled={loading}>Crear formula</button>
                 </form>
                 <form className="employee-form attribute-form" onSubmit={handleSaveProductoAtributo}>
+                  <label className="product-field"><span>Concepto (tbl_atributos)</span><select onChange={(event) => {
+                    const selectedId = Number(event.target.value);
+                    if (!selectedId) return;
+                    const item = tblAtributosList.find((a) => a.id === selectedId);
+                    if (!item) return;
+                    const tipoAtributoObj = productosCreditoCatalogs.tiposAtributo.find((t) => t.nombre.toUpperCase() === item.aplicaA.toUpperCase());
+                    const tipoCalculoObj = productosCreditoCatalogs.tiposCalculo.find((c) => c.nombre.toLowerCase().includes(item.tipoFormula.toLowerCase()) || item.tipoFormula.toLowerCase().includes(c.nombre.toLowerCase()));
+                    setProductoAtributoForm((current) => ({
+                      ...current,
+                      nombre: item.nombre,
+                      idTipoAtributo: tipoAtributoObj ? String(tipoAtributoObj.id) : current.idTipoAtributo,
+                      idTipoCalculo: tipoCalculoObj ? String(tipoCalculoObj.id) : current.idTipoCalculo,
+                      valor: String(item.valorDefault),
+                      porcentaje: String(item.porcentajeDefault),
+                      minimo: String(item.minimoDefault),
+                      maximo: String(item.maximoDefault),
+                      proveedor: item.proveedorDefault,
+                      prioridad: String(item.prioridadDefault),
+                      aplicaIva: item.aplicaIvaDefault,
+                      obligatorio: item.obligatorioDefault
+                    }));
+                  }}>
+                    <option value="">-- Cargar de tbl_atributos --</option>
+                    {tblAtributosList.filter((a) => a.activo).map((item) => (
+                      <option key={item.id} value={item.id}>{item.nombre} ({item.aplicaA})</option>
+                    ))}
+                  </select></label>
                   <label className="product-field"><span>Aplica a *</span><select value={productoAtributoForm.idTipoAtributo} onChange={(event) => setProductoAtributoForm((current) => ({ ...current, idTipoAtributo: event.target.value }))}>
                     <option value="">Selecciona</option>
                     {productosCreditoCatalogs.tiposAtributo.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
@@ -7605,6 +7764,99 @@ function App() {
                 <section className="surface employees-panel">
                   <div className="surface-title"><h2>Parametros configurados</h2><span>{parametrosFinancieros.length}</span></div>
                   <div className="table-wrap"><table><thead><tr><th>Codigo</th><th>Nombre</th><th>Valor</th><th>Unidad</th><th>Desde</th><th>Hasta</th><th>Estado</th></tr></thead><tbody>{parametrosFinancieros.map((item) => <tr key={item.id}><td>{item.codigo}</td><td>{item.nombre}</td><td>{item.unidad === 'PORCENTAJE' ? String(item.valor) + '%' : formatMoney(item.valor)}</td><td>{item.unidad}</td><td>{item.vigenciaDesde}</td><td>{item.vigenciaHasta ?? '-'}</td><td>{item.activo ? 'Activo' : 'Inactivo'}</td></tr>)}</tbody></table></div>
+                </section>
+              </section>
+            )}
+
+            {productosCreditoTab === 'tblAtributos' && (
+              <section className="content-grid credit-product-grid">
+                <form className="surface pagaduria-form" onSubmit={handleSaveTblAtributo}>
+                  <div className="surface-title">
+                    <div>
+                      <span className="section-kicker">Catálogo Maestro (tbl_atributos)</span>
+                      <h2>{editingTblAtributoId ? 'Editar Atributo Maestro' : 'Registrar Nuevo Atributo Maestro'}</h2>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {editingTblAtributoId && (
+                        <button type="button" className="ghost-button" onClick={handleCancelTblAtributoEdit}>Cancelar</button>
+                      )}
+                      <button type="submit" disabled={loading}>
+                        {editingTblAtributoId ? 'Guardar Cambios' : 'Registrar Atributo'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="form-section">
+                    <h3>Información del Concepto y Reglas por Defecto</h3>
+                    <div className="field-grid four-cols">
+                      <label className="product-field"><span>Nombre *</span><input value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA CREDITO" /></label>
+                      <label className="product-field"><span>Aplica a *</span><select value={tblAtributoForm.aplicaA} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaA: e.target.value }))}><option value="CREDITO">CREDITO</option><option value="CUOTA">CUOTA</option><option value="DESEMBOLSO">DESEMBOLSO</option></select></label>
+                      <label className="product-field"><span>Tipo de Fórmula *</span><select value={tblAtributoForm.tipoFormula} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, tipoFormula: e.target.value }))}><option value="Porcentaje">Porcentaje</option><option value="Valor fijo">Valor fijo</option><option value="Manual">Manual</option><option value="Base * valor / valor2">Base * valor / valor2</option></select></label>
+                      <label className="product-field"><span>Proveedor por Defecto</span><input value={tblAtributoForm.proveedorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, proveedorDefault: e.target.value }))} placeholder="Ej. Aseguradora / DIAN / P&S" /></label>
+                      <label className="product-field"><span>Valor por Defecto</span><input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="0" /></label>
+                      <label className="product-field"><span>Porcentaje Defecto (%)</span><input value={tblAtributoForm.porcentajeDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, porcentajeDefault: e.target.value }))} placeholder="0.0" /></label>
+                      <label className="product-field"><span>Mínimo Defecto</span><input value={tblAtributoForm.minimoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, minimoDefault: e.target.value }))} placeholder="0" /></label>
+                      <label className="product-field"><span>Máximo Defecto</span><input value={tblAtributoForm.maximoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, maximoDefault: e.target.value }))} placeholder="0" /></label>
+                      <label className="product-field compact-number"><span>Prioridad</span><input value={tblAtributoForm.prioridadDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, prioridadDefault: e.target.value }))} placeholder="1" /></label>
+                      <label className="product-field full-col" style={{ gridColumn: 'span 3' }}><span>Descripción / Detalle</span><input value={tblAtributoForm.descripcion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, descripcion: e.target.value }))} placeholder="Descripción opcional del concepto" /></label>
+                    </div>
+                    <div className="field-grid" style={{ marginTop: '12px', display: 'flex', gap: '16px' }}>
+                      <label className="inline-check"><input type="checkbox" checked={tblAtributoForm.aplicaIvaDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaIvaDefault: e.target.checked }))} /> IVA por Defecto</label>
+                      <label className="inline-check"><input type="checkbox" checked={tblAtributoForm.obligatorioDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, obligatorioDefault: e.target.checked }))} /> Obligatorio por Defecto</label>
+                    </div>
+                  </div>
+                </form>
+
+                <section className="surface employees-panel">
+                  <div className="surface-title">
+                    <div>
+                      <span className="section-kicker">Catálogo Configurado</span>
+                      <h2>Atributos Maestros Registrados (tbl_atributos)</h2>
+                    </div>
+                    <span>{tblAtributosList.length} registros</span>
+                  </div>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>Nombre</th>
+                          <th>Aplica A</th>
+                          <th>Fórmula</th>
+                          <th>Valor / %</th>
+                          <th>Proveedor</th>
+                          <th>IVA</th>
+                          <th>Obligatorio</th>
+                          <th>Estado</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tblAtributosList.map((item) => (
+                          <tr key={item.id}>
+                            <td><strong>#{item.id}</strong></td>
+                            <td>
+                              <strong>{item.nombre}</strong>
+                              {item.descripcion && <div style={{ fontSize: '0.8rem', color: '#666' }}>{item.descripcion}</div>}
+                            </td>
+                            <td><span className="status-pill">{item.aplicaA}</span></td>
+                            <td>{item.tipoFormula}</td>
+                            <td>{item.porcentajeDefault > 0 ? `${item.porcentajeDefault}%` : (item.valorDefault > 0 ? formatMoney(item.valorDefault) : '$0')}</td>
+                            <td>{item.proveedorDefault || '-'}</td>
+                            <td>{item.aplicaIvaDefault ? 'Sí' : 'No'}</td>
+                            <td>{item.obligatorioDefault ? 'Sí' : 'No'}</td>
+                            <td><span className={item.activo ? 'status-badge active' : 'status-badge inactive'}>{item.activo ? 'Activo' : 'Inactivo'}</span></td>
+                            <td>
+                              <span className="row-actions compact-actions">
+                                <button type="button" onClick={() => handleEditTblAtributo(item)}>Editar</button>
+                                <button type="button" onClick={() => handleToggleTblAtributoEstado(item.id)}>{item.activo ? 'Inactivar' : 'Activar'}</button>
+                                <button type="button" className="danger" onClick={() => handleDeleteTblAtributo(item.id)}>Eliminar</button>
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </section>
               </section>
             )}

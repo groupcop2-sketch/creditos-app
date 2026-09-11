@@ -599,6 +599,24 @@ export type ProductoEtapaRow = {
   slaHoras: number | null;
 };
 
+export type AtributoCatalogoRow = {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  aplicaA?: string | null;
+  tipoFormula?: string | null;
+  idTipoAtributo?: number | null;
+  idTipoCalculo?: number | null;
+  valorDefault?: number | null;
+  porcentajeDefault?: number | null;
+  minimoDefault?: number | null;
+  maximoDefault?: number | null;
+  proveedorDefault?: string | null;
+  prioridadDefault?: number | null;
+  aplicaIvaDefault?: boolean;
+  obligatorioDefault?: boolean;
+};
+
 export type ProductosCreditoCatalogs = {
   tiposCredito: AddressCatalogItem[];
   tiposAtributo: AddressCatalogItem[];
@@ -606,6 +624,7 @@ export type ProductosCreditoCatalogs = {
   documentos: AddressCatalogItem[];
   etapas: AddressCatalogItem[];
   libranzeras: AddressCatalogItem[];
+  atributosCatalogo?: AtributoCatalogoRow[];
 };
 
 export type CreditoRow = {
