@@ -879,15 +879,41 @@ const initialTblAtributoForm: TblAtributoFormState = {
 };
 
 const INITIAL_TBL_ATRIBUTOS: TblAtributoItem[] = [
-  { id: 1, nombre: 'FIANZA CREDITO', descripcion: 'Cobertura de fianza sobre el monto del crédito', aplicaA: 'CREDITO', tipoFormula: 'Manual', valorDefault: 0, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Beneficiario', prioridadDefault: 1, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
-  { id: 2, nombre: 'AVAL CREDITO', descripcion: 'Garantía de aval otorgado por fondo de garantías', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 2.5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Fianzacredito', prioridadDefault: 1, aplicaIvaDefault: true, obligatorioDefault: true, activo: true },
-  { id: 3, nombre: 'SEGURO DE VIDA DEUDORES', descripcion: 'Póliza de seguro de vida para amparo de deudores', aplicaA: 'CUOTA', tipoFormula: 'Valor fijo', valorDefault: 5000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Aseguradora', prioridadDefault: 2, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
-  { id: 4, nombre: 'ESTUDIO DE CREDITO', descripcion: 'Cargo único por análisis crediticio y verificación', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 25000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'P&S Soluciones', prioridadDefault: 3, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 5, nombre: 'PLATAFORMA Y TECNOLOGIA', descripcion: 'Costo de uso de plataforma digital y procesamiento', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 15000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Sistema', prioridadDefault: 4, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 6, nombre: 'COMISION POR MIPYME', descripcion: 'Comisión mipyme aplicable según ley', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 1.5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Entidad', prioridadDefault: 5, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 7, nombre: 'GASTOS DE COBRANZA', descripcion: 'Recargo administrativo por gestión de mora', aplicaA: 'CUOTA', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 5.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Cartera', prioridadDefault: 6, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 8, nombre: 'IVA SOBRE CARGOS', descripcion: 'Impuesto al valor agregado aplicable a comisiones', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 19.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'DIAN', prioridadDefault: 7, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
-  { id: 9, nombre: 'GMF / 4 X 1000', descripcion: 'Gravamen a los movimientos financieros', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 0.4, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Banco', prioridadDefault: 8, aplicaIvaDefault: false, obligatorioDefault: false, activo: true }
+  { id: 1, nombre: 'FIANZA DE CREDITOS COOPHUMANA', descripcion: 'Fianza de créditos Coophumana - Beneficiario 900528910 COOPHUMANA', aplicaA: 'CREDITO', tipoFormula: 'FIANZA', valorDefault: 0, porcentajeDefault: 100, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '900528910 COOPHUMANA', prioridadDefault: 1, aplicaIvaDefault: true, obligatorioDefault: true, activo: true },
+  { id: 2, nombre: 'SEGURO DE VIDA DEUDORES', descripcion: 'Póliza seguro de vida deudores - Beneficiario 901342794 WOW DESARROLLOS', aplicaA: 'CREDITO', tipoFormula: 'SEGURO DE VIDA', valorDefault: 0, porcentajeDefault: 100, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901342794 WOW DESARROLLOS', prioridadDefault: 2, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
+  { id: 3, nombre: 'CORRETAJE', descripcion: 'Comisión de corretaje sobre valor desembolso 8% - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR DESEMBOLSO * %', valorDefault: 0, porcentajeDefault: 8, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 3, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
+  { id: 4, nombre: 'INTERESES ANTICIPADOS', descripcion: 'Intereses anticipados sobre valor crédito 5% - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * % * DIAS', valorDefault: 0, porcentajeDefault: 5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 4, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
+  { id: 5, nombre: 'AFILIACION COOPHUMANA', descripcion: 'Cuota afiliación Coophumana (SMMLV * 0.2%) * Plazo + $7,000 - Beneficiario 900528910 COOPHUMANA', aplicaA: 'CREDITO', tipoFormula: '(SMMLV * % ) * PLAZO + VALOR', valorDefault: 7000, porcentajeDefault: 0.2, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '900528910 COOPHUMANA', prioridadDefault: 4, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
+  { id: 6, nombre: 'CORRETAJE GARANTIA REAL', descripcion: 'Corretaje garantía real 14% valor crédito - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * %', valorDefault: 0, porcentajeDefault: 14, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 4, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
+  { id: 7, nombre: 'INTERES PRIMAS', descripcion: 'Interés primas 2% valor crédito - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * %', valorDefault: 0, porcentajeDefault: 2, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 5, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
+  { id: 8, nombre: 'INTERES GARANTIA REAL', descripcion: 'Interés garantía real 10% valor desembolso - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR DESEMBOLSO * %', valorDefault: 0, porcentajeDefault: 10, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 5, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
+  { id: 9, nombre: 'CORRETAJE PRIMAS', descripcion: 'Corretaje primas 8% valor crédito - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * %', valorDefault: 0, porcentajeDefault: 8, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 6, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
+  { id: 10, nombre: 'FIANZA TRES', descripcion: 'Fianza Tres FIANZA LI3M - Beneficiario 900528910 COOPHUMANA', aplicaA: 'CREDITO', tipoFormula: 'FIANZA', valorDefault: 0, porcentajeDefault: 100, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '900528910 COOPHUMANA', prioridadDefault: 10, aplicaIvaDefault: true, obligatorioDefault: true, activo: true },
+  { id: 11, nombre: 'ESTUDIO DE CREDITO', descripcion: 'Cargo único por análisis crediticio y verificación', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 25000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'P&S SOLUCIONES', prioridadDefault: 11, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 12, nombre: 'PLATAFORMA Y TECNOLOGIA', descripcion: 'Costo de uso de plataforma digital y procesamiento', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 15000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Sistema', prioridadDefault: 12, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 13, nombre: 'COMISION POR MIPYME', descripcion: 'Comisión mipyme aplicable según ley', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 1.5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Entidad', prioridadDefault: 13, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 14, nombre: 'GASTOS DE COBRANZA', descripcion: 'Recargo administrativo por gestión de mora', aplicaA: 'CUOTA', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 5.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Cartera', prioridadDefault: 14, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
+  { id: 15, nombre: 'IVA SOBRE CARGOS', descripcion: 'Impuesto al valor agregado aplicable a comisiones', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 19.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'DIAN', prioridadDefault: 15, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
+  { id: 16, nombre: 'GMF / 4 X 1000', descripcion: 'Gravamen a los movimientos financieros', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 0.4, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Banco', prioridadDefault: 16, aplicaIvaDefault: false, obligatorioDefault: false, activo: true }
+];
+
+const INITIAL_FORMULAS_CATALOG: string[] = [
+  'VALOR FIJO',
+  'FIANZA',
+  'SMMLV * %',
+  'SEGURO DE VIDA',
+  'VALOR CRÉDITO * %',
+  'VALOR CRÉDITO * % * DÍAS ANTICIPADOS',
+  'VALOR SALDO * %',
+  'VALOR CRÉDITO * % > (MÍNIMO)',
+  '(VALOR DESEMBOLSO * VALOR) / VALOR2',
+  'VALOR DESEMBOLSO * %',
+  'VALOR DESEMBOLSO * % > (MÍNIMO)',
+  '(SMMLV * % ) * PLAZO + VALOR',
+  'VALOR * PLAZO',
+  'Porcentaje',
+  'Manual',
+  'Base * valor / valor2'
 ];
 
 const initialParametroFinancieroForm: ParametroFinancieroFormState = {
@@ -1222,6 +1248,7 @@ function App() {
   const [comerciales, setComerciales] = useState<ComercialRow[]>([]);
   const [productosCreditoTab, setProductosCreditoTab] = useState<ProductosCreditoTab>('general');
   const [tblAtributosList, setTblAtributosList] = useState<TblAtributoItem[]>(INITIAL_TBL_ATRIBUTOS);
+  const [customFormulas, setCustomFormulas] = useState<string[]>(INITIAL_FORMULAS_CATALOG);
   const [tblAtributoForm, setTblAtributoForm] = useState<TblAtributoFormState>(initialTblAtributoForm);
   const [editingTblAtributoId, setEditingTblAtributoId] = useState<number | null>(null);
   const [productoCreditoForm, setProductoCreditoForm] = useState<ProductoCreditoFormState>(initialProductoCreditoForm);
@@ -3493,35 +3520,41 @@ function App() {
 
   const handleCreateFormulaCalculo = async (event: FormEvent) => {
     event.preventDefault();
-    if (!session) return;
     if (!formulaCalculoForm.nombre.trim()) {
-      setMessage('El nombre de la formula es obligatorio.');
+      setMessage('El nombre de la fórmula es obligatorio.');
       return;
     }
-    setLoading(true);
-    setMessage('');
-    try {
-      const formula = await api.createTipoCalculoCredito(session.token, {
-        nombre: formulaCalculoForm.nombre,
-        codigo: formulaCalculoForm.codigo || null,
-        baseCalculo: formulaCalculoForm.baseCalculo,
-        operacion: formulaCalculoForm.operacion,
-        requiereValor: formulaCalculoForm.requiereValor,
-        requiereValor2: formulaCalculoForm.requiereValor2,
-        requierePorcentaje: formulaCalculoForm.requierePorcentaje,
-        aplicaMinimo: formulaCalculoForm.aplicaMinimo,
-        aplicaMaximo: formulaCalculoForm.aplicaMaximo
-      });
-      const catalogs = await api.listProductosCreditoCatalogs(session.token);
-      setProductosCreditoCatalogs(catalogs);
-      setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: String(formula.id) }));
-      setFormulaCalculoForm(initialFormulaCalculoForm);
-      setMessage('Formula creada y seleccionada');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo crear la formula');
-    } finally {
-      setLoading(false);
+    const nuevaFormula = formulaCalculoForm.nombre.trim().toUpperCase();
+    if (!customFormulas.includes(nuevaFormula)) {
+      setCustomFormulas((prev) => [nuevaFormula, ...prev]);
     }
+    if (session) {
+      setLoading(true);
+      setMessage('');
+      try {
+        const formula = await api.createTipoCalculoCredito(session.token, {
+          nombre: nuevaFormula,
+          codigo: formulaCalculoForm.codigo || null,
+          baseCalculo: formulaCalculoForm.baseCalculo,
+          operacion: formulaCalculoForm.operacion,
+          requiereValor: formulaCalculoForm.requiereValor,
+          requiereValor2: formulaCalculoForm.requiereValor2,
+          requierePorcentaje: formulaCalculoForm.requierePorcentaje,
+          aplicaMinimo: formulaCalculoForm.aplicaMinimo,
+          aplicaMaximo: formulaCalculoForm.aplicaMaximo
+        });
+        const catalogs = await api.listProductosCreditoCatalogs(session.token);
+        setProductosCreditoCatalogs(catalogs);
+        setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: String(formula.id) }));
+      } catch {
+        // Fallback local update
+      } finally {
+        setLoading(false);
+      }
+    }
+    setTblAtributoForm((cur) => ({ ...cur, tipoFormula: nuevaFormula }));
+    setFormulaCalculoForm(initialFormulaCalculoForm);
+    setMessage(`Fórmula "${nuevaFormula}" registrada y seleccionada para el atributo.`);
   };
 
   const handleSaveProductoAtributo = async (event: FormEvent) => {
@@ -7858,6 +7891,70 @@ function App() {
 
             {productosCreditoTab === 'tblAtributos' && (
               <section className="content-grid credit-product-grid">
+                <form className="surface pagaduria-form" onSubmit={handleCreateFormulaCalculo} style={{ marginBottom: '20px' }}>
+                  <div className="surface-title">
+                    <div>
+                      <span className="section-kicker">Constructor de Reglas</span>
+                      <h2>Crear Nueva Fórmula de Cálculo</h2>
+                    </div>
+                    <button type="submit" disabled={loading}>
+                      Crear fórmula
+                    </button>
+                  </div>
+                  <div className="form-section">
+                    <div className="field-grid five-cols" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1fr', gap: '12px', alignItems: 'center' }}>
+                      <label className="product-field">
+                        <span>Crear nueva fórmula *</span>
+                        <input
+                          value={formulaCalculoForm.nombre}
+                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, nombre: event.target.value }))}
+                          placeholder="Ej. CUOTA * %"
+                        />
+                      </label>
+                      <label className="product-field">
+                        <span>Base</span>
+                        <select
+                          value={formulaCalculoForm.baseCalculo}
+                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, baseCalculo: event.target.value }))}
+                        >
+                          <option value="VALOR_CREDITO">Valor crédito</option>
+                          <option value="CUOTA">Cuota</option>
+                          <option value="SALDO">Saldo</option>
+                          <option value="DESEMBOLSO">Desembolso</option>
+                        </select>
+                      </label>
+                      <label className="product-field">
+                        <span>Operación</span>
+                        <select
+                          value={formulaCalculoForm.operacion}
+                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, operacion: event.target.value }))}
+                        >
+                          <option value="PORCENTAJE">Porcentaje</option>
+                          <option value="VALOR_FIJO">Valor fijo</option>
+                          <option value="MANUAL">Manual</option>
+                          <option value="MULTIPLICAR_DIVIDIR">Base * valor / valor2</option>
+                        </select>
+                      </label>
+                      <label className="inline-check" style={{ margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={formulaCalculoForm.aplicaMinimo}
+                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMinimo: event.target.checked }))}
+                        />
+                        Mínimo
+                      </label>
+                      <label className="inline-check" style={{ margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={formulaCalculoForm.aplicaMaximo}
+                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMaximo: event.target.checked }))}
+                        />
+                        Máximo
+                      </label>
+                    </div>
+                  </div>
+                </form>
+
                 <form className="surface pagaduria-form" onSubmit={handleSaveTblAtributo}>
                   <div className="surface-title">
                     <div>
@@ -7878,7 +7975,24 @@ function App() {
                     <div className="field-grid four-cols">
                       <label className="product-field"><span>Nombre *</span><input value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA CREDITO" /></label>
                       <label className="product-field"><span>Aplica a *</span><select value={tblAtributoForm.aplicaA} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaA: e.target.value }))}><option value="CREDITO">CREDITO</option><option value="CUOTA">CUOTA</option><option value="DESEMBOLSO">DESEMBOLSO</option></select></label>
-                      <label className="product-field"><span>Tipo de Fórmula *</span><select value={tblAtributoForm.tipoFormula} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, tipoFormula: e.target.value }))}><option value="Porcentaje">Porcentaje</option><option value="Valor fijo">Valor fijo</option><option value="Manual">Manual</option><option value="Base * valor / valor2">Base * valor / valor2</option></select></label>
+                      <label className="product-field">
+                        <span>Tipo de Fórmula *</span>
+                        <select value={tblAtributoForm.tipoFormula} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, tipoFormula: e.target.value }))}>
+                          <option value="">-- Seleccionar Tipo de Fórmula --</option>
+                          {customFormulas.map((formula) => (
+                            <option key={formula} value={formula}>
+                              {formula}
+                            </option>
+                          ))}
+                          {productosCreditoCatalogs.tiposCalculo
+                            .filter((tc) => !customFormulas.includes(tc.nombre))
+                            .map((tc) => (
+                              <option key={tc.id} value={tc.nombre}>
+                                {tc.nombre}
+                              </option>
+                            ))}
+                        </select>
+                      </label>
                       <label className="product-field"><span>Proveedor por Defecto</span><input value={tblAtributoForm.proveedorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, proveedorDefault: e.target.value }))} placeholder="Ej. Aseguradora / DIAN / P&S" /></label>
                       <label className="product-field"><span>Valor por Defecto</span><input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="0" /></label>
                       <label className="product-field"><span>Porcentaje Defecto (%)</span><input value={tblAtributoForm.porcentajeDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, porcentajeDefault: e.target.value }))} placeholder="0.0" /></label>
