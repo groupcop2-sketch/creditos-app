@@ -33,6 +33,7 @@ import {
   type EmployeeCatalogs,
   type FirmaCreditoRow,
   type FondeoDisponibleRow,
+  type FormulaCalculoRow,
   type InversionRow,
   type IdentificationTypeRow,
   type LibranzeraRow,
@@ -923,6 +924,19 @@ const INITIAL_FORMULAS_CATALOG: string[] = [
   'Base * valor / valor2'
 ];
 
+const INITIAL_TIPOS_CALCULO_LIST: FormulaCalculoRow[] = [
+  { id: 1, nombre: 'FIANZA DE CREDITOS', codigo: 'FIANZA', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: true, aplicaMaximo: false, activo: true },
+  { id: 2, nombre: 'SEGURO DE VIDA DEUDORES', codigo: 'SEG_VIDA', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 3, nombre: 'VALOR DESEMBOLSO * %', codigo: 'DESEMB_PORC', baseCalculo: 'DESEMBOLSO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 4, nombre: 'VALOR CRÉDITO * % * DIAS', codigo: 'VAL_CRED_DIAS', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 5, nombre: '(SMMLV * % ) * PLAZO + VALOR', codigo: 'SMMLV_PLAZO_VAL', baseCalculo: 'SMMLV', operacion: 'MULTIPLICAR_DIVIDIR', requiereValor: true, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 6, nombre: 'VALOR CRÉDITO * %', codigo: 'VAL_CRED_PORC', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 7, nombre: 'Valor fijo', codigo: 'VALOR_FIJO', baseCalculo: 'VALOR_CREDITO', operacion: 'VALOR_FIJO', requiereValor: true, requiereValor2: false, requierePorcentaje: false, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 8, nombre: 'Porcentaje', codigo: 'PORCENTAJE_GENERICO', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 9, nombre: 'Manual', codigo: 'MANUAL', baseCalculo: 'VALOR_CREDITO', operacion: 'MANUAL', requiereValor: true, requiereValor2: false, requierePorcentaje: false, aplicaMinimo: false, aplicaMaximo: false, activo: true },
+  { id: 10, nombre: 'Base * valor / valor2', codigo: 'BASE_VAL_VAL2', baseCalculo: 'DESEMBOLSO', operacion: 'MULTIPLICAR_DIVIDIR', requiereValor: true, requiereValor2: true, requierePorcentaje: false, aplicaMinimo: false, aplicaMaximo: false, activo: true }
+];
+
 const initialParametroFinancieroForm: ParametroFinancieroFormState = {
   codigo: '',
   nombre: '',
@@ -1263,6 +1277,10 @@ function App() {
   const [editingProductoCreditoId, setEditingProductoCreditoId] = useState<number | null>(null);
   const [editingProductoAtributoId, setEditingProductoAtributoId] = useState<number | null>(null);
   const [formulaCalculoForm, setFormulaCalculoForm] = useState<FormulaCalculoFormState>(initialFormulaCalculoForm);
+  const [editingFormulaCalculoId, setEditingFormulaCalculoId] = useState<number | null>(null);
+  const [subTabAtributos, setSubTabAtributos] = useState<'atributos' | 'formulas'>('atributos');
+  const [formulaSearchQuery, setFormulaSearchQuery] = useState<string>('');
+  const [atributoSearchQuery, setAtributoSearchQuery] = useState<string>('');
   const [productoDocumentoForm, setProductoDocumentoForm] = useState<ProductoDocumentoFormState>(initialProductoDocumentoForm);
   const [selectedProductoDocumentoId, setSelectedProductoDocumentoId] = useState<number | null>(null);
   const [productoEtapaForm, setProductoEtapaForm] = useState<ProductoEtapaFormState>(initialProductoEtapaForm);
@@ -1271,7 +1289,7 @@ function App() {
   const [productosCreditoCatalogs, setProductosCreditoCatalogs] = useState<ProductosCreditoCatalogs>({
     tiposCredito: [],
     tiposAtributo: [],
-    tiposCalculo: [],
+    tiposCalculo: INITIAL_TIPOS_CALCULO_LIST,
     documentos: [],
     etapas: [],
     libranzeras: []
@@ -3538,43 +3556,137 @@ function App() {
     }
   };
 
-  const handleCreateFormulaCalculo = async (event: FormEvent) => {
+  const handleSaveFormulaCalculo = async (event: FormEvent) => {
     event.preventDefault();
     if (!formulaCalculoForm.nombre.trim()) {
       setMessage('El nombre de la fórmula es obligatorio.');
       return;
     }
-    const nuevaFormula = formulaCalculoForm.nombre.trim().toUpperCase();
-    if (!customFormulas.includes(nuevaFormula)) {
-      setCustomFormulas((prev) => [nuevaFormula, ...prev]);
+    const nombreFormula = formulaCalculoForm.nombre.trim().toUpperCase();
+    if (!customFormulas.includes(nombreFormula)) {
+      setCustomFormulas((prev) => [nombreFormula, ...prev]);
     }
-    if (session) {
-      setLoading(true);
-      setMessage('');
-      try {
-        const formula = await api.createTipoCalculoCredito(session.token, {
-          nombre: nuevaFormula,
-          codigo: formulaCalculoForm.codigo || null,
-          baseCalculo: formulaCalculoForm.baseCalculo,
-          operacion: formulaCalculoForm.operacion,
-          requiereValor: formulaCalculoForm.requiereValor,
-          requiereValor2: formulaCalculoForm.requiereValor2,
-          requierePorcentaje: formulaCalculoForm.requierePorcentaje,
-          aplicaMinimo: formulaCalculoForm.aplicaMinimo,
-          aplicaMaximo: formulaCalculoForm.aplicaMaximo
+    setLoading(true);
+    setMessage('');
+    try {
+      const payload = {
+        nombre: nombreFormula,
+        codigo: formulaCalculoForm.codigo || null,
+        baseCalculo: formulaCalculoForm.baseCalculo,
+        operacion: formulaCalculoForm.operacion,
+        requiereValor: formulaCalculoForm.requiereValor,
+        requiereValor2: formulaCalculoForm.requiereValor2,
+        requierePorcentaje: formulaCalculoForm.requierePorcentaje,
+        aplicaMinimo: formulaCalculoForm.aplicaMinimo,
+        aplicaMaximo: formulaCalculoForm.aplicaMaximo
+      };
+
+      if (session) {
+        if (editingFormulaCalculoId) {
+          try {
+            await api.updateTipoCalculoCredito(session.token, editingFormulaCalculoId, payload);
+          } catch {
+            // local update if backend endpoint fails
+          }
+        } else {
+          try {
+            const formula = await api.createTipoCalculoCredito(session.token, payload);
+            setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: String(formula.id) }));
+          } catch {
+            // local creation fallback
+          }
+        }
+        try {
+          const catalogs = await api.listProductosCreditoCatalogs(session.token);
+          if (catalogs && (catalogs.tiposCalculo || []).length > 0) {
+            setProductosCreditoCatalogs(catalogs);
+          } else {
+            setProductosCreditoCatalogs((prev) => {
+              const existing = prev.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST;
+              let updatedList: FormulaCalculoRow[];
+              if (editingFormulaCalculoId) {
+                updatedList = existing.map((tc) => (tc.id === editingFormulaCalculoId ? { ...tc, ...payload, id: editingFormulaCalculoId, activo: tc.activo } : tc));
+              } else {
+                const newRow: FormulaCalculoRow = { id: Date.now(), ...payload, activo: true };
+                updatedList = [newRow, ...existing];
+              }
+              return { ...prev, tiposCalculo: updatedList };
+            });
+          }
+        } catch {
+          setProductosCreditoCatalogs((prev) => {
+            const existing = prev.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST;
+            let updatedList: FormulaCalculoRow[];
+            if (editingFormulaCalculoId) {
+              updatedList = existing.map((tc) => (tc.id === editingFormulaCalculoId ? { ...tc, ...payload, id: editingFormulaCalculoId, activo: tc.activo } : tc));
+            } else {
+              const newRow: FormulaCalculoRow = { id: Date.now(), ...payload, activo: true };
+              updatedList = [newRow, ...existing];
+            }
+            return { ...prev, tiposCalculo: updatedList };
+          });
+        }
+      } else {
+        setProductosCreditoCatalogs((prev) => {
+          const existing = prev.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST;
+          let updatedList: FormulaCalculoRow[];
+          if (editingFormulaCalculoId) {
+            updatedList = existing.map((tc) => (tc.id === editingFormulaCalculoId ? { ...tc, ...payload, id: editingFormulaCalculoId, activo: tc.activo } : tc));
+          } else {
+            const newRow: FormulaCalculoRow = { id: Date.now(), ...payload, activo: true };
+            updatedList = [newRow, ...existing];
+          }
+          return { ...prev, tiposCalculo: updatedList };
         });
-        const catalogs = await api.listProductosCreditoCatalogs(session.token);
-        setProductosCreditoCatalogs(catalogs);
-        setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: String(formula.id) }));
-      } catch {
-        // Fallback local update
-      } finally {
-        setLoading(false);
       }
+
+      setTblAtributoForm((cur) => ({ ...cur, tipoFormula: nombreFormula }));
+      setMessage(editingFormulaCalculoId ? `Fórmula "${nombreFormula}" actualizada correctamente.` : `Fórmula "${nombreFormula}" registrada correctamente.`);
+      setFormulaCalculoForm(initialFormulaCalculoForm);
+      setEditingFormulaCalculoId(null);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo guardar la fórmula');
+    } finally {
+      setLoading(false);
     }
-    setTblAtributoForm((cur) => ({ ...cur, tipoFormula: nuevaFormula }));
+  };
+
+  const handleEditFormulaCalculo = (formula: FormulaCalculoRow) => {
+    setEditingFormulaCalculoId(formula.id);
+    setFormulaCalculoForm({
+      nombre: formula.nombre,
+      codigo: formula.codigo || '',
+      baseCalculo: formula.baseCalculo || 'VALOR_CREDITO',
+      operacion: formula.operacion || 'PORCENTAJE',
+      requiereValor: !!formula.requiereValor,
+      requiereValor2: !!formula.requiereValor2,
+      requierePorcentaje: !!formula.requierePorcentaje,
+      aplicaMinimo: !!formula.aplicaMinimo,
+      aplicaMaximo: !!formula.aplicaMaximo
+    });
+    setSubTabAtributos('formulas');
+    setMessage(`Editando fórmula: "${formula.nombre}"`);
+  };
+
+  const handleCancelFormulaCalculoEdit = () => {
+    setEditingFormulaCalculoId(null);
     setFormulaCalculoForm(initialFormulaCalculoForm);
-    setMessage(`Fórmula "${nuevaFormula}" registrada y seleccionada para el atributo.`);
+  };
+
+  const handleToggleFormulaEstado = (formula: FormulaCalculoRow) => {
+    setProductosCreditoCatalogs((prev) => ({
+      ...prev,
+      tiposCalculo: (prev.tiposCalculo || []).map((tc) => (tc.id === formula.id ? { ...tc, activo: !tc.activo } : tc))
+    }));
+    setMessage(`Estado de la fórmula "${formula.nombre}" actualizado.`);
+  };
+
+  const handleDeleteFormulaCalculo = (formulaId: number) => {
+    setProductosCreditoCatalogs((prev) => ({
+      ...prev,
+      tiposCalculo: (prev.tiposCalculo || []).filter((tc) => tc.id !== formulaId)
+    }));
+    setMessage('Fórmula eliminada del catálogo.');
   };
 
   const handleSaveProductoAtributo = async (event: FormEvent) => {
@@ -7910,270 +8022,515 @@ function App() {
             )}
 
             {productosCreditoTab === 'tblAtributos' && (
-              <section className="content-grid credit-product-grid">
-                <form className="surface pagaduria-form" onSubmit={handleCreateFormulaCalculo} style={{ marginBottom: '20px' }}>
-                  <div className="surface-title">
+              <section className="content-grid credit-product-grid" style={{ gridTemplateColumns: '1fr', gap: '20px' }}>
+                {/* Header Summary Card */}
+                <div className="surface" style={{ padding: '20px', background: 'linear-gradient(135deg, #0f4c3a 0%, #1e6b52 100%)', color: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(15, 76, 58, 0.15)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                     <div>
-                      <span className="section-kicker">Constructor de Reglas</span>
-                      <h2>Crear Nueva Fórmula de Cálculo</h2>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: '#a7f3d0' }}>MÓDULO OPERATIVO · CONFIGURACIÓN MAESTRA</span>
+                      <h2 style={{ margin: '4px 0 0 0', color: '#ffffff', fontSize: '1.5rem', fontWeight: 800 }}>Catálogo de Atributos & Reglas de Cálculo</h2>
                     </div>
-                    <button type="submit" disabled={loading}>
-                      Crear fórmula
-                    </button>
-                  </div>
-                  <div className="form-section">
-                    <div className="field-grid five-cols" style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr 1fr 1fr', gap: '12px', alignItems: 'center' }}>
-                      <label className="product-field">
-                        <span>Crear nueva fórmula *</span>
-                        <input
-                          value={formulaCalculoForm.nombre}
-                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, nombre: event.target.value }))}
-                          placeholder="Ej. CUOTA * %"
-                        />
-                      </label>
-                      <label className="product-field">
-                        <span>Base</span>
-                        <select
-                          value={formulaCalculoForm.baseCalculo}
-                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, baseCalculo: event.target.value }))}
-                        >
-                          <option value="VALOR_CREDITO">Valor crédito</option>
-                          <option value="CUOTA">Cuota</option>
-                          <option value="SALDO">Saldo</option>
-                          <option value="DESEMBOLSO">Desembolso</option>
-                        </select>
-                      </label>
-                      <label className="product-field">
-                        <span>Operación</span>
-                        <select
-                          value={formulaCalculoForm.operacion}
-                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, operacion: event.target.value }))}
-                        >
-                          <option value="PORCENTAJE">Porcentaje</option>
-                          <option value="VALOR_FIJO">Valor fijo</option>
-                          <option value="MANUAL">Manual</option>
-                          <option value="MULTIPLICAR_DIVIDIR">Base * valor / valor2</option>
-                        </select>
-                      </label>
-                      <label className="inline-check" style={{ margin: 0 }}>
-                        <input
-                          type="checkbox"
-                          checked={formulaCalculoForm.aplicaMinimo}
-                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMinimo: event.target.checked }))}
-                        />
-                        Mínimo
-                      </label>
-                      <label className="inline-check" style={{ margin: 0 }}>
-                        <input
-                          type="checkbox"
-                          checked={formulaCalculoForm.aplicaMaximo}
-                          onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMaximo: event.target.checked }))}
-                        />
-                        Máximo
-                      </label>
-                    </div>
-                  </div>
-                </form>
-
-                <form className="surface pagaduria-form" onSubmit={handleSaveTblAtributo}>
-                  <div className="surface-title">
-                    <div>
-                      <span className="section-kicker">Catálogo Maestro (tbl_atributos)</span>
-                      <h2>{editingTblAtributoId ? 'Editar Atributo Maestro' : 'Registrar Nuevo Atributo Maestro'}</h2>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      {editingTblAtributoId && (
-                        <button type="button" className="ghost-button" onClick={handleCancelTblAtributoEdit}>Cancelar</button>
-                      )}
-                      <button type="submit" disabled={loading}>
-                        {editingTblAtributoId ? 'Guardar Cambios' : 'Registrar Atributo'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="form-section">
-                    <h3>Información</h3>
-                    <div className="field-grid four-cols">
-                      <label className="product-field" style={{ gridColumn: 'span 2' }}>
-                        <span>Nombre *</span>
-                        <input value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA DE CREDITOS COOPHUMANA" />
-                      </label>
-                      <label className="product-field compact-number">
-                        <span>Prioridad *</span>
-                        <input value={tblAtributoForm.prioridadDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, prioridadDefault: e.target.value }))} placeholder="1" />
-                      </label>
-                      <label className="product-field">
-                        <span>IVA *</span>
-                        <select value={tblAtributoForm.aplicaIvaDefault ? 'SI' : 'NO'} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaIvaDefault: e.target.value === 'SI' }))}>
-                          <option value="SI">SI</option>
-                          <option value="NO">NO</option>
-                        </select>
-                      </label>
-                      <label className="product-field full-col" style={{ gridColumn: 'span 2' }}>
-                        <span>Proveedor / Beneficiario</span>
-                        <input value={tblAtributoForm.proveedorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, proveedorDefault: e.target.value }))} placeholder="Ej. 900528910 COOPHUMANA / P&S SOLUCIONES" />
-                      </label>
-                      <label className="product-field full-col" style={{ gridColumn: 'span 2' }}>
-                        <span>Descripción / Detalle</span>
-                        <input value={tblAtributoForm.descripcion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, descripcion: e.target.value }))} placeholder="Descripción opcional del concepto" />
-                      </label>
-                      <div style={{ gridColumn: 'span 4', display: 'flex', alignItems: 'center', marginTop: '4px' }}>
-                        <label className="inline-check">
-                          <input type="checkbox" checked={tblAtributoForm.obligatorioDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, obligatorioDefault: e.target.checked }))} />
-                          Facturar / Obligatorio
-                        </label>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', padding: '10px 16px', borderRadius: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#d1fae5', textTransform: 'uppercase' }}>Atributos Maestros</span>
+                        <strong style={{ fontSize: '1.3rem', color: '#ffffff' }}>{tblAtributosList.length}</strong>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', padding: '10px 16px', borderRadius: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#d1fae5', textTransform: 'uppercase' }}>Tipos de Fórmulas</span>
+                        <strong style={{ fontSize: '1.3rem', color: '#ffffff' }}>{(productosCreditoCatalogs.tiposCalculo || []).length}</strong>
+                      </div>
+                      <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', padding: '10px 16px', borderRadius: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
+                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#d1fae5', textTransform: 'uppercase' }}>Fórmulas Activas</span>
+                        <strong style={{ fontSize: '1.3rem', color: '#ffffff' }}>{(productosCreditoCatalogs.tiposCalculo || []).filter((f) => f.activo !== false).length}</strong>
                       </div>
                     </div>
                   </div>
 
-                  <div className="form-section" style={{ marginTop: '20px' }}>
-                    <h3>Tipos de Fórmulas</h3>
-                    <div className="field-grid four-cols">
-                      <label className="product-field">
-                        <span>Aplica a (Base) *</span>
-                        <select value={tblAtributoForm.aplicaA} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaA: e.target.value }))}>
-                          <option value="CREDITO">CRÉDITO</option>
-                          <option value="CUOTA">CUOTA</option>
-                          <option value="DESEMBOLSO">DESEMBOLSO</option>
-                        </select>
-                      </label>
+                  {/* Sub-tabs Navigation */}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '16px' }}>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        background: subTabAtributos === 'atributos' ? '#ffffff' : 'rgba(255,255,255,0.15)',
+                        color: subTabAtributos === 'atributos' ? '#0f4c3a' : '#ffffff',
+                        boxShadow: subTabAtributos === 'atributos' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
+                      }}
+                      onClick={() => setSubTabAtributos('atributos')}
+                    >
+                      📋 Atributos Maestros (tbl_atributos)
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '10px 20px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        background: subTabAtributos === 'formulas' ? '#ffffff' : 'rgba(255,255,255,0.15)',
+                        color: subTabAtributos === 'formulas' ? '#0f4c3a' : '#ffffff',
+                        boxShadow: subTabAtributos === 'formulas' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
+                      }}
+                      onClick={() => setSubTabAtributos('formulas')}
+                    >
+                      🧮 Tipos de Fórmulas de Cálculo (tbl_tipo_calculo)
+                    </button>
+                  </div>
+                </div>
 
-                      <label className="product-field">
-                        <span>Tipo de fórmula *</span>
-                        <select
-                          value={tblAtributoForm.tipoFormula}
-                          onChange={(e) => {
-                            const selectedFormula = e.target.value;
-                            let autoOp = tblAtributoForm.operacion;
-                            if (selectedFormula.includes('%') || selectedFormula.toUpperCase().includes('PORCENTAJE')) {
-                              autoOp = 'Porcentaje';
-                            } else if (selectedFormula.toUpperCase().includes('VALOR FIJO')) {
-                              autoOp = 'Valor fijo';
-                            } else if (selectedFormula.toUpperCase().includes('MANUAL')) {
-                              autoOp = 'Manual';
-                            } else if (selectedFormula.includes('/') || selectedFormula.includes('VALOR2')) {
-                              autoOp = 'Base * valor / valor2';
-                            }
-                            setTblAtributoForm((cur) => ({ ...cur, tipoFormula: selectedFormula, operacion: autoOp }));
-                          }}
-                        >
-                          <option value="">-- Seleccionar Tipo de Fórmula --</option>
-                          {customFormulas.map((formula) => (
-                            <option key={formula} value={formula}>
-                              {formula}
-                            </option>
-                          ))}
-                          {productosCreditoCatalogs.tiposCalculo
-                            .filter((tc) => !customFormulas.includes(tc.nombre))
-                            .map((tc) => (
-                              <option key={tc.id} value={tc.nombre}>
-                                {tc.nombre}
-                              </option>
-                            ))}
-                        </select>
-                      </label>
+                {/* SubTab 1: Atributos Maestros */}
+                {subTabAtributos === 'atributos' && (
+                  <>
+                    <form className="surface pagaduria-form" onSubmit={handleSaveTblAtributo} style={{ padding: '24px', borderRadius: '12px' }}>
+                      <div className="surface-title" style={{ marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                        <div>
+                          <span className="section-kicker">CATÁLOGO MAESTRO DE CONCEPTOS</span>
+                          <h2>{editingTblAtributoId ? `Editando Atributo Maestro #${editingTblAtributoId}` : 'Registrar Nuevo Atributo Maestro'}</h2>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {editingTblAtributoId && (
+                            <button type="button" className="ghost-button" onClick={handleCancelTblAtributoEdit}>Cancelar</button>
+                          )}
+                          <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontWeight: 700 }}>
+                            {editingTblAtributoId ? 'Guardar Cambios' : 'Registrar Atributo'}
+                          </button>
+                        </div>
+                      </div>
 
-                      <label className="product-field">
-                        <span>Operación *</span>
-                        <select value={tblAtributoForm.operacion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, operacion: e.target.value }))}>
-                          <option value="Porcentaje">Porcentaje</option>
-                          <option value="Valor fijo">Valor fijo</option>
-                          <option value="Manual">Manual</option>
-                          <option value="Base * valor / valor2">Base * valor / valor2</option>
-                        </select>
-                      </label>
-
-                      {tblAtributoForm.operacion === 'Porcentaje' && (
-                        <label className="product-field">
-                          <span>Porcentaje (%) *</span>
-                          <input value={tblAtributoForm.porcentajeDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, porcentajeDefault: e.target.value }))} placeholder="Ej. 10.0" />
-                        </label>
-                      )}
-
-                      {(tblAtributoForm.operacion === 'Valor fijo' || tblAtributoForm.operacion === 'Manual') && (
-                        <label className="product-field">
-                          <span>Valor ($) *</span>
-                          <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 15000" />
-                        </label>
-                      )}
-
-                      {tblAtributoForm.operacion === 'Base * valor / valor2' && (
-                        <>
-                          <label className="product-field">
-                            <span>Valor (Multiplicador) *</span>
-                            <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 1000" />
+                      <div className="form-section">
+                        <h3 style={{ fontSize: '0.95rem', color: '#0f4c3a', fontWeight: 700, marginBottom: '12px' }}>Información del Concepto</h3>
+                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                          <label className="product-field" style={{ gridColumn: 'span 2' }}>
+                            <span>Nombre del Atributo *</span>
+                            <input value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA DE CREDITOS COOPHUMANA" />
                           </label>
                           <label className="product-field">
-                            <span>Valor 2 (Divisor) *</span>
-                            <input value={tblAtributoForm.valor2Default} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valor2Default: e.target.value }))} placeholder="Ej. 100" />
+                            <span>Prioridad *</span>
+                            <input type="number" value={tblAtributoForm.prioridadDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, prioridadDefault: e.target.value }))} placeholder="1" />
                           </label>
-                        </>
-                      )}
+                          <label className="product-field">
+                            <span>Aplica IVA *</span>
+                            <select value={tblAtributoForm.aplicaIvaDefault ? 'SI' : 'NO'} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaIvaDefault: e.target.value === 'SI' }))}>
+                              <option value="SI">SÍ</option>
+                              <option value="NO">NO</option>
+                            </select>
+                          </label>
+                        </div>
 
-                      <label className="product-field">
-                        <span>Mínimo Defecto</span>
-                        <input value={tblAtributoForm.minimoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, minimoDefault: e.target.value }))} placeholder="0" />
-                      </label>
-                      <label className="product-field">
-                        <span>Máximo Defecto</span>
-                        <input value={tblAtributoForm.maximoDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, maximoDefault: e.target.value }))} placeholder="0" />
-                      </label>
-                    </div>
-                  </div>
-                </form>
+                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                          <label className="product-field">
+                            <span>Aplica a (Base) *</span>
+                            <select value={tblAtributoForm.aplicaA} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaA: e.target.value }))}>
+                              <option value="CREDITO">CRÉDITO</option>
+                              <option value="CUOTA">CUOTA</option>
+                              <option value="DESEMBOLSO">DESEMBOLSO</option>
+                            </select>
+                          </label>
 
-                <section className="surface employees-panel">
-                  <div className="surface-title">
-                    <div>
-                      <span className="section-kicker">Catálogo Configurado</span>
-                      <h2>Atributos Maestros Registrados (tbl_atributos)</h2>
-                    </div>
-                    <span>{tblAtributosList.length} registros</span>
-                  </div>
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Nombre</th>
-                          <th>Aplica A</th>
-                          <th>Fórmula</th>
-                          <th>Valor / %</th>
-                          <th>Proveedor</th>
-                          <th>IVA</th>
-                          <th>Obligatorio</th>
-                          <th>Estado</th>
-                          <th>Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tblAtributosList.map((item) => (
-                          <tr key={item.id}>
-                            <td><strong>#{item.id}</strong></td>
-                            <td>
-                              <strong>{item.nombre}</strong>
-                              {item.descripcion && <div style={{ fontSize: '0.8rem', color: '#666' }}>{item.descripcion}</div>}
-                            </td>
-                            <td><span className="status-pill">{item.aplicaA}</span></td>
-                            <td>{item.tipoFormula}</td>
-                            <td>{item.porcentajeDefault > 0 ? `${item.porcentajeDefault}%` : (item.valorDefault > 0 ? formatMoney(item.valorDefault) : '$0')}</td>
-                            <td>{item.proveedorDefault || '-'}</td>
-                            <td>{item.aplicaIvaDefault ? 'Sí' : 'No'}</td>
-                            <td>{item.obligatorioDefault ? 'Sí' : 'No'}</td>
-                            <td><span className={item.activo ? 'status-badge active' : 'status-badge inactive'}>{item.activo ? 'Activo' : 'Inactivo'}</span></td>
-                            <td>
-                              <span className="row-actions compact-actions">
-                                <button type="button" onClick={() => handleEditTblAtributo(item)}>Editar</button>
-                                <button type="button" onClick={() => handleToggleTblAtributoEstado(item.id)}>{item.activo ? 'Inactivar' : 'Activar'}</button>
-                                <button type="button" className="danger" onClick={() => handleDeleteTblAtributo(item.id)}>Eliminar</button>
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
+                          <label className="product-field">
+                            <span>Tipo de fórmula *</span>
+                            <select
+                              value={tblAtributoForm.tipoFormula}
+                              onChange={(e) => {
+                                const selectedFormula = e.target.value;
+                                let autoOp = tblAtributoForm.operacion;
+                                if (selectedFormula.includes('%') || selectedFormula.toUpperCase().includes('PORCENTAJE')) {
+                                  autoOp = 'Porcentaje';
+                                } else if (selectedFormula.toUpperCase().includes('VALOR FIJO')) {
+                                  autoOp = 'Valor fijo';
+                                } else if (selectedFormula.toUpperCase().includes('MANUAL')) {
+                                  autoOp = 'Manual';
+                                } else if (selectedFormula.includes('/') || selectedFormula.includes('VALOR2')) {
+                                  autoOp = 'Base * valor / valor2';
+                                }
+                                setTblAtributoForm((cur) => ({ ...cur, tipoFormula: selectedFormula, operacion: autoOp }));
+                              }}
+                            >
+                              <option value="">-- Seleccionar Tipo de Fórmula --</option>
+                              {(productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST).map((tc) => (
+                                <option key={tc.id} value={tc.nombre}>
+                                  {tc.nombre} ({tc.baseCalculo || 'CRÉDITO'})
+                                </option>
+                              ))}
+                              {customFormulas
+                                .filter((cf) => !(productosCreditoCatalogs.tiposCalculo || []).some((tc) => tc.nombre === cf))
+                                .map((formula) => (
+                                  <option key={formula} value={formula}>
+                                    {formula}
+                                  </option>
+                                ))}
+                            </select>
+                          </label>
+
+                          <label className="product-field">
+                            <span>Operación por defecto *</span>
+                            <select value={tblAtributoForm.operacion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, operacion: e.target.value }))}>
+                              <option value="Porcentaje">Porcentaje</option>
+                              <option value="Valor fijo">Valor fijo</option>
+                              <option value="Manual">Manual</option>
+                              <option value="Base * valor / valor2">Base * valor / valor2</option>
+                            </select>
+                          </label>
+
+                          {tblAtributoForm.operacion === 'Porcentaje' && (
+                            <label className="product-field">
+                              <span>Porcentaje defecto (%) *</span>
+                              <input value={tblAtributoForm.porcentajeDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, porcentajeDefault: e.target.value }))} placeholder="Ej. 10.0" />
+                            </label>
+                          )}
+
+                          {(tblAtributoForm.operacion === 'Valor fijo' || tblAtributoForm.operacion === 'Manual') && (
+                            <label className="product-field">
+                              <span>Valor defecto ($) *</span>
+                              <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 15000" />
+                            </label>
+                          )}
+
+                          {tblAtributoForm.operacion === 'Base * valor / valor2' && (
+                            <>
+                              <label className="product-field">
+                                <span>Multiplicador (Valor 1)</span>
+                                <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 1000" />
+                              </label>
+                              <label className="product-field">
+                                <span>Divisor (Valor 2)</span>
+                                <input value={tblAtributoForm.valor2Default} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valor2Default: e.target.value }))} placeholder="Ej. 100" />
+                              </label>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                          <label className="product-field">
+                            <span>Proveedor / Beneficiario</span>
+                            <input value={tblAtributoForm.proveedorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, proveedorDefault: e.target.value }))} placeholder="Ej. 900528910 COOPHUMANA" />
+                          </label>
+
+                          <label className="product-field" style={{ gridColumn: 'span 2' }}>
+                            <span>Descripción / Detalle</span>
+                            <input value={tblAtributoForm.descripcion} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, descripcion: e.target.value }))} placeholder="Descripción opcional del concepto" />
+                          </label>
+
+                          <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
+                            <label className="inline-check" style={{ fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
+                              <input type="checkbox" checked={tblAtributoForm.obligatorioDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, obligatorioDefault: e.target.checked }))} />
+                              Facturar / Obligatorio
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </form>
+
+                    {/* Tabla de Atributos Maestros */}
+                    <section className="surface employees-panel" style={{ padding: '24px', borderRadius: '12px' }}>
+                      <div className="surface-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+                        <div>
+                          <span className="section-kicker">Catálogo Configurado</span>
+                          <h2>Atributos Maestros Registrados (tbl_atributos)</h2>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <input
+                            type="text"
+                            value={atributoSearchQuery}
+                            onChange={(e) => setAtributoSearchQuery(e.target.value)}
+                            placeholder="🔍 Buscar por nombre, fórmula o proveedor..."
+                            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '280px', fontSize: '0.85rem' }}
+                          />
+                          <span style={{ background: '#e2e8f0', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                            {tblAtributosList.length} registros
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="table-wrap" style={{ overflowX: 'auto' }}>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th style={{ width: '60px' }}>ID</th>
+                              <th>Nombre y Descripción</th>
+                              <th>Aplica A</th>
+                              <th>Fórmula de Cálculo</th>
+                              <th>Valor / Porcentaje</th>
+                              <th>Proveedor</th>
+                              <th>IVA</th>
+                              <th>Obligatorio</th>
+                              <th>Estado</th>
+                              <th style={{ textAlign: 'center' }}>Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tblAtributosList
+                              .filter((item) => {
+                                if (!atributoSearchQuery.trim()) return true;
+                                const q = atributoSearchQuery.toLowerCase();
+                                return item.nombre.toLowerCase().includes(q) || item.tipoFormula.toLowerCase().includes(q) || (item.proveedorDefault || '').toLowerCase().includes(q);
+                              })
+                              .map((item) => (
+                                <tr key={item.id}>
+                                  <td><strong>#{item.id}</strong></td>
+                                  <td>
+                                    <strong style={{ color: '#0f4c3a', display: 'block' }}>{item.nombre}</strong>
+                                    {item.descripcion && <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{item.descripcion}</span>}
+                                  </td>
+                                  <td>
+                                    <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: item.aplicaA === 'CREDITO' ? '#dbeafe' : item.aplicaA === 'CUOTA' ? '#fef3c7' : '#e0e7ff', color: item.aplicaA === 'CREDITO' ? '#1e40af' : item.aplicaA === 'CUOTA' ? '#92400e' : '#3730a3' }}>
+                                      {item.aplicaA}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <strong style={{ fontSize: '0.85rem', color: '#334155' }}>{item.tipoFormula}</strong>
+                                  </td>
+                                  <td>
+                                    {item.porcentajeDefault > 0 ? (
+                                      <span style={{ fontWeight: 700, color: '#059669' }}>{item.porcentajeDefault}%</span>
+                                    ) : item.valorDefault > 0 ? (
+                                      <span style={{ fontWeight: 700, color: '#2563eb' }}>{formatMoney(item.valorDefault)}</span>
+                                    ) : (
+                                      <span style={{ color: '#94a3b8' }}>$0</span>
+                                    )}
+                                  </td>
+                                  <td><small style={{ fontWeight: 600, color: '#475569' }}>{item.proveedorDefault || '-'}</small></td>
+                                  <td>{item.aplicaIvaDefault ? <span style={{ color: '#059669', fontWeight: 700 }}>Sí (19%)</span> : <span style={{ color: '#64748b' }}>No</span>}</td>
+                                  <td>{item.obligatorioDefault ? <span style={{ color: '#dc2626', fontWeight: 700 }}>Sí</span> : <span style={{ color: '#64748b' }}>No</span>}</td>
+                                  <td>
+                                    <span className={item.activo ? 'status-badge active' : 'status-badge inactive'}>
+                                      {item.activo ? 'Activo' : 'Inactivo'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="row-actions compact-actions" style={{ justifyContent: 'center' }}>
+                                      <button type="button" onClick={() => handleEditTblAtributo(item)}>Editar</button>
+                                      <button type="button" onClick={() => handleToggleTblAtributoEstado(item.id)}>{item.activo ? 'Inactivar' : 'Activar'}</button>
+                                      <button type="button" className="danger" onClick={() => handleDeleteTblAtributo(item.id)}>Eliminar</button>
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </>
+                )}
+
+                {/* SubTab 2: Tipos de Fórmulas */}
+                {subTabAtributos === 'formulas' && (
+                  <>
+                    <form className="surface pagaduria-form" onSubmit={handleSaveFormulaCalculo} style={{ padding: '24px', borderRadius: '12px' }}>
+                      <div className="surface-title" style={{ marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                        <div>
+                          <span className="section-kicker">CONSTRUCTOR DE REGLAS DE CÁLCULO</span>
+                          <h2>{editingFormulaCalculoId ? `Editando Fórmula #${editingFormulaCalculoId}: ${formulaCalculoForm.nombre}` : 'Crear Nueva Fórmula de Cálculo'}</h2>
+                          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Define y parametriza los tipos de fórmulas utilizados en la liquidación de créditos y atributos.</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {editingFormulaCalculoId && (
+                            <button type="button" className="ghost-button" onClick={handleCancelFormulaCalculoEdit}>
+                              Cancelar Edición
+                            </button>
+                          )}
+                          <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontWeight: 700 }}>
+                            {editingFormulaCalculoId ? 'Actualizar Fórmula' : 'Crear Fórmula'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="form-section">
+                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                          <label className="product-field" style={{ gridColumn: 'span 2' }}>
+                            <span>Nombre de la Fórmula *</span>
+                            <input
+                              value={formulaCalculoForm.nombre}
+                              onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, nombre: event.target.value }))}
+                              placeholder="Ej. CUOTA * % O VALOR CRÉDITO * % * DÍAS"
+                            />
+                          </label>
+
+                          <label className="product-field">
+                            <span>Código Referencia</span>
+                            <input
+                              value={formulaCalculoForm.codigo}
+                              onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, codigo: event.target.value.toUpperCase() }))}
+                              placeholder="Ej. FORM_CUOTA_PORC"
+                            />
+                          </label>
+
+                          <label className="product-field">
+                            <span>Base de Cálculo *</span>
+                            <select
+                              value={formulaCalculoForm.baseCalculo}
+                              onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, baseCalculo: event.target.value }))}
+                            >
+                              <option value="VALOR_CREDITO">Valor crédito</option>
+                              <option value="CUOTA">Cuota</option>
+                              <option value="SALDO">Saldo deudor</option>
+                              <option value="DESEMBOLSO">Valor desembolso</option>
+                              <option value="SMMLV">SMMLV (Salario Mínimo)</option>
+                            </select>
+                          </label>
+
+                          <label className="product-field">
+                            <span>Operación Matemática *</span>
+                            <select
+                              value={formulaCalculoForm.operacion}
+                              onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, operacion: event.target.value }))}
+                            >
+                              <option value="PORCENTAJE">Porcentaje (%)</option>
+                              <option value="VALOR_FIJO">Valor fijo ($)</option>
+                              <option value="MANUAL">Manual / Ingreso Libre</option>
+                              <option value="MULTIPLICAR_DIVIDIR">Base * valor / valor2</option>
+                            </select>
+                          </label>
+                        </div>
+
+                        <div style={{ marginTop: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '10px' }}>
+                            Condiciones y Parámetros Requeridos:
+                          </span>
+                          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={formulaCalculoForm.aplicaMinimo}
+                                onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMinimo: event.target.checked }))}
+                              />
+                              Aplica Mínimo Garantizado
+                            </label>
+                            <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={formulaCalculoForm.aplicaMaximo}
+                                onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMaximo: event.target.checked }))}
+                              />
+                              Aplica Tope Máximo
+                            </label>
+                            <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={formulaCalculoForm.requierePorcentaje}
+                                onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, requierePorcentaje: event.target.checked }))}
+                              />
+                              Requiere Porcentaje (%)
+                            </label>
+                            <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={formulaCalculoForm.requiereValor}
+                                onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, requiereValor: event.target.checked }))}
+                              />
+                              Requiere Valor Fijo / Multiplicador
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </form>
+
+                    {/* Tabla de Tipos de Fórmulas */}
+                    <section className="surface employees-panel" style={{ padding: '24px', borderRadius: '12px' }}>
+                      <div className="surface-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+                        <div>
+                          <span className="section-kicker">Catálogo de Algoritmos</span>
+                          <h2>Tabla de Tipos de Fórmulas de Cálculo</h2>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <input
+                            type="text"
+                            value={formulaSearchQuery}
+                            onChange={(e) => setFormulaSearchQuery(e.target.value)}
+                            placeholder="🔍 Buscar fórmula o código..."
+                            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '280px', fontSize: '0.85rem' }}
+                          />
+                          <span style={{ background: '#e2e8f0', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                            {(productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST).length} fórmulas
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="table-wrap" style={{ overflowX: 'auto' }}>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th style={{ width: '50px' }}>ID</th>
+                              <th>Código</th>
+                              <th>Nombre de la Fórmula</th>
+                              <th>Base de Cálculo</th>
+                              <th>Operación</th>
+                              <th>Reglas / Parámetros</th>
+                              <th>Estado</th>
+                              <th style={{ textAlign: 'center' }}>Acciones</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST)
+                              .filter((item) => {
+                                if (!formulaSearchQuery.trim()) return true;
+                                const q = formulaSearchQuery.toLowerCase();
+                                return item.nombre.toLowerCase().includes(q) || (item.codigo || '').toLowerCase().includes(q) || (item.baseCalculo || '').toLowerCase().includes(q);
+                              })
+                              .map((item) => (
+                                <tr key={item.id}>
+                                  <td><strong>#{item.id}</strong></td>
+                                  <td>
+                                    <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '0.78rem', color: '#475569', fontWeight: 700 }}>
+                                      {item.codigo || `FORM_${item.id}`}
+                                    </code>
+                                  </td>
+                                  <td>
+                                    <strong style={{ color: '#0f4c3a', fontSize: '0.9rem' }}>{item.nombre}</strong>
+                                  </td>
+                                  <td>
+                                    <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, background: item.baseCalculo === 'VALOR_CREDITO' ? '#dbeafe' : item.baseCalculo === 'DESEMBOLSO' ? '#dcfce7' : item.baseCalculo === 'CUOTA' ? '#fef3c7' : '#f3e8ff', color: item.baseCalculo === 'VALOR_CREDITO' ? '#1e40af' : item.baseCalculo === 'DESEMBOLSO' ? '#166534' : item.baseCalculo === 'CUOTA' ? '#92400e' : '#6b21a8' }}>
+                                      {item.baseCalculo || 'VALOR_CREDITO'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
+                                      {item.operacion || 'PORCENTAJE'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                                      {item.aplicaMinimo && <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Mínimo</span>}
+                                      {item.aplicaMaximo && <span style={{ background: '#fef2f2', color: '#b91c1c', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Máximo</span>}
+                                      {item.requierePorcentaje && <span style={{ background: '#ecfdf5', color: '#047857', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Porcentaje %</span>}
+                                      {item.requiereValor && <span style={{ background: '#fff7ed', color: '#c2410c', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Valor Fijo</span>}
+                                    </div>
+                                  </td>
+                                  <td>
+                                    <span className={item.activo !== false ? 'status-badge active' : 'status-badge inactive'}>
+                                      {item.activo !== false ? 'Activo' : 'Inactivo'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <span className="row-actions compact-actions" style={{ justifyContent: 'center' }}>
+                                      <button type="button" onClick={() => handleEditFormulaCalculo(item)}>
+                                        Editar
+                                      </button>
+                                      <button type="button" onClick={() => handleToggleFormulaEstado(item)}>
+                                        {item.activo !== false ? 'Inactivar' : 'Activar'}
+                                      </button>
+                                      <button type="button" className="danger" onClick={() => handleDeleteFormulaCalculo(item.id)}>
+                                        Eliminar
+                                      </button>
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  </>
+                )}
               </section>
             )}
 
