@@ -13,6 +13,8 @@ import { EntidadesBancariasView } from './components/configuracion-financiera/En
 import { TasasInteresView } from './components/configuracion-financiera/TasasInteresView';
 import { PlazosPagoView } from './components/configuracion-financiera/PlazosPagoView';
 import { FormatosCreditoView } from './components/configuracion-financiera/FormatosCreditoView';
+import { TiposFianzasView } from './components/configuracion-financiera/TiposFianzasView';
+import { TiposSalariosView } from './components/configuracion-financiera/TiposSalariosView';
 import {
   api,
   type AddressCatalogs,
@@ -65,8 +67,8 @@ import {
   type UserRow
 } from './api';
 
-type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | `modulo:${number}`;
-type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'apariencia';
+type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | `modulo:${number}`;
+type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
 type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
 type AliadosTab = 'registro' | 'directorio';
@@ -1540,6 +1542,10 @@ function App() {
         ? 'Registro de usuarios'
         : view === 'configuracion'
           ? 'Configuracion'
+          : view === 'salarios'
+            ? 'Tipos de salarios'
+            : view === 'fianzas'
+              ? 'Tipos de fianzas'
           : view === 'bancos'
             ? 'Entidades bancarias'
             : view === 'tasas'
@@ -1556,6 +1562,10 @@ function App() {
         ? 'Seguridad'
         : view === 'configuracion'
           ? 'Parametros del sistema'
+          : view === 'salarios'
+            ? 'Parámetros Legales (SMMLV & IVA)'
+            : view === 'fianzas'
+              ? 'Garantías y Afianzamiento'
           : view === 'bancos'
             ? 'Catálogo Bancario'
             : view === 'tasas'
@@ -5035,6 +5045,22 @@ function App() {
             Configuracion
           </button>
           <div className="nav-divider">Configuración Financiera</div>
+          <button
+            type="button"
+            className={view === 'salarios' ? 'module-link active' : 'module-link'}
+            onClick={() => setView('salarios')}
+          >
+            <span>SL</span>
+            Tipos de salarios / IVA
+          </button>
+          <button
+            type="button"
+            className={view === 'fianzas' ? 'module-link active' : 'module-link'}
+            onClick={() => setView('fianzas')}
+          >
+            <span>FZ</span>
+            Tipos de fianzas
+          </button>
           <button
             type="button"
             className={view === 'formatos' ? 'module-link active' : 'module-link'}
@@ -9091,14 +9117,14 @@ function App() {
         {view === 'configuracion' && (
           <section className="surface config-surface">
             <div className="config-tabs">
-              {(['roles', 'permisos', 'modulos', 'apariencia'] as ConfigTab[]).map((tab) => (
+              {(['roles', 'permisos', 'modulos', 'salarios', 'fianzas', 'apariencia'] as ConfigTab[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
                   className={configTab === tab ? 'tab-button active' : 'tab-button'}
                   onClick={() => setConfigTab(tab)}
                 >
-                  {tab}
+                  {tab === 'salarios' ? 'Salario Mínimo / IVA' : tab === 'fianzas' ? 'Tipos de Fianzas' : tab}
                 </button>
               ))}
             </div>
@@ -9263,6 +9289,26 @@ function App() {
                 </section>
               </div>
             )}
+
+            {configTab === 'salarios' && session && (
+              <TiposSalariosView token={session.token} notify={notify} />
+            )}
+
+            {configTab === 'fianzas' && session && (
+              <TiposFianzasView token={session.token} notify={notify} />
+            )}
+          </section>
+        )}
+
+        {view === 'salarios' && session && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <TiposSalariosView token={session.token} notify={notify} />
+          </section>
+        )}
+
+        {view === 'fianzas' && session && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <TiposFianzasView token={session.token} notify={notify} />
           </section>
         )}
 

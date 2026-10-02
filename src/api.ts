@@ -582,6 +582,34 @@ export type FormatoCreditoItem = {
   fecActualizacion: string | null;
 };
 
+export type CalificacionFianzaItem = {
+  id?: number;
+  letra: string;
+  porcentaje: number;
+};
+
+export type FianzaItem = {
+  id: number;
+  nombre: string;
+  cantidad: number;
+  calificaciones: CalificacionFianzaItem[];
+  activo: boolean;
+  fecCreacion: string;
+  fecActualizacion?: string | null;
+};
+
+export type ParametroFinancieroItem = {
+  id: number;
+  codigo: string;
+  nombre: string;
+  valor: number;
+  unidad: 'VALOR' | 'PORCENTAJE';
+  vigenciaDesde: string;
+  vigenciaHasta: string | null;
+  activo: boolean;
+  fecCreacion: string;
+};
+
 export type CampoCatalogoItem = {
   key: string;
   label: string;
@@ -1531,6 +1559,39 @@ export const api = {
   updateFormatoCredito: (token: string, id: number, body: unknown) =>
     request<FormatoCreditoItem>(`/api/v1/productos-creditos/formatos/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
   deleteFormatoCredito: (token: string, id: number) =>
-    request<void>(`/api/v1/productos-creditos/formatos/${id}`, { method: 'DELETE' }, token)
+    request<void>(`/api/v1/productos-creditos/formatos/${id}`, { method: 'DELETE' }, token),
+
+  // ==========================================
+  // FIANZAS (Tipos de fianzas y calificaciones)
+  // ==========================================
+  listFianzas: (token: string, search?: string) =>
+    request<FianzaItem[]>(`/api/v1/productos-creditos/fianzas${search ? `?search=${encodeURIComponent(search)}` : ''}`, {}, token),
+  getFianza: (token: string, id: number) =>
+    request<FianzaItem>(`/api/v1/productos-creditos/fianzas/${id}`, {}, token),
+  createFianza: (token: string, body: unknown) =>
+    request<FianzaItem>('/api/v1/productos-creditos/fianzas', { method: 'POST', body: JSON.stringify(body) }, token),
+  updateFianza: (token: string, id: number, body: unknown) =>
+    request<FianzaItem>(`/api/v1/productos-creditos/fianzas/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deleteFianza: (token: string, id: number) =>
+    request<void>(`/api/v1/productos-creditos/fianzas/${id}`, { method: 'DELETE' }, token),
+
+  // ==========================================
+  // TIPOS DE SALARIOS Y PARÁMETROS (SMMLV, IVA)
+  // ==========================================
+  listSalariosParametros: (token: string, search?: string, tipo?: 'SALARIOS' | 'IVA' | 'TODOS') => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (tipo) params.set('tipo', tipo);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<ParametroFinancieroItem[]>(`/api/v1/productos-creditos/salarios${qs}`, {}, token);
+  },
+  getSalarioParametro: (token: string, id: number) =>
+    request<ParametroFinancieroItem>(`/api/v1/productos-creditos/salarios/${id}`, {}, token),
+  createSalarioParametro: (token: string, body: unknown) =>
+    request<ParametroFinancieroItem>('/api/v1/productos-creditos/salarios', { method: 'POST', body: JSON.stringify(body) }, token),
+  updateSalarioParametro: (token: string, id: number, body: unknown) =>
+    request<ParametroFinancieroItem>(`/api/v1/productos-creditos/salarios/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deleteSalarioParametro: (token: string, id: number) =>
+    request<void>(`/api/v1/productos-creditos/salarios/${id}`, { method: 'DELETE' }, token)
 };
 
