@@ -1018,6 +1018,12 @@ textarea:focus {
   color: var(--color-info);
 }
 
+.feedback-alert-warning {
+  border-color: color-mix(in srgb, var(--color-warning) 42%, var(--border-color));
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--bg-surface));
+  color: var(--color-warning);
+}
+
 .feedback-alert-dismiss {
   min-height: 24px;
   min-width: 24px;

@@ -1,6 +1,6 @@
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 
-export type FeedbackTone = 'error' | 'success' | 'info';
+export type FeedbackTone = 'error' | 'success' | 'info' | 'warning';
 
 type FeedbackAlertProps = {
   message: string;
@@ -11,7 +11,8 @@ type FeedbackAlertProps = {
 const icons = {
   error: AlertCircle,
   success: CheckCircle2,
-  info: Info
+  info: Info,
+  warning: AlertTriangle
 };
 
 export function FeedbackAlert({ message, tone = 'info', onDismiss }: FeedbackAlertProps) {
