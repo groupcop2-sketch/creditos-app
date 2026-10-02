@@ -9,11 +9,16 @@ import { PdfFieldMapper } from './PdfFieldMapper';
 import { FormStepper, type StepItem } from './FormStepper';
 import { FeedbackAlert, type FeedbackTone } from './FeedbackAlert';
 import { getAuthErrorMessage } from './feedback';
+import { EntidadesBancariasView } from './components/configuracion-financiera/EntidadesBancariasView';
+import { TasasInteresView } from './components/configuracion-financiera/TasasInteresView';
+import { PlazosPagoView } from './components/configuracion-financiera/PlazosPagoView';
+import { FormatosCreditoView } from './components/configuracion-financiera/FormatosCreditoView';
 import {
   api,
   type AddressCatalogs,
   type AliadoRow,
   type AliadosCatalogs,
+  type BancoItem,
   type CarteraReporte,
   type CatalogModule,
   type ComercialRow,
@@ -33,12 +38,14 @@ import {
   type EmployeeCatalogs,
   type FirmaCreditoRow,
   type FondeoDisponibleRow,
+  type FormatoCreditoItem,
   type FormulaCalculoRow,
   type InversionRow,
   type IdentificationTypeRow,
   type LibranzeraRow,
   type PermissionRow,
   type ParametroFinancieroRow,
+  type PlazoPagoItem,
   type PortalCatalogs,
   type PortalCliente,
   type PortalCreditosResponse,
@@ -54,16 +61,17 @@ import {
   type SimulacionCredito,
   type SocioRow,
   type SociosCatalogs,
+  type TasaReferenciaItem,
   type UserRow
 } from './api';
 
-type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | `modulo:${number}`;
+type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | `modulo:${number}`;
 type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'apariencia';
 type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
 type AliadosTab = 'registro' | 'directorio';
 type ComercialesTab = 'libranzera' | 'vendedor' | 'directorio';
-type ProductosCreditoTab = 'solicitudes' | 'general' | 'atributos' | 'convenios' | 'documentos' | 'etapas' | 'parametros' | 'tblAtributos';
+type ProductosCreditoTab = 'solicitudes' | 'general' | 'atributos' | 'tblAtributos' | 'convenios' | 'documentos' | 'etapas' | 'parametros' | 'formatos' | 'tasas' | 'plazos' | 'bancos';
 type ThemeMode = 'light' | 'dark';
 type PaletteKey = 'azul' | 'verde' | 'vino' | 'grafito';
 
@@ -1298,6 +1306,8 @@ function App() {
   const [parametrosFinancieros, setParametrosFinancieros] = useState<ParametroFinancieroRow[]>([]);
   const [parametroFinancieroForm, setParametroFinancieroForm] = useState<ParametroFinancieroFormState>(initialParametroFinancieroForm);
   const [selectedProductoCreditoId, setSelectedProductoCreditoId] = useState<number | null>(null);
+  const [formatosCreditoList, setFormatosCreditoList] = useState<FormatoCreditoItem[]>([]);
+  const [plazosPagoList, setPlazosPagoList] = useState<PlazoPagoItem[]>([]);
   const [productoAtributos, setProductoAtributos] = useState<ProductoAtributoRow[]>([]);
   const [productoConvenios, setProductoConvenios] = useState<ProductoConvenioRow[]>([]);
   const [productoConvenioForm, setProductoConvenioForm] = useState<ProductoConvenioFormState>(initialProductoConvenioForm);
@@ -1530,7 +1540,15 @@ function App() {
         ? 'Registro de usuarios'
         : view === 'configuracion'
           ? 'Configuracion'
-          : selectedModule?.nombre ?? 'Modulo';
+          : view === 'bancos'
+            ? 'Entidades bancarias'
+            : view === 'tasas'
+              ? 'Tasas de interés'
+              : view === 'plazos'
+                ? 'Plazo de pago'
+                : view === 'formatos'
+                  ? 'Formatos de créditos'
+                  : selectedModule?.nombre ?? 'Modulo';
   const pageKicker =
     view === 'dashboard'
       ? 'Vista general'
@@ -1538,7 +1556,15 @@ function App() {
         ? 'Seguridad'
         : view === 'configuracion'
           ? 'Parametros del sistema'
-          : 'Modulo operativo';
+          : view === 'bancos'
+            ? 'Catálogo Bancario'
+            : view === 'tasas'
+              ? 'Superintendencia Financiera'
+              : view === 'plazos'
+                ? 'Condiciones de Crédito'
+                : view === 'formatos'
+                  ? 'Configuración de Producto'
+                  : 'Modulo operativo';
 
   const overview = [
     { label: 'Usuarios', value: users.length },
@@ -2056,19 +2082,25 @@ function App() {
         productosResponse,
         creditosCatalogsResponse,
         creditosResponse,
-        employeeCatalogsResponse
+        employeeCatalogsResponse,
+        formatosResponse,
+        plazosResponse
       ] = await Promise.all([
         api.listProductosCreditoCatalogs(session.token),
         api.listProductosCredito(session.token),
         api.listCreditosCatalogs(session.token),
         api.listCreditos(session.token),
-        api.listEmployeeCatalogs(session.token)
+        api.listEmployeeCatalogs(session.token),
+        api.listFormatosCredito(session.token).catch(() => []),
+        api.listPlazos(session.token).catch(() => [])
       ]);
       setProductosCreditoCatalogs(catalogsResponse);
       setProductosCredito(productosResponse);
       setCreditosCatalogs(creditosCatalogsResponse);
       setCreditos(creditosResponse);
       setEmployeeCatalogs(employeeCatalogsResponse);
+      setFormatosCreditoList(formatosResponse);
+      setPlazosPagoList(plazosResponse);
       setSelectedProductoCreditoId((current) => current ?? productosResponse[0]?.id ?? null);
       setSelectedCreditoId((current) => current ?? creditosResponse[0]?.id ?? null);
       setProductoCreditoForm((current) => ({
@@ -5002,6 +5034,39 @@ function App() {
             <span>CF</span>
             Configuracion
           </button>
+          <div className="nav-divider">Configuración Financiera</div>
+          <button
+            type="button"
+            className={view === 'formatos' ? 'module-link active' : 'module-link'}
+            onClick={() => setView('formatos')}
+          >
+            <span>FC</span>
+            Formatos de créditos
+          </button>
+          <button
+            type="button"
+            className={view === 'tasas' ? 'module-link active' : 'module-link'}
+            onClick={() => setView('tasas')}
+          >
+            <span>TS</span>
+            Tasas de interés
+          </button>
+          <button
+            type="button"
+            className={view === 'plazos' ? 'module-link active' : 'module-link'}
+            onClick={() => setView('plazos')}
+          >
+            <span>PZ</span>
+            Plazo de pago
+          </button>
+          <button
+            type="button"
+            className={view === 'bancos' ? 'module-link active' : 'module-link'}
+            onClick={() => setView('bancos')}
+          >
+            <span>BA</span>
+            Entidades bancarias
+          </button>
         </nav>
 
         <div className="user-card">
@@ -6935,7 +7000,7 @@ function App() {
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
             <div className="config-tabs">
-              {(['solicitudes', 'general', 'atributos', 'tblAtributos', 'convenios', 'documentos', 'etapas', 'parametros'] as ProductosCreditoTab[]).map((tab) => (
+              {(['solicitudes', 'general', 'atributos', 'tblAtributos', 'convenios', 'documentos', 'etapas', 'parametros', 'formatos', 'tasas', 'plazos', 'bancos'] as ProductosCreditoTab[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -6950,13 +7015,17 @@ function App() {
                     convenios: 'Convenios',
                     documentos: 'Documentacion',
                     etapas: 'Flujo del credito',
-                    parametros: 'Parametros'
+                    parametros: 'Parametros',
+                    formatos: 'Formatos de créditos',
+                    tasas: 'Tasas (Usura / DTF)',
+                    plazos: 'Plazos de pago',
+                    bancos: 'Entidades bancarias'
                   }[tab]}
                 </button>
               ))}
             </div>
 
-            {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && (
+            {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
               <div className="product-context-bar">
                 <div>
                   <span className="section-kicker">Producto en configuracion</span>
@@ -7758,18 +7827,32 @@ function App() {
                               <label className="product-field"><span>Tope maximo</span><input value={productoCreditoForm.montoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, montoMaximo: event.target.value }))} placeholder="Monto maximo aprobado" /><small>Limite superior del producto.</small></label>
                               <label className="product-field"><span>Salario minimo</span><input value={productoCreditoForm.salarioMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMinimo: event.target.value }))} placeholder="Ingreso minimo requerido" /></label>
                               <label className="product-field"><span>Salario maximo</span><input value={productoCreditoForm.salarioMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, salarioMaximo: event.target.value }))} placeholder="Ingreso maximo permitido" /></label>
-                              <label className="product-field"><span>Plazo minimo</span><select value={productoCreditoForm.plazoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMinimo: event.target.value }))}>
-                                <option value="">Sin minimo</option>
-                                {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
-                              </select></label>
-                              <label className="product-field"><span>Plazo maximo</span><select value={productoCreditoForm.plazoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMaximo: event.target.value }))}>
-                                <option value="">Sin maximo</option>
-                                {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
-                              </select></label>
                               <label className="product-field"><span>Modelo de plazo</span><select value={productoCreditoForm.modeloPlazo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, modeloPlazo: event.target.value }))}>
                                 <option value="MESES">Meses</option>
                                 <option value="DIAS">Dias</option>
                                 <option value="CUOTAS">Cuotas</option>
+                              </select></label>
+                              <label className="product-field"><span>Plazo minimo ({productoCreditoForm.modeloPlazo?.toLowerCase()})</span><select value={productoCreditoForm.plazoMinimo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMinimo: event.target.value }))}>
+                                <option value="">Sin minimo</option>
+                                {(productoCreditoForm.modeloPlazo === 'DIAS'
+                                  ? (plazosPagoList.filter((p) => p.unidad === 'DIAS').length > 0
+                                      ? plazosPagoList.filter((p) => p.unidad === 'DIAS').map((p) => p.plazo)
+                                      : [8, 15, 30, 45, 60, 90, 120, 180, 360])
+                                  : (plazosPagoList.filter((p) => p.unidad === 'MESES').length > 0
+                                      ? Array.from(new Set([...plazosPagoList.filter((p) => p.unidad === 'MESES').map((p) => p.plazo), ...monthOptions])).sort((a, b) => a - b)
+                                      : monthOptions)
+                                ).map((num) => <option key={num} value={num}>{num} {productoCreditoForm.modeloPlazo?.toLowerCase()}</option>)}
+                              </select></label>
+                              <label className="product-field"><span>Plazo maximo ({productoCreditoForm.modeloPlazo?.toLowerCase()})</span><select value={productoCreditoForm.plazoMaximo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, plazoMaximo: event.target.value }))}>
+                                <option value="">Sin maximo</option>
+                                {(productoCreditoForm.modeloPlazo === 'DIAS'
+                                  ? (plazosPagoList.filter((p) => p.unidad === 'DIAS').length > 0
+                                      ? plazosPagoList.filter((p) => p.unidad === 'DIAS').map((p) => p.plazo)
+                                      : [8, 15, 30, 45, 60, 90, 120, 180, 360])
+                                  : (plazosPagoList.filter((p) => p.unidad === 'MESES').length > 0
+                                      ? Array.from(new Set([...plazosPagoList.filter((p) => p.unidad === 'MESES').map((p) => p.plazo), ...monthOptions])).sort((a, b) => a - b)
+                                      : monthOptions)
+                                ).map((num) => <option key={num} value={num}>{num} {productoCreditoForm.modeloPlazo?.toLowerCase()}</option>)}
                               </select></label>
                               <label className="product-field"><span>Codeudores requeridos</span><input value={productoCreditoForm.numeroCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, numeroCodeudores: event.target.value }))} placeholder="0" /></label>
                             </div>
@@ -7828,24 +7911,135 @@ function App() {
                         subtitle: 'Firma y detalles',
                         content: (
                           <div className="form-section">
-                            <h3>Formatos y descripcion</h3>
+                            <h3>Formatos y estructura de campos del crédito</h3>
                             <div className="field-grid four-cols">
-                              <label className="product-field"><span>Formato de credito</span><select value={productoCreditoForm.formatoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCredito: event.target.value }))}>
-                                <option value="NO">No</option>
-                                <option value="SI">Si</option>
-                              </select></label>
-                              <label className="product-field"><span>Formato de requisitos</span><select value={productoCreditoForm.formatoRequisitos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoRequisitos: event.target.value }))}>
-                                <option value="NO">No</option>
-                                <option value="SI">Si</option>
-                              </select></label>
-                              <label className="product-field"><span>Formato codeudores</span><select value={productoCreditoForm.formatoCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCodeudores: event.target.value }))}>
-                                <option value="NO">No</option>
-                                <option value="SI">Si</option>
-                              </select></label>
-                              <label className="product-field"><span>Proveedor firma</span><input value={productoCreditoForm.proveedorFirma} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, proveedorFirma: event.target.value }))} placeholder="Proveedor" /></label>
-                              <label className="product-field"><span>Periodo de gracia</span><input value={productoCreditoForm.periodoGracia} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodoGracia: event.target.value }))} placeholder="0" /></label>
+                              <label className="product-field">
+                                <span>Formato de crédito</span>
+                                <select
+                                  value={productoCreditoForm.formatoCredito || ''}
+                                  onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCredito: event.target.value }))}
+                                >
+                                  <option value="">-- Sin formato asignado --</option>
+                                  {formatosCreditoList.map((f) => (
+                                    <option key={f.id} value={f.nombre}>
+                                      {f.nombre} ({f.numRequisitos} requisitos)
+                                    </option>
+                                  ))}
+                                  {formatosCreditoList.length === 0 && <option value="CREDITO">CREDITO (19 requisitos)</option>}
+                                </select>
+                              </label>
+                              <label className="product-field">
+                                <span>Formato de requisitos</span>
+                                <select value={productoCreditoForm.formatoRequisitos} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoRequisitos: event.target.value }))}>
+                                  <option value="NO">No</option>
+                                  <option value="SI">Si</option>
+                                </select>
+                              </label>
+                              <label className="product-field">
+                                <span>Formato codeudores</span>
+                                <select value={productoCreditoForm.formatoCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, formatoCodeudores: event.target.value }))}>
+                                  <option value="NO">No</option>
+                                  <option value="SI">Si</option>
+                                </select>
+                              </label>
+                              <label className="product-field">
+                                <span>Proveedor firma</span>
+                                <input value={productoCreditoForm.proveedorFirma} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, proveedorFirma: event.target.value }))} placeholder="Proveedor" />
+                              </label>
+                              <label className="product-field">
+                                <span>Periodo de gracia (meses)</span>
+                                <input value={productoCreditoForm.periodoGracia} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, periodoGracia: event.target.value }))} placeholder="0" />
+                              </label>
                             </div>
-                            <textarea value={productoCreditoForm.descripcion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />
+
+                            {/* Estructura de campos o información que llevará o puede mostrar el crédito */}
+                            {(() => {
+                              const activeFormato = formatosCreditoList.find(
+                                (f) => f.nombre === productoCreditoForm.formatoCredito || String(f.id) === productoCreditoForm.formatoCredito
+                              );
+                              const camposConfigurados = activeFormato?.campos || {};
+                              const camposCatalogoList: Array<{ key: string; label: string }> = [
+                                { key: 'valorCreditoSolicitar', label: 'Valor del crédito al solicitar' },
+                                { key: 'valorDesembolso', label: 'Valor de desembolso' },
+                                { key: 'valorCuota', label: 'Valor de la cuota' },
+                                { key: 'plazo', label: 'Plazo' },
+                                { key: 'tasaInteresSolicitar', label: 'Tasa de interés al solicitar' },
+                                { key: 'atributosCreditoSolicitar', label: 'Atributos del crédito al solicitar' },
+                                { key: 'planAmortizacionSolicitar', label: 'Plan de amortización al solicitar' },
+                                { key: 'tasaInteres', label: 'Tasa de interés' },
+                                { key: 'valorCredito', label: 'Valor del crédito' },
+                                { key: 'primeraCuota', label: 'Primera cuota' },
+                                { key: 'interesAjustable', label: 'Interés ajustable' },
+                                { key: 'metodo', label: 'Método' },
+                                { key: 'cartera', label: 'Cartera' },
+                                { key: 'calificacionRiesgo', label: 'Calificación de riesgo' },
+                                { key: 'saldoCredito', label: 'Saldo del crédito' },
+                                { key: 'atributosCredito', label: 'Atributos del crédito' },
+                                { key: 'planAmortizacion', label: 'Plan de amortización' },
+                                { key: 'documentosCredito', label: 'Documentos del crédito' },
+                                { key: 'extractos', label: 'Extractos' }
+                              ];
+
+                              return (
+                                <div style={{ marginTop: '16px', padding: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                                    <div>
+                                      <strong style={{ fontSize: '0.95rem', color: '#1e293b' }}>
+                                        Estructura de campos o información del crédito
+                                      </strong>
+                                      <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                        {activeFormato
+                                          ? `Formato seleccionado: "${activeFormato.nombre}" (${activeFormato.numRequisitos} campos activos)`
+                                          : 'Formato estándar: los 19 campos disponibles que puede mostrar y requerir el crédito al solicitar y configurar.'}
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="ghost-button"
+                                      style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+                                      onClick={() => setProductosCreditoTab('formatos')}
+                                    >
+                                      Editar formatos →
+                                    </button>
+                                  </div>
+
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '8px' }}>
+                                    {camposCatalogoList.map((c) => {
+                                      const isActivo = activeFormato ? !!camposConfigurados[c.key] : true;
+                                      return (
+                                        <div
+                                          key={c.key}
+                                          style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            padding: '8px 12px',
+                                            borderRadius: '6px',
+                                            background: isActivo ? '#f0fdf4' : '#f8fafc',
+                                            border: isActivo ? '1px solid #86efac' : '1px solid #e2e8f0',
+                                            color: isActivo ? '#166534' : '#94a3b8',
+                                            fontSize: '0.82rem',
+                                            fontWeight: isActivo ? 600 : 400
+                                          }}
+                                        >
+                                          <span style={{ fontSize: '1rem', color: isActivo ? '#16a34a' : '#cbd5e1' }}>
+                                            {isActivo ? '☑' : '☐'}
+                                          </span>
+                                          <span>{c.label}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            <textarea
+                              value={productoCreditoForm.descripcion}
+                              onChange={(event) => setProductoCreditoForm((current) => ({ ...current, descripcion: event.target.value }))}
+                              placeholder="Descripción o condiciones comerciales del producto"
+                              style={{ marginTop: '14px' }}
+                            />
                           </div>
                         )
                       }
@@ -8708,6 +8902,35 @@ function App() {
                 </form>
               </section>
             )}
+
+            {productosCreditoTab === 'formatos' && session && (
+              <FormatosCreditoView
+                token={session.token}
+                notify={notify}
+                onFormatSelected={() => reloadProductosCreditoData()}
+              />
+            )}
+
+            {productosCreditoTab === 'tasas' && session && (
+              <TasasInteresView
+                token={session.token}
+                notify={notify}
+              />
+            )}
+
+            {productosCreditoTab === 'plazos' && session && (
+              <PlazosPagoView
+                token={session.token}
+                notify={notify}
+              />
+            )}
+
+            {productosCreditoTab === 'bancos' && session && (
+              <EntidadesBancariasView
+                token={session.token}
+                notify={notify}
+              />
+            )}
           </section>
         )}
 
@@ -9040,6 +9263,34 @@ function App() {
                 </section>
               </div>
             )}
+          </section>
+        )}
+
+        {view === 'bancos' && session && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <EntidadesBancariasView token={session.token} notify={notify} />
+          </section>
+        )}
+
+        {view === 'tasas' && session && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <TasasInteresView token={session.token} notify={notify} />
+          </section>
+        )}
+
+        {view === 'plazos' && session && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <PlazosPagoView token={session.token} notify={notify} />
+          </section>
+        )}
+
+        {view === 'formatos' && session && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <FormatosCreditoView
+              token={session.token}
+              notify={notify}
+              onFormatSelected={() => reloadProductosCreditoData()}
+            />
           </section>
         )}
 

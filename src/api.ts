@@ -531,6 +531,79 @@ export type ParametroFinancieroRow = {
   activo: boolean;
 };
 
+export type BancoItem = {
+  id: number;
+  nombre: string;
+  codigo: string | null;
+  fecCreacion: string;
+  fecActualizacion: string | null;
+};
+
+export type TasaReferenciaItem = {
+  id: number;
+  tipoTasa: string;
+  mes: string;
+  ano: number;
+  base: number;
+  tasaEa: number;
+  tasaDiaria: number;
+  tasaSemanal: number;
+  tasaMensual: number;
+  tasaQuincenal: number;
+  tasaBimestral: number;
+  tasaTrimestral: number;
+  tasaCuatrimestral: number;
+  resolucion: string | null;
+  modalidad: string | null;
+  fuente: string | null;
+  fecVigenciaDesde: string | null;
+  fecVigenciaHasta: string | null;
+};
+
+export type PlazoPagoItem = {
+  id: number;
+  plazo: number;
+  unidad: 'DIAS' | 'MESES';
+  descripcion: string | null;
+  activo: boolean;
+  orden: number;
+  fecCreacion: string;
+  fecActualizacion: string | null;
+};
+
+export type FormatoCreditoItem = {
+  id: number;
+  nombre: string;
+  descripcion: string | null;
+  campos: Record<string, boolean>;
+  numRequisitos: number;
+  activo: boolean;
+  fecCreacion: string;
+  fecActualizacion: string | null;
+};
+
+export type CampoCatalogoItem = {
+  key: string;
+  label: string;
+  default: boolean;
+};
+
+export type ValidarEndpointResult = {
+  valido: boolean;
+  url: string;
+  statusCode?: number;
+  totalRegistrosRetornados?: number;
+  columnasDetectadas?: string[];
+  muestra?: unknown[];
+  mensaje: string;
+};
+
+export type SincronizarTasasResult = {
+  mensaje: string;
+  tasasActualizadas: number;
+  registros: TasaReferenciaItem[];
+};
+
 export type FormulaCalculoRow = {
   id: number;
   nombre: string;
@@ -1399,6 +1472,65 @@ export const api = {
   listPortalProductos: (token: string) => request<PortalProductoCredito[]>('/api/v1/portal/productos', {}, token),
   listPortalCreditos: (token: string) => request<PortalCreditosResponse>('/api/v1/portal/creditos', {}, token),
   simularPortalCredito: (token: string, body: unknown) => request<SimulacionCredito>('/api/v1/portal/simular', { method: 'POST', body: JSON.stringify(body) }, token),
-  crearSolicitudPortal: (token: string, body: unknown) => request<CreditoRow>('/api/v1/portal/solicitudes', { method: 'POST', body: JSON.stringify(body) }, token)
+  crearSolicitudPortal: (token: string, body: unknown) => request<CreditoRow>('/api/v1/portal/solicitudes', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  // ==========================================
+  // BANCOS / ENTIDADES BANCARIAS
+  // ==========================================
+  listBancos: (token: string, search?: string) =>
+    request<BancoItem[]>(`/api/v1/productos-creditos/bancos${search ? `?search=${encodeURIComponent(search)}` : ''}`, {}, token),
+  createBanco: (token: string, body: unknown) =>
+    request<BancoItem>('/api/v1/productos-creditos/bancos', { method: 'POST', body: JSON.stringify(body) }, token),
+  updateBanco: (token: string, id: number, body: unknown) =>
+    request<BancoItem>(`/api/v1/productos-creditos/bancos/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deleteBanco: (token: string, id: number) =>
+    request<void>(`/api/v1/productos-creditos/bancos/${id}`, { method: 'DELETE' }, token),
+
+  // ==========================================
+  // TASAS (USURA / DTF / MORA & DATOS.GOV.CO)
+  // ==========================================
+  listTasas: (token: string, tipo?: string, ano?: number) => {
+    const params = new URLSearchParams();
+    if (tipo) params.set('tipo', tipo);
+    if (ano) params.set('ano', String(ano));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<TasaReferenciaItem[]>(`/api/v1/productos-creditos/tasas${qs}`, {}, token);
+  },
+  createTasa: (token: string, body: unknown) =>
+    request<TasaReferenciaItem>('/api/v1/productos-creditos/tasas', { method: 'POST', body: JSON.stringify(body) }, token),
+  deleteTasa: (token: string, id: number) =>
+    request<void>(`/api/v1/productos-creditos/tasas/${id}`, { method: 'DELETE' }, token),
+  validarEndpointTasas: (token: string, url?: string) =>
+    request<ValidarEndpointResult>('/api/v1/productos-creditos/tasas/validar-endpoint', { method: 'POST', body: JSON.stringify({ url }) }, token),
+  sincronizarTasas: (token: string, url?: string) =>
+    request<SincronizarTasasResult>('/api/v1/productos-creditos/tasas/sincronizar', { method: 'POST', body: JSON.stringify({ url }) }, token),
+
+  // ==========================================
+  // PLAZOS DE PAGO (DÍAS Y MESES)
+  // ==========================================
+  listPlazos: (token: string, unidad?: string) =>
+    request<PlazoPagoItem[]>(`/api/v1/productos-creditos/plazos${unidad ? `?unidad=${unidad}` : ''}`, {}, token),
+  createPlazo: (token: string, body: unknown) =>
+    request<PlazoPagoItem>('/api/v1/productos-creditos/plazos', { method: 'POST', body: JSON.stringify(body) }, token),
+  updatePlazo: (token: string, id: number, body: unknown) =>
+    request<PlazoPagoItem>(`/api/v1/productos-creditos/plazos/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deletePlazo: (token: string, id: number) =>
+    request<void>(`/api/v1/productos-creditos/plazos/${id}`, { method: 'DELETE' }, token),
+
+  // ==========================================
+  // FORMATOS DE CRÉDITO Y ESTRUCTURA DE CAMPOS
+  // ==========================================
+  listFormatosCredito: (token: string) =>
+    request<FormatoCreditoItem[]>('/api/v1/productos-creditos/formatos', {}, token),
+  getFormatoCredito: (token: string, id: number) =>
+    request<FormatoCreditoItem>(`/api/v1/productos-creditos/formatos/${id}`, {}, token),
+  getCamposCatalogoFormato: (token: string) =>
+    request<CampoCatalogoItem[]>('/api/v1/productos-creditos/formatos/campos-catalogo', {}, token),
+  createFormatoCredito: (token: string, body: unknown) =>
+    request<FormatoCreditoItem>('/api/v1/productos-creditos/formatos', { method: 'POST', body: JSON.stringify(body) }, token),
+  updateFormatoCredito: (token: string, id: number, body: unknown) =>
+    request<FormatoCreditoItem>(`/api/v1/productos-creditos/formatos/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  deleteFormatoCredito: (token: string, id: number) =>
+    request<void>(`/api/v1/productos-creditos/formatos/${id}`, { method: 'DELETE' }, token)
 };
 
