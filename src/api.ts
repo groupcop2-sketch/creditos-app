@@ -699,7 +699,7 @@ export type CrearDocuSignEnvelopeInput = {
   firmanteIdentificacion?: string | null;
   asunto?: string;
   mensaje?: string;
-  documentosTipos?: Array<'PAGARE' | 'CONTRATO' | 'CARTA_INSTRUCCIONES'>;
+  documentosTipos?: Array<'PAGARE' | 'CONTRATO' | 'CARTA_INSTRUCCIONES' | 'AUTORIZACION_DESCUENTO' | 'SEGURO_VIDA'>;
 };
 
 export type ValidarEndpointResult = {

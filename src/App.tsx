@@ -16,6 +16,8 @@ import { FormatosCreditoView } from './components/configuracion-financiera/Forma
 import { TiposFianzasView } from './components/configuracion-financiera/TiposFianzasView';
 import { TiposSalariosView } from './components/configuracion-financiera/TiposSalariosView';
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
+import { DocuSignStateMachine } from './components/docusign/DocuSignStateMachine';
+import { CreditDetailView } from './components/creditos/CreditDetailView';
 import {
   api,
   type AddressCatalogs,
@@ -23,6 +25,7 @@ import {
   type AliadosCatalogs,
   type BancoItem,
   type CarteraReporte,
+  type DocuSignEnvelopeDetail,
   type CatalogModule,
   type ComercialRow,
   type ComercialesCatalogs,
@@ -1326,6 +1329,7 @@ function App() {
   });
   const [creditos, setCreditos] = useState<CreditoRow[]>([]);
   const [selectedCreditoId, setSelectedCreditoId] = useState<number | null>(null);
+  const [showRadicarForm, setShowRadicarForm] = useState(false);
   const [creditoDocumentos, setCreditoDocumentos] = useState<CreditoDocumentoRow[]>([]);
   const [creditoEtapas, setCreditoEtapas] = useState<CreditoEtapaRow[]>([]);
   const [creditoExpediente, setCreditoExpediente] = useState<CreditoExpediente | null>(null);
@@ -1344,6 +1348,22 @@ function App() {
     firmanteNombre: '',
     firmanteCorreo: '',
     firmanteTelefono: ''
+  });
+  const [creditoEnvelope, setCreditoEnvelope] = useState<DocuSignEnvelopeDetail | null>(null);
+  const [showStateMachine, setShowStateMachine] = useState(true);
+  const [showSendDocumentsModal, setShowSendDocumentsModal] = useState(false);
+  const [sendingDocuments, setSendingDocuments] = useState(false);
+  const [sendDocumentsForm, setSendDocumentsForm] = useState({
+    firmanteNombre: '',
+    firmanteCorreo: '',
+    firmanteTelefono: '',
+    firmanteIdentificacion: '',
+    asunto: '',
+    mensaje: '',
+    includeContrato: true,
+    includeAutorizacion: true,
+    includePagare: true,
+    includeSeguroVida: true
   });
   const [creditoDesembolsoForm, setCreditoDesembolsoForm] = useState({
     valorDesembolso: '',
@@ -2166,11 +2186,12 @@ function App() {
     if (!session) return;
 
     try {
-      const [expediente, firmasResponse, templatesResponse, fondeoResponse] = await Promise.all([
+      const [expediente, firmasResponse, templatesResponse, fondeoResponse, docusignSobres] = await Promise.all([
         api.getCreditoExpediente(session.token, creditoId),
         api.listFirmasCredito(session.token, creditoId),
         api.listDocumentTemplates(session.token),
-        api.listOpcionesFondeo(session.token)
+        api.listOpcionesFondeo(session.token),
+        api.listDocuSignEnvelopes(session.token, { creditoId }).catch(() => [])
       ]);
       setCreditoExpediente(expediente);
       setCreditoDocumentos(expediente.documentos);
@@ -2178,6 +2199,17 @@ function App() {
       setCreditoFirmas(firmasResponse);
       setDocumentTemplates(templatesResponse);
       setFondeoDisponible(fondeoResponse);
+
+      if (docusignSobres && docusignSobres.length > 0) {
+        try {
+          const envDetail = await api.getDocuSignEnvelopeDetail(session.token, docusignSobres[0].envelopeId);
+          setCreditoEnvelope(envDetail);
+        } catch {
+          setCreditoEnvelope(null);
+        }
+      } else {
+        setCreditoEnvelope(null);
+      }
       setSelectedCreditoEtapaId((current) =>
         current && expediente.etapas.some((etapa) => etapa.id === current)
           ? current
@@ -4588,6 +4620,107 @@ function App() {
     }
   };
 
+  const reloadCreditoEnvelope = async (envelopeId?: string) => {
+    if (!session || !selectedCreditoId) return;
+    try {
+      if (envelopeId) {
+        const detail = await api.getDocuSignEnvelopeDetail(session.token, envelopeId);
+        setCreditoEnvelope(detail);
+      } else {
+        const envelopes = await api.listDocuSignEnvelopes(session.token, { creditoId: selectedCreditoId });
+        if (envelopes.length > 0) {
+          const detail = await api.getDocuSignEnvelopeDetail(session.token, envelopes[0].envelopeId);
+          setCreditoEnvelope(detail);
+        } else {
+          setCreditoEnvelope(null);
+        }
+      }
+    } catch (err) {
+      console.warn('Error reloading DocuSign envelope:', err);
+    }
+  };
+
+  const handleOpenSendDocumentsModal = (specificDocName?: string) => {
+    const clienteNombre = selectedCredito?.nombreCliente || creditoExpediente?.credito?.nombreCliente || '';
+    const clienteCorreo = selectedCredito?.correoCliente || creditoExpediente?.credito?.correoCliente || '';
+    const clienteTelefono = selectedCredito?.telefonoCliente || creditoExpediente?.credito?.telefonoCliente || '';
+    const clienteIdentificacion = selectedCredito?.identificacionCliente || creditoExpediente?.credito?.identificacionCliente || '';
+    const consecutivo = selectedCredito?.consecutivo || `CR-${selectedCreditoId}`;
+
+    setSendDocumentsForm({
+      firmanteNombre: clienteNombre,
+      firmanteCorreo: clienteCorreo,
+      firmanteTelefono: clienteTelefono,
+      firmanteIdentificacion: clienteIdentificacion,
+      asunto: `Firma digital de documentos de crédito - ${consecutivo}`,
+      mensaje: `Apreciado(a) ${clienteNombre}, adjuntamos para su firma electrónica el paquete de documentos de su crédito (${consecutivo}).`,
+      includeContrato: true,
+      includeAutorizacion: true,
+      includePagare: true,
+      includeSeguroVida: true
+    });
+    setShowSendDocumentsModal(true);
+  };
+
+  const handleSendDocumentsSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!session || !selectedCreditoId) return;
+    if (!sendDocumentsForm.firmanteNombre.trim() || !sendDocumentsForm.firmanteCorreo.trim()) {
+      alert('Por favor completa el nombre y correo del cliente');
+      return;
+    }
+
+    const docsTipos: Array<'PAGARE' | 'CONTRATO' | 'AUTORIZACION_DESCUENTO' | 'SEGURO_VIDA'> = [];
+    if (sendDocumentsForm.includeContrato) docsTipos.push('CONTRATO');
+    if (sendDocumentsForm.includeAutorizacion) docsTipos.push('AUTORIZACION_DESCUENTO');
+    if (sendDocumentsForm.includePagare) docsTipos.push('PAGARE');
+    if (sendDocumentsForm.includeSeguroVida) docsTipos.push('SEGURO_VIDA');
+
+    if (docsTipos.length === 0) {
+      alert('Selecciona al menos un documento para enviar');
+      return;
+    }
+
+    setSendingDocuments(true);
+    try {
+      const created = await api.createDocuSignEnvelope(session.token, {
+        creditoId: selectedCreditoId,
+        firmanteNombre: sendDocumentsForm.firmanteNombre.trim(),
+        firmanteCorreo: sendDocumentsForm.firmanteCorreo.trim(),
+        firmanteTelefono: sendDocumentsForm.firmanteTelefono.trim() || null,
+        firmanteIdentificacion: sendDocumentsForm.firmanteIdentificacion.trim() || null,
+        asunto: sendDocumentsForm.asunto.trim(),
+        mensaje: sendDocumentsForm.mensaje.trim(),
+        documentosTipos: docsTipos
+      });
+
+      setCreditoEnvelope(created);
+      setShowStateMachine(true);
+      setShowSendDocumentsModal(false);
+      setMessage(`¡Documentos enviados exitosamente al correo ${sendDocumentsForm.firmanteCorreo.trim()}! Se activó la máquina de estados.`);
+      await reloadCreditoDetalle(selectedCreditoId);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Error al enviar los documentos al cliente');
+    } finally {
+      setSendingDocuments(false);
+    }
+  };
+
+  const handleDownloadEnvelopeCombined = async (envelopeId: string) => {
+    if (!session) return;
+    try {
+      const blob = await api.getDocuSignCombinedPdfBlob(session.token, envelopeId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `DOCUSIGN_FIRMADO_${envelopeId.slice(0, 8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al descargar documento firmado');
+    }
+  };
+
   const handleOpenCreditoPagoSoporte = async (pagoId: number) => {
     if (!session) return;
     try {
@@ -5120,47 +5253,51 @@ function App() {
       </aside>
 
       <main className="workspace">
-        <header className="workspace-header">
-          <div>
-            <span className="section-kicker">{pageKicker}</span>
-            <h1>{pageTitle}</h1>
-          </div>
-          <div className="header-actions">
-            <div className="theme-toolbar">
-              <div className="mode-switch" aria-label="Modo de visualizacion">
-                <button
-                  type="button"
-                  className={themeMode === 'light' ? 'mode-button active' : 'mode-button'}
-                  onClick={() => setThemeMode('light')}
-                >
-                  Dia
-                </button>
-                <button
-                  type="button"
-                  className={themeMode === 'dark' ? 'mode-button active' : 'mode-button'}
-                  onClick={() => setThemeMode('dark')}
-                >
-                  Noche
-                </button>
+        {!(isProductosCreditoModule && selectedCreditoId !== null) && (
+          <header className="workspace-header">
+            <div>
+              <span className="section-kicker">{pageKicker}</span>
+              <h1>{pageTitle}</h1>
+            </div>
+            <div className="header-actions">
+              <div className="theme-toolbar">
+                <div className="mode-switch" aria-label="Modo de visualizacion">
+                  <button
+                    type="button"
+                    className={themeMode === 'light' ? 'mode-button active' : 'mode-button'}
+                    onClick={() => setThemeMode('light')}
+                  >
+                    Dia
+                  </button>
+                  <button
+                    type="button"
+                    className={themeMode === 'dark' ? 'mode-button active' : 'mode-button'}
+                    onClick={() => setThemeMode('dark')}
+                  >
+                    Noche
+                  </button>
+                </div>
+                <select value={paletteKey} onChange={(event) => setPaletteKey(event.target.value as PaletteKey)}>
+                  {(Object.entries(palettes) as Array<[PaletteKey, Palette]>).map(([key, palette]) => (
+                    <option key={key} value={key}>{palette.name}</option>
+                  ))}
+                </select>
               </div>
-              <select value={paletteKey} onChange={(event) => setPaletteKey(event.target.value as PaletteKey)}>
-                {(Object.entries(palettes) as Array<[PaletteKey, Palette]>).map(([key, palette]) => (
-                  <option key={key} value={key}>{palette.name}</option>
-                ))}
-              </select>
+              <div className="status-pill">{apiStatus}</div>
             </div>
-            <div className="status-pill">{apiStatus}</div>
-          </div>
-        </header>
+          </header>
+        )}
 
-        <section className="metrics-strip">
-          {overview.map((item) => (
-            <div key={item.label} className="metric-item">
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
-        </section>
+        {!(isProductosCreditoModule && selectedCreditoId !== null) && (
+          <section className="metrics-strip">
+            {overview.map((item) => (
+              <div key={item.label} className="metric-item">
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+              </div>
+            ))}
+          </section>
+        )}
 
         {view === 'dashboard' && (
           <section className="dashboard-view executive-dashboard">
@@ -7039,31 +7176,33 @@ function App() {
 
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
-            <div className="config-tabs">
-              {(['solicitudes', 'general', 'atributos', 'tblAtributos', 'convenios', 'documentos', 'etapas', 'parametros', 'formatos', 'tasas', 'plazos', 'bancos'] as ProductosCreditoTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={productosCreditoTab === tab ? 'tab-button active' : 'tab-button'}
-                  onClick={() => setProductosCreditoTab(tab)}
-                >
-                  {{
-                    solicitudes: 'Solicitudes',
-                    general: 'Productos',
-                    atributos: 'Condiciones y cargos',
-                    tblAtributos: 'Catálogo Atributos',
-                    convenios: 'Convenios',
-                    documentos: 'Documentacion',
-                    etapas: 'Flujo del credito',
-                    parametros: 'Parametros',
-                    formatos: 'Formatos de créditos',
-                    tasas: 'Tasas (Usura / DTF)',
-                    plazos: 'Plazos de pago',
-                    bancos: 'Entidades bancarias'
-                  }[tab]}
-                </button>
-              ))}
-            </div>
+            {!(productosCreditoTab === 'solicitudes' && selectedCreditoId !== null) && (
+              <div className="config-tabs">
+                {(['solicitudes', 'general', 'atributos', 'tblAtributos', 'convenios', 'documentos', 'etapas', 'parametros', 'formatos', 'tasas', 'plazos', 'bancos'] as ProductosCreditoTab[]).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    className={productosCreditoTab === tab ? 'tab-button active' : 'tab-button'}
+                    onClick={() => setProductosCreditoTab(tab)}
+                  >
+                    {{
+                      solicitudes: 'Solicitudes',
+                      general: 'Productos',
+                      atributos: 'Condiciones y cargos',
+                      tblAtributos: 'Catálogo Atributos',
+                      convenios: 'Convenios',
+                      documentos: 'Documentacion',
+                      etapas: 'Flujo del credito',
+                      parametros: 'Parametros',
+                      formatos: 'Formatos de créditos',
+                      tasas: 'Tasas (Usura / DTF)',
+                      plazos: 'Plazos de pago',
+                      bancos: 'Entidades bancarias'
+                    }[tab]}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
               <div className="product-context-bar">
@@ -7086,11 +7225,104 @@ function App() {
             )}
 
             {productosCreditoTab === 'solicitudes' && (
-              <section className="content-grid credit-product-grid">
-                <form className="surface pagaduria-form" onSubmit={handleCreateCredito}>
-                  <div className="surface-title">
-                    <h2>Radicar crédito</h2>
+              selectedCreditoId !== null && selectedCredito ? (
+                <CreditDetailView
+                  credito={selectedCredito}
+                  expediente={creditoExpediente}
+                  documentos={creditoDocumentos}
+                  etapas={creditoEtapas}
+                  selectedEtapaId={selectedCreditoEtapaId}
+                  onSelectEtapa={(id) => setSelectedCreditoEtapaId(id)}
+                  observacionEtapa={creditoEtapaObservacion}
+                  onChangeObservacionEtapa={setCreditoEtapaObservacion}
+                  onUpdateEtapa={handleUpdateCreditoEtapa}
+                  onUploadDocumento={handleUploadCreditoDocumento}
+                  onOpenDocumento={handleOpenCreditoDocumento}
+                  onUpdateDocumentoEstado={handleUpdateCreditoDocumento}
+                  onOpenSendDocumentsModal={handleOpenSendDocumentsModal}
+                  envelope={creditoEnvelope}
+                  onReloadEnvelope={reloadCreditoEnvelope}
+                  onReloadCredito={reloadCreditoDetalle}
+                  onDownloadSignedPdf={handleDownloadEnvelopeCombined}
+                  token={session.token}
+                  loading={loading}
+                  formatMoney={formatMoney}
+                  formatDateTime={formatDateTime}
+                  onBack={() => setSelectedCreditoId(null)}
+                  currentUser={session.user}
+                  creditoDecisionForm={creditoDecisionForm}
+                  onChangeDecisionForm={setCreditoDecisionForm}
+                  onDecideCredito={handleDecideCredito}
+                  monthOptions={monthOptions}
+                  creditoDesembolsoForm={creditoDesembolsoForm}
+                  onChangeDesembolsoForm={setCreditoDesembolsoForm}
+                  onRegistrarDesembolso={handleRegistrarDesembolso}
+                  fondeoDisponible={fondeoDisponible}
+                  employeeCatalogs={employeeCatalogs}
+                  liquidacionDefinitivaActual={liquidacionDefinitivaActual}
+                  onRegistrarLiquidacionDefinitiva={handleRegistrarLiquidacionDefinitiva}
+                  onAnularLiquidacionDefinitiva={handleAnularLiquidacionDefinitiva}
+                  creditoFirmas={creditoFirmas}
+                  documentTemplates={documentTemplates}
+                  onOpenFirmaPdf={handleOpenFirmaPdf}
+                  onFirmaManualEstado={handleFirmaManualEstado}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                    background: '#ffffff',
+                    padding: '1.25rem 1.5rem',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                  }}>
+                    <div>
+                      <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        Solicitudes de Crédito
+                      </h2>
+                      <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '4px 0 0 0' }}>
+                        Gestiona, valida y realiza seguimiento integral a las solicitudes de crédito.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        padding: '6px 14px',
+                        borderRadius: '9999px',
+                        background: '#e0f2fe',
+                        color: '#0369a1'
+                      }}>
+                        {creditos.length} solicitudes
+                      </span>
+                      <button
+                        type="button"
+                        className="primary"
+                        style={{
+                          fontWeight: 700,
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                        onClick={() => setShowRadicarForm(!showRadicarForm)}
+                      >
+                        {showRadicarForm ? 'Ocultar formulario' : '+ Radicar nuevo crédito'}
+                      </button>
+                    </div>
                   </div>
+
+                  {showRadicarForm && (
+                    <form className="surface pagaduria-form" onSubmit={handleCreateCredito}>
+                      <div className="surface-title">
+                        <h2>Radicar crédito</h2>
+                      </div>
 
                   <FormStepper
                     steps={[
@@ -7159,9 +7391,10 @@ function App() {
                     }
                   />
                 </form>
+              )}
 
-                {creditoSimulacion && (
-                  <section className="surface employees-panel">
+              {showRadicarForm && creditoSimulacion && (
+                <section className="surface employees-panel">
                     <div className="surface-title">
                       <h2>Simulacion</h2>
                       <span>{creditoSimulacion.producto.nombre}</span>
@@ -7206,625 +7439,73 @@ function App() {
                   </section>
                 )}
 
-                <section className="surface employees-panel">
-                  <div className="surface-title">
-                    <h2>Solicitudes radicadas</h2>
-                    <span>{creditos.length}</span>
-                  </div>
-                  <div className="list-panel">
-                    {creditos.map((credito) => (
-                      <button
-                        key={credito.id}
-                        type="button"
-                        className={selectedCreditoId === credito.id ? 'company-row active' : 'company-row'}
-                        onClick={() => setSelectedCreditoId(credito.id)}
-                      >
-                        <strong>{credito.consecutivo} - {credito.nombreCliente}</strong>
-                        <span>{credito.producto}  -  {formatMoney(credito.montoSolicitado)}  -  {credito.plazo} meses  -  cuota {formatMoney(credito.cuotaEstimada)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="surface employees-panel credit-file">
-                  <div className="surface-title">
-                    <div>
-                      <h2>Expediente {selectedCredito?.consecutivo ?? 'sin seleccionar'}</h2>
-                      <p>{creditoExpediente?.siguienteAccion ?? 'Selecciona una solicitud para revisar el flujo'}</p>
-                    </div>
-                    <span className={`status-pill status-${normalizeStatusClass(selectedCredito?.estado)}`}>{selectedCredito?.estado ?? 'Sin seleccionar'}</span>
-                  </div>
-
-                  {selectedCredito && (
-                    <>
-                      <div className="credit-file-summary">
-                        <article><span>Cliente</span><strong>{selectedCredito.nombreCliente}</strong><small>{selectedCredito.identificacionCliente}</small></article>
-                        <article><span>Producto</span><strong>{selectedCredito.producto}</strong><small>{selectedCredito.tipoCredito}</small></article>
-                        <article><span>Monto</span><strong>{formatMoney(selectedCredito.montoSolicitado)}</strong><small>{selectedCredito.plazo} meses</small></article>
-                        <article><span>Cuota estimada</span><strong>{formatMoney(selectedCredito.cuotaEstimada)}</strong><small>Tasa {selectedCredito.tasa ?? 0}%</small></article>
-                      </div>
-
-                      <div className="credit-progress">
-                        <div><strong>{creditProgress}%</strong><span>Avance del proceso</span></div>
-                        <i><b style={{ width: `${creditProgress}%` }} /></i>
-                      </div>
-
-                      <section className="subsurface client-review-panel">
-                        <div className="surface-title compact">
-                          <h3>Informacion diligenciada por el cliente</h3>
-                          <span>{creditoExpediente?.perfilCliente?.portal?.id ? 'Portal vinculado' : 'Sin registro portal'}</span>
-                        </div>
-                        <div className="client-review-grid">
-                          <article>
-                            <h4>Datos personales</h4>
-                            <p><strong>Nombre:</strong> {creditoExpediente?.perfilCliente?.portal.nombre ?? selectedCredito.nombreCliente}</p>
-                            <p><strong>Identificacion:</strong> {selectedCredito.identificacionCliente}</p>
-                            <p><strong>Correo:</strong> {creditoExpediente?.perfilCliente?.portal.correo ?? selectedCredito.correoCliente ?? '-'}</p>
-                            <p><strong>Telefono:</strong> {creditoExpediente?.perfilCliente?.portal.telefono ?? selectedCredito.telefonoCliente ?? '-'}</p>
-                            <p><strong>Correo confirmado:</strong> {creditoExpediente?.perfilCliente?.portal.correoConfirmado ? 'Si' : 'No'}</p>
-                          </article>
-                          <article>
-                            <h4>Informacion laboral</h4>
-                            <p><strong>Cargo:</strong> {creditoExpediente?.perfilCliente?.portal.cargo ?? creditoExpediente?.perfilCliente?.empleado.cargo ?? '-'}</p>
-                            <p><strong>Contrato:</strong> {creditoExpediente?.perfilCliente?.portal.tipoContrato ?? '-'}</p>
-                            <p><strong>Ingreso:</strong> {creditoExpediente?.perfilCliente?.portal.fechaIngreso ?? '-'}</p>
-                            <p><strong>Salario:</strong> {formatMoney(creditoExpediente?.perfilCliente?.portal.salario ?? creditoExpediente?.perfilCliente?.empleado.salario)}</p>
-                            <p><strong>Neto:</strong> {formatMoney(creditoExpediente?.perfilCliente?.portal.neto)}</p>
-                            <p><strong>Embargos:</strong> {creditoExpediente?.perfilCliente?.portal.tieneEmbargos ? 'Si' : 'No'}</p>
-                          </article>
-                          <article>
-                            <h4>Empresa</h4>
-                            <p><strong>Razon social:</strong> {creditoExpediente?.perfilCliente?.empresa.razonSocial ?? selectedCredito.empresa ?? '-'}</p>
-                            <p><strong>NIT:</strong> {creditoExpediente?.perfilCliente?.empresa.nit ?? '-'}</p>
-                            <p><strong>Codigo:</strong> {creditoExpediente?.perfilCliente?.empresa.codigo ?? '-'}</p>
-                            <p><strong>Correo:</strong> {creditoExpediente?.perfilCliente?.empresa.correo ?? '-'}</p>
-                            <p><strong>Telefono:</strong> {creditoExpediente?.perfilCliente?.empresa.telefono ?? '-'}</p>
-                            <p><strong>Representante:</strong> {creditoExpediente?.perfilCliente?.empresa.representanteLegal ?? '-'}</p>
-                          </article>
-                          <article>
-                            <h4>Financiera y hogar</h4>
-                            <p><strong>Banco nomina:</strong> {creditoExpediente?.perfilCliente?.empleado.banco ?? '-'}</p>
-                            <p><strong>Tipo cuenta:</strong> {creditoExpediente?.perfilCliente?.empleado.tipoCuenta ?? '-'}</p>
-                            <p><strong>Cuenta:</strong> {creditoExpediente?.perfilCliente?.empleado.cuentaNomina ?? '-'}</p>
-                            <p><strong>Estado civil:</strong> {creditoExpediente?.perfilCliente?.empleado.estadoCivil ?? '-'}</p>
-                            <p><strong>Personas a cargo:</strong> {creditoExpediente?.perfilCliente?.empleado.personasCargo ?? '-'}</p>
-                            <p><strong>Vivienda:</strong> {creditoExpediente?.perfilCliente?.empleado.tipoVivienda ?? '-'}</p>
-                          </article>
-                        </div>
-                      </section>
-
-                      <div className="credit-file-layout">
-                        <div className="credit-stage-panel">
-                          <div className="surface-title compact">
-                            <h3>Flujo del credito</h3>
-                            <span>{creditoEtapas.length} etapas</span>
-                          </div>
-                          <div className="stage-timeline">
-                            {creditoEtapas.map((etapa) => (
-                              <button
-                                key={etapa.id}
-                                type="button"
-                                className={`stage-item status-${normalizeStatusClass(etapa.estadoEtapa)} ${selectedCreditoEtapa?.id === etapa.id ? 'active' : ''}`}
-                                onClick={() => setSelectedCreditoEtapaId(etapa.id)}
-                              >
-                                <b>{etapa.orden}</b>
-                                <span>
-                                  <strong>{etapa.etapa}</strong>
-                                  <small>{etapa.responsable ?? 'Sin responsable'} - {etapa.estadoEtapa}</small>
+                  <section className="surface" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                    <div className="table-wrap">
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Consecutivo</th>
+                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Cliente</th>
+                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Producto</th>
+                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Monto solicitado</th>
+                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Plazo</th>
+                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Cuota estimada</th>
+                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Estado</th>
+                            <th style={{ padding: '12px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {creditos.map((credito) => (
+                            <tr
+                              key={credito.id}
+                              style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}
+                              onClick={() => setSelectedCreditoId(credito.id)}
+                            >
+                              <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0284c7' }}>
+                                #{credito.consecutivo}
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <strong>{credito.nombreCliente}</strong>
+                                <small style={{ display: 'block', color: '#64748b' }}>CC {credito.identificacionCliente}</small>
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#334155', fontWeight: 600 }}>
+                                {credito.producto}
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>
+                                {formatMoney(credito.montoSolicitado)}
+                              </td>
+                              <td style={{ padding: '12px 14px', color: '#64748b' }}>
+                                {credito.plazo} meses
+                              </td>
+                              <td style={{ padding: '12px 14px', fontWeight: 600, color: '#0f172a' }}>
+                                {formatMoney(credito.cuotaEstimada)}
+                              </td>
+                              <td style={{ padding: '12px 14px' }}>
+                                <span className={`status-pill small status-${normalizeStatusClass(credito.estado)}`}>
+                                  {credito.estado || 'EN PROCESO'}
                                 </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="credit-action-panel">
-                          <div className="surface-title compact">
-                            <h3>{selectedCreditoEtapa?.etapa ?? 'Etapa'}</h3>
-                            <span className={`status-pill small status-${normalizeStatusClass(selectedCreditoEtapa?.estadoEtapa)}`}>{selectedCreditoEtapa?.estadoEtapa ?? '-'}</span>
-                          </div>
-                          <div className="stage-meta">
-                            <p><strong>Responsable:</strong> {selectedCreditoEtapa?.responsable ?? 'Sin asignar'}</p>
-                            <p><strong>Inicio:</strong> {formatDateTime(selectedCreditoEtapa?.fechaInicio)}</p>
-                            <p><strong>Fin:</strong> {formatDateTime(selectedCreditoEtapa?.fechaFin)}</p>
-                          </div>
-                          {isApprovalStageName(selectedCreditoEtapa?.etapa) && (
-                            <div className="decision-box">
-                              <div className="surface-title compact">
-                                <h3>Decision del credito</h3>
-                                <span>{creditoExpediente?.decisiones[0]?.requiereComite ? `Comite ${creditoExpediente.decisiones[0].estadoComite ?? 'PENDIENTE'} ${creditoExpediente.decisiones[0].votosActuales ?? 0}/${creditoExpediente.decisiones[0].votosRequeridos ?? 0}` : creditoExpediente?.decisiones[0]?.decision ?? 'Sin decision'}</span>
-                              </div>
-                              <div className="field-grid two-cols">
-                                <input value={creditoDecisionForm.montoAprobado} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, montoAprobado: event.target.value }))} placeholder="Monto aprobado" />
-                                <select value={creditoDecisionForm.plazoAprobado} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, plazoAprobado: event.target.value }))}>
-                                  <option value="">Plazo aprobado</option>
-                                  {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
-                                </select>
-                                <input value={creditoDecisionForm.tasaAprobada} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, tasaAprobada: event.target.value }))} placeholder="Tasa aprobada %" />
-                                <input value={creditoDecisionForm.cuotaAprobada} onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, cuotaAprobada: event.target.value }))} placeholder="Cuota aprobada" />
-                              </div>
-                              {creditoExpediente?.decisiones[0]?.requiereComite && creditoExpediente.decisiones[0].estadoComite === 'PENDIENTE' && (
-                                <div className="approval-committee-status">
-                                  <strong>Comite pendiente</strong>
-                                  <span>{creditoExpediente.decisiones[0].votosActuales ?? 0}/{creditoExpediente.decisiones[0].votosRequeridos ?? 0} aprobaciones registradas</span>
-                                </div>
-                              )}
-                              <textarea
-                                value={creditoDecisionForm.observacion}
-                                onChange={(event) => setCreditoDecisionForm((current) => ({ ...current, observacion: event.target.value }))}
-                                placeholder="Observacion de aprobacion, comite o analisis"
-                              />
-                              <div className="stage-actions">
-                                <button type="button" disabled={loading} onClick={() => handleDecideCredito('APROBADO')}>Registrar aprobacion</button>
-                                <button type="button" className="secondary" disabled={loading} onClick={() => handleDecideCredito('DEVUELTO')}>Devolver credito</button>
-                                <button type="button" className="danger" disabled={loading} onClick={() => handleDecideCredito('RECHAZADO')}>Rechazar credito</button>
-                              </div>
-                            </div>
-                          )}
-                          {isDisbursementStageName(selectedCreditoEtapa?.etapa) && (
-                            <div className="decision-box">
-                              <div className="surface-title compact">
-                                <h3>Registro de desembolso</h3>
-                                <span>{creditoExpediente?.desembolsos[0] ? 'Registrado' : 'Pendiente'}</span>
-                              </div>
-                              <div className="field-grid two-cols">
-                                <input value={creditoDesembolsoForm.valorDesembolso} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, valorDesembolso: event.target.value }))} placeholder="Valor desembolsado" />
-                                <input type="date" value={creditoDesembolsoForm.fechaDesembolso} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, fechaDesembolso: event.target.value }))} />
-                                <input type="date" value={creditoDesembolsoForm.fechaPrimeraCuota} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, fechaPrimeraCuota: event.target.value }))} title="Fecha primera cuota" />
-                                <select value={creditoDesembolsoForm.periodicidad} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, periodicidad: event.target.value }))}>
-                                  <option value="MENSUAL">Periodicidad mensual</option>
-                                  <option value="QUINCENAL">Periodicidad quincenal</option>
-                                </select>
-                                <input value={creditoDesembolsoForm.diaCorte} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, diaCorte: event.target.value }))} placeholder="Dia de corte" />
-                                <input value={creditoDesembolsoForm.diaPagoOportuno} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, diaPagoOportuno: event.target.value }))} placeholder="Dia pago oportuno" />
-                                <input value={creditoDesembolsoForm.moraDespuesVencimiento} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, moraDespuesVencimiento: event.target.value }))} placeholder="Mora despues de dias" />
-                                <label className="check-card compact-check">
-                                  <input type="checkbox" checked={creditoDesembolsoForm.ajustarFinSemana} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, ajustarFinSemana: event.target.checked }))} />
-                                  Ajustar fin de semana
-                                </label>
-                                <select
-                                  value={creditoDesembolsoForm.idInversion}
-                                  onChange={(event) => {
-                                    const option = fondeoDisponible.find((item) => String(item.idInversion) === event.target.value);
-                                    setCreditoDesembolsoForm((current) => ({
-                                      ...current,
-                                      idInversion: event.target.value,
-                                      valorFondeo: event.target.value ? String(Math.min(Number(current.valorDesembolso || 0) || option?.saldoDisponible || 0, option?.saldoDisponible || 0)) : ''
-                                    }));
+                              </td>
+                              <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                                <button
+                                  type="button"
+                                  className="primary tiny"
+                                  style={{ fontWeight: 700, padding: '6px 14px', borderRadius: '6px' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedCreditoId(credito.id);
                                   }}
                                 >
-                                  <option value="">Socio / inversion que apalanca</option>
-                                  {fondeoDisponible.map((item) => (
-                                    <option key={item.idInversion} value={item.idInversion}>
-                                      {item.inversionista} - disponible {formatMoney(item.saldoDisponible)}
-                                    </option>
-                                  ))}
-                                </select>
-                                <input value={creditoDesembolsoForm.valorFondeo} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, valorFondeo: event.target.value }))} placeholder="Valor tomado de la inversion" />
-                                <select value={creditoDesembolsoForm.bancoDestino} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, bancoDestino: event.target.value }))}>
-                                  <option value="">Banco destino</option>
-                                  {employeeCatalogs.bancos.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-                                </select>
-                                <select value={creditoDesembolsoForm.tipoCuenta} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, tipoCuenta: event.target.value }))}>
-                                  <option value="">Tipo de cuenta</option>
-                                  {employeeCatalogs.tiposCuenta.map((item) => <option key={item.id} value={item.nombre}>{item.nombre}</option>)}
-                                </select>
-                                <input value={creditoDesembolsoForm.numeroCuenta} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, numeroCuenta: event.target.value }))} placeholder="Numero de cuenta" />
-                                <input value={creditoDesembolsoForm.referenciaPago} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, referenciaPago: event.target.value }))} placeholder="Referencia transaccion" />
-                                <input value={creditoDesembolsoForm.numeroOrden} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, numeroOrden: event.target.value }))} placeholder="Numero de orden opcional" />
-                                <input value={creditoDesembolsoForm.comprobantePago} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, comprobantePago: event.target.value }))} placeholder="Comprobante o URL soporte" />
-                                <input value={creditoDesembolsoForm.observacionCalendario} onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, observacionCalendario: event.target.value }))} placeholder="Observacion calendario" />
-                              </div>
-                              <textarea
-                                value={creditoDesembolsoForm.observacion}
-                                onChange={(event) => setCreditoDesembolsoForm((current) => ({ ...current, observacion: event.target.value }))}
-                                placeholder="Observacion del desembolso"
-                              />
-                              <div className="stage-actions">
-                                <button type="button" disabled={loading} onClick={handleRegistrarDesembolso}>Registrar desembolso</button>
-                              </div>
-                            </div>
-                          )}
-                          <textarea
-                            value={creditoEtapaObservacion}
-                            onChange={(event) => setCreditoEtapaObservacion(event.target.value)}
-                            placeholder="Observacion de la gestion"
-                          />
-                          <div className="stage-actions">
-                            <button type="button" disabled={loading || !selectedCreditoEtapa} onClick={() => handleUpdateCreditoEtapa('APROBADA')}>Aprobar etapa</button>
-                            <button type="button" className="secondary" disabled={loading || !selectedCreditoEtapa} onClick={() => handleUpdateCreditoEtapa('DEVUELTA')}>Devolver</button>
-                            <button type="button" className="danger" disabled={loading || !selectedCreditoEtapa} onClick={() => handleUpdateCreditoEtapa('RECHAZADA')}>Rechazar</button>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="credit-file-layout">
-                        <section className="subsurface">
-                          <div className="surface-title compact"><h3>Documentos</h3><span>{creditoDocumentos.filter((item) => item.estadoDocumento === 'PENDIENTE').length} pendientes</span></div>
-                          <div className="table-wrap">
-                            <table>
-                              <thead><tr><th>Documento</th><th>Aplica a</th><th>Estado</th><th>Obligatorio</th><th>Gestion</th></tr></thead>
-                              <tbody>{creditoDocumentos.map((item) => (
-                                <tr key={item.id}>
-                                  <td>{item.documento}</td>
-                                  <td>{item.aplicaA}</td>
-                                  <td>
-                                    <span className={`status-pill small status-${normalizeStatusClass(item.estadoDocumento)}`}>{item.estadoDocumento}</span>
-                                    {item.archivoNombre && <small className="file-name">{item.archivoNombre}</small>}
-                                  </td>
-                                  <td>{item.obligatorio ? 'Si' : 'No'}</td>
-                                  <td>
-                                    <div className="row-actions">
-                                      <label className="mini-upload">
-                                        Cargar
-                                        <input
-                                          type="file"
-                                          accept="application/pdf,image/png,image/jpeg"
-                                          disabled={loading}
-                                          onChange={(event) => {
-                                            void handleUploadCreditoDocumento(item.id, event.target.files?.[0]);
-                                            event.currentTarget.value = '';
-                                          }}
-                                        />
-                                      </label>
-                                      {item.archivoNombre && (
-                                        <button type="button" disabled={loading} onClick={() => handleOpenCreditoDocumento(item.id)}>Ver</button>
-                                      )}
-                                      {item.estadoDocumento !== 'APROBADO' && (
-                                        <button type="button" disabled={loading} onClick={() => handleUpdateCreditoDocumento(item.id, 'APROBADO')}>Aprobar</button>
-                                      )}
-                                      {item.estadoDocumento !== 'RECHAZADO' && (
-                                        <button type="button" className="danger" disabled={loading} onClick={() => handleUpdateCreditoDocumento(item.id, 'RECHAZADO')}>Rechazar</button>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}</tbody>
-                            </table>
-                          </div>
-                        </section>
-
-                        <section className="subsurface">
-                          <div className="surface-title compact">
-                            <h3>Liquidacion definitiva</h3>
-                            <span>{liquidacionDefinitivaActual ? 'Version ' + liquidacionDefinitivaActual.version : 'Pendiente'}</span>
-                          </div>
-                          <div className="stage-actions compact-actions">
-                            <button type="button" disabled={loading} onClick={handleRegistrarLiquidacionDefinitiva}>
-                              {liquidacionDefinitivaActual ? 'Nueva version liquidacion' : 'Registrar liquidacion definitiva'}
-                            </button>
-                          </div>
-                          {liquidacionDefinitivaActual && (
-                            <div className="decision-metrics liquidacion-summary">
-                              <article><span>Monto solicitado</span><strong>{formatMoney(liquidacionDefinitivaActual.montoSolicitado)}</strong></article>
-                              <article><span>Cargos financiados</span><strong>{formatMoney(liquidacionDefinitivaActual.cargosFinanciados)}</strong></article>
-                              <article><span>Descuentos desembolso</span><strong>{formatMoney(liquidacionDefinitivaActual.descuentosDesembolso)}</strong></article>
-                              <article><span>IVA</span><strong>{formatMoney(liquidacionDefinitivaActual.iva)}</strong></article>
-                              <article><span>Valor a desembolsar</span><strong>{formatMoney(liquidacionDefinitivaActual.valorDesembolso)}</strong></article>
-                              <article><span>Valor credito</span><strong>{formatMoney(liquidacionDefinitivaActual.valorCredito)}</strong></article>
-                              <article><span>Cuota</span><strong>{formatMoney(liquidacionDefinitivaActual.cuota)}</strong><small>{liquidacionDefinitivaActual.plazo} meses</small></article>
-                              <article><span>Total pagar</span><strong>{formatMoney(liquidacionDefinitivaActual.totalPagar)}</strong><small>Intereses {formatMoney(liquidacionDefinitivaActual.totalIntereses)}</small></article>
-                            </div>
-                          )}
-                          <div className="table-wrap">
-                            <table>
-                              <thead><tr><th>Concepto</th><th>Tipo</th><th>Calculo</th><th>Valor</th></tr></thead>
-                              <tbody>{(creditoExpediente?.liquidacion ?? []).map((item) => <tr key={item.id}><td>{item.nombre}</td><td>{item.tipoAtributo ?? '-'}</td><td>{item.tipoCalculo ?? '-'}</td><td>{formatMoney(item.valorCalculado)}</td></tr>)}</tbody>
-                            </table>
-                          </div>
-                          {((creditoExpediente?.liquidacionesDefinitivas ?? []).length ?? 0) > 0 && (
-                            <div className="table-wrap stacked-table">
-                              <table>
-                                <thead><tr><th>Version</th><th>Estado</th><th>Desembolso</th><th>Credito</th><th>Cuota</th><th>Total</th><th>Fecha</th><th>Acciones</th></tr></thead>
-                                <tbody>{(creditoExpediente?.liquidacionesDefinitivas ?? []).map((item) => (
-                                  <tr key={item.id}>
-                                    <td>#{item.version}</td>
-                                    <td><span className={'status-pill small status-' + normalizeStatusClass(item.estado)}>{item.estado}</span></td>
-                                    <td>{formatMoney(item.valorDesembolso)}</td>
-                                    <td>{formatMoney(item.valorCredito)}</td>
-                                    <td>{formatMoney(item.cuota)}</td>
-                                    <td>{formatMoney(item.totalPagar)}</td>
-                                    <td>{formatDateTime(item.fecha)}</td>
-                                    <td>{item.estado !== 'ANULADA' ? <button type="button" className="danger tiny" disabled={loading} onClick={() => handleAnularLiquidacionDefinitiva(item.id)}>Anular</button> : '-'}</td>
-                                  </tr>
-                                ))}</tbody>
-                              </table>
-                            </div>
-                          )}
-                        </section>
-                      </div>
-
-                      <section className="subsurface signature-panel">
-                        <div className="surface-title compact">
-                          <h3>Firma digital</h3>
-                          <span>{creditoFirmas.length} solicitudes</span>
-                        </div>
-                        <div className="signature-send-grid">
-                          <select value={creditoFirmaForm.idPlantilla} onChange={(event) => setCreditoFirmaForm((current) => ({ ...current, idPlantilla: event.target.value }))}>
-                            <option value="">Plantilla para firmar</option>
-                            {documentTemplates.map((template) => <option key={template.id} value={template.id}>{template.nombre}</option>)}
-                          </select>
-                          <input value={creditoFirmaForm.firmanteNombre} onChange={(event) => setCreditoFirmaForm((current) => ({ ...current, firmanteNombre: event.target.value }))} placeholder="Firmante" />
-                          <input value={creditoFirmaForm.firmanteCorreo} onChange={(event) => setCreditoFirmaForm((current) => ({ ...current, firmanteCorreo: event.target.value }))} placeholder="Correo" />
-                          <input value={creditoFirmaForm.firmanteTelefono} onChange={(event) => setCreditoFirmaForm((current) => ({ ...current, firmanteTelefono: event.target.value }))} placeholder="Telefono" />
-                          <button type="button" disabled={loading || !creditoFirmaForm.idPlantilla} onClick={handleEnviarFirmaCredito}>Enviar a firma</button>
-                        </div>
-                        <div className="table-wrap">
-                          <table>
-                            <thead><tr><th>Documento</th><th>Firmante</th><th>Proveedor</th><th>Estado</th><th>Fecha envio</th><th>Acciones</th></tr></thead>
-                            <tbody>{creditoFirmas.map((firma) => (
-                              <tr key={firma.id}>
-                                <td>{firma.documento ?? `Documento ${firma.documentoGeneradoId}`}</td>
-                                <td>{firma.firmanteNombre}<small className="file-name">{firma.firmanteCorreo ?? firma.firmanteTelefono ?? ''}</small></td>
-                                <td>{firma.proveedor}</td>
-                                <td><span className={`status-pill small status-${normalizeStatusClass(firma.estado)}`}>{firma.estado}</span></td>
-                                <td>{formatDateTime(firma.fechaEnvio)}</td>
-                                <td>
-                                  <div className="row-actions">
-                                    {firma.signUrl && <button type="button" onClick={() => window.open(firma.signUrl ?? '', '_blank', 'noopener,noreferrer')}>Abrir firma</button>}
-                                    {firma.estado === 'FIRMADO' && <button type="button" disabled={loading} onClick={() => handleOpenFirmaPdf(firma.id)}>PDF firmado</button>}
-                                    {firma.estado !== 'FIRMADO' && <button type="button" disabled={loading} onClick={() => handleFirmaManualEstado(firma.id, 'FIRMADO')}>Marcar firmado</button>}
-                                    {firma.estado !== 'RECHAZADO' && <button type="button" className="danger" disabled={loading} onClick={() => handleFirmaManualEstado(firma.id, 'RECHAZADO')}>Rechazar</button>}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}</tbody>
-                          </table>
-                        </div>
-                      </section>
-
-                      <section className="subsurface signature-panel">
-                        <div className="surface-title compact">
-                          <h3>Trazabilidad de inversionistas</h3>
-                          <span>{formatMoney((creditoExpediente?.fondeos ?? []).reduce((total, item) => total + item.valorAsignado, 0))}</span>
-                        </div>
-                        <div className="table-wrap">
-                          <table>
-                            <thead><tr><th>Inversionista</th><th>Inversion</th><th>Valor asignado</th><th>Fecha</th><th>Usuario</th></tr></thead>
-                            <tbody>{(creditoExpediente?.fondeos ?? []).map((item) => (
-                              <tr key={item.id}>
-                                <td>{item.inversionista}</td>
-                                <td>#{item.idInversion}</td>
-                                <td>{formatMoney(item.valorAsignado)}</td>
-                                <td>{item.fechaAsignacion}</td>
-                                <td>{item.usuario ?? 'Sistema'}</td>
-                              </tr>
-                            ))}</tbody>
-                          </table>
-                        </div>
-                      </section>
-
-                      {((creditoExpediente?.desembolsos ?? []).length ?? 0) > 0 && (
-                        <section className="subsurface">
-                          <div className="surface-title compact"><h3>Desembolsos</h3><span>{(creditoExpediente?.desembolsos ?? []).length ?? 0} registros</span></div>
-                          <div className="table-wrap">
-                            <table>
-                              <thead><tr><th>Orden</th><th>Estado</th><th>Fecha</th><th>Valor</th><th>Banco</th><th>Cuenta</th><th>Referencia</th><th>Comprobante</th><th>Acciones</th><th>Usuario</th></tr></thead>
-                              <tbody>{creditoExpediente?.desembolsos.map((item) => (
-                                <tr key={item.id}>
-                                  <td>{item.numeroOrden ?? '-'}</td>
-                                  <td><span className={'status-pill small status-' + normalizeStatusClass(item.estadoDesembolso)}>{item.estadoDesembolso}</span></td>
-                                  <td>{item.fechaEjecucion ?? item.fechaDesembolso}</td>
-                                  <td>{formatMoney(item.valorDesembolso)}</td>
-                                  <td>{item.bancoDestino ?? '-'}</td>
-                                  <td>{[item.tipoCuenta, item.numeroCuenta].filter(Boolean).join(' ') || '-'}</td>
-                                  <td>{item.referenciaPago ?? '-'}</td>
-                                  <td>{item.comprobantePago ?? '-'}</td>
-                                  <td>{item.estadoDesembolso !== 'ANULADO' ? <button type="button" className="danger tiny" disabled={loading} onClick={() => handleAnularDesembolsoCredito(item.id)}>Anular</button> : '-'}</td>
-                                  <td>{item.usuario ?? 'Sistema'}</td>
-                                </tr>
-                              ))}</tbody>
-                            </table>
-                          </div>
-                        </section>
-                      )}
-
-                      {((creditoExpediente?.cuotas ?? []).length ?? 0) > 0 && (
-                        <section className="subsurface">
-                          <div className="surface-title compact">
-                            <h3>Registro de pagos</h3>
-                            <span>{formatMoney((creditoExpediente?.cuotas ?? []).reduce((total, item) => total + item.saldoCuota, 0))} pendiente</span>
-                          </div>
-                          <div className="signature-send-grid">
-                            <input type="date" value={creditoPagoForm.fechaPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, fechaPago: event.target.value }))} />
-                            <input value={creditoPagoForm.valorPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, valorPago: event.target.value }))} placeholder="Valor pagado" />
-                            <select value={creditoPagoForm.tipoRecaudo} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, tipoRecaudo: event.target.value, medioPago: event.target.value === 'NOMINA' ? 'NOMINA' : current.medioPago }))}>
-                              <option value="MANUAL">Recaudo manual</option>
-                              <option value="NOMINA">Recaudo por nomina</option>
-                            </select>
-                            <select value={creditoPagoForm.medioPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, medioPago: event.target.value, tipoRecaudo: event.target.value === 'NOMINA' ? 'NOMINA' : current.tipoRecaudo }))}>
-                              <option value="">Medio de pago</option>
-                              <option value="TRANSFERENCIA">Transferencia</option>
-                              <option value="CONSIGNACION">Consignacion</option>
-                              <option value="NOMINA">Descuento nomina</option>
-                              <option value="EFECTIVO">Efectivo</option>
-                              <option value="OTRO">Otro</option>
-                            </select>
-                            <input value={creditoPagoForm.periodoNomina} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, periodoNomina: event.target.value }))} placeholder="Periodo nomina AAAA-MM" />
-                            <input value={creditoPagoForm.referenciaPago} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, referenciaPago: event.target.value }))} placeholder="Referencia" />
-                            <input value={creditoPagoForm.observacion} onChange={(event) => setCreditoPagoForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Observacion" />
-                            <button type="button" disabled={loading || !creditoPagoForm.valorPago} onClick={handleRegistrarPagoCredito}>Aplicar pago</button>
-                          </div>
-                          <div className="subsurface nested-panel">
-                            <div className="surface-title compact"><h3>Cargue masivo pagaduria</h3><span>{recaudoMasivoResultado ? `${recaudoMasivoResultado.aplicados}/${recaudoMasivoResultado.totalFilas}` : 'CSV'}</span></div>
-                            <div className="signature-send-grid">
-                              <input type="date" value={recaudoMasivoForm.fechaPago} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, fechaPago: event.target.value }))} />
-                              <input value={recaudoMasivoForm.periodoNomina} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, periodoNomina: event.target.value }))} placeholder="Periodo nomina AAAA-MM" />
-                              <input value={recaudoMasivoForm.referenciaLote} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, referenciaLote: event.target.value }))} placeholder="Referencia lote" />
-                              <input value={recaudoMasivoForm.observacion} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Observacion lote" />
-                            </div>
-                            <textarea value={recaudoMasivoForm.contenido} onChange={(event) => setRecaudoMasivoForm((current) => ({ ...current, contenido: event.target.value }))} placeholder="consecutivo;valor;referencia&#10;PC-000001;250000;NOM-2026-07" />
-                            <div className="stage-actions"><button type="button" disabled={loading || !recaudoMasivoForm.contenido.trim()} onClick={handleRegistrarRecaudoMasivo}>Aplicar recaudo masivo</button></div>
-                            {recaudoMasivoResultado && (
-                              <div className="table-wrap"><table><thead><tr><th>Fila</th><th>Credito</th><th>Valor</th><th>Estado</th><th>Mensaje</th></tr></thead><tbody>{recaudoMasivoResultado.resultados.map((item) => (
-                                <tr key={item.fila}><td>{item.fila}</td><td>{item.consecutivo ?? item.creditoId ?? '-'}</td><td>{formatMoney(item.valorPago)}</td><td>{item.aplicado ? 'Aplicado' : 'Rechazado'}</td><td>{item.mensaje}</td></tr>
-                              ))}</tbody></table></div>
-                            )}
-                          </div>
-                          {((creditoExpediente?.pagos ?? []).length ?? 0) > 0 && (
-                            <div className="table-wrap">
-                              <table>
-                                <thead><tr><th>Fecha</th><th>Valor</th><th>Saldo favor</th><th>Recaudo</th><th>Periodo</th><th>Estado</th><th>Medio</th><th>Referencia</th><th>Soporte</th><th>Acciones</th><th>Usuario</th></tr></thead>
-                                <tbody>{creditoExpediente?.pagos.map((item) => (
-                                  <tr key={item.id}>
-                                    <td>{item.fechaPago}</td>
-                                    <td>{formatMoney(item.valorPago)}</td>
-                                    <td>{item.saldoFavor > 0 ? formatMoney(item.saldoFavor) : '-'}</td>
-                                    <td>{item.tipoRecaudo ?? '-'}</td>
-                                    <td>{item.periodoNomina ?? '-'}</td>
-                                    <td><span className={'status-pill small status-' + normalizeStatusClass(item.estadoPago)}>{item.estadoPago}</span></td>
-                                    <td>{item.medioPago ?? '-'}</td>
-                                    <td>{item.referenciaPago ?? '-'}</td>
-                                    <td>
-                                      <div className="row-actions">
-                                        {item.soportes > 0 && (
-                                          <button type="button" className="ghost tiny" onClick={() => void handleOpenCreditoPagoSoporte(item.id)}>
-                                            Ver
-                                          </button>
-                                        )}
-                                        <label className="mini-upload">
-                                          {item.soportes > 0 ? 'Reemplazar' : 'Cargar'}
-                                          <input
-                                            type="file"
-                                            accept="application/pdf,image/jpeg,image/png"
-                                            onChange={(event) => {
-                                              void handleUploadCreditoPagoSoporte(item.id, event.target.files?.[0]);
-                                              event.currentTarget.value = '';
-                                            }}
-                                          />
-                                        </label>
-                                      </div>
-                                      {item.soporteNombre && <small className="file-name">{item.soporteNombre}</small>}
-                                    </td>
-                                    <td>{item.estadoPago !== 'REVERSADO' ? <button type="button" className="danger tiny" disabled={loading} onClick={() => handleReversarPagoCredito(item.id)}>Reversar</button> : '-'}</td>
-                                    <td>{item.usuario ?? 'Sistema'}</td>
-                                  </tr>
-                                ))}</tbody>
-                              </table>
-                            </div>
-                          )}
-                        </section>
-                      )}
-
-                      {((creditoExpediente?.extracto ?? []).length ?? 0) > 0 && (
-                        <section className="subsurface">
-                          <div className="surface-title compact"><h3>Extracto contable</h3><span>{formatMoney(creditoExpediente?.extracto.at(-1)?.saldoContable ?? 0)} saldo</span></div>
-                          <div className="table-wrap"><table>
-                            <thead><tr><th>Fecha</th><th>Tipo</th><th>Concepto</th><th>Debito</th><th>Credito</th><th>Saldo</th><th>Ref.</th><th>Usuario</th></tr></thead>
-                            <tbody>{creditoExpediente?.extracto.map((item) => (
-                              <tr key={item.id}><td>{item.fecha}</td><td>{item.tipo}</td><td>{item.concepto}</td><td>{formatMoney(item.debito)}</td><td>{formatMoney(item.credito)}</td><td>{formatMoney(item.saldoContable)}</td><td>{[item.referenciaTipo, item.referenciaId].filter(Boolean).join(' ') || '-'}</td><td>{item.usuario ?? 'Sistema'}</td></tr>
-                            ))}</tbody>
-                          </table></div>
-                        </section>
-                      )}
-                      {((creditoExpediente?.cuotas ?? []).length ?? 0) > 0 && (
-                        <section className="subsurface">
-                          <div className="surface-title compact">
-                            <h3>Cartera definitiva</h3>
-                            <span>{(creditoExpediente?.cuotas ?? []).length ?? 0} cuotas</span>
-                          </div>
-                          <div className="decision-metrics liquidacion-summary">
-                            <article><span>Saldo cartera</span><strong>{formatMoney(carteraExpedienteResumen.saldo)}</strong></article>
-                            <article><span>Cartera vencida</span><strong>{formatMoney(carteraExpedienteResumen.vencido)}</strong></article>
-                            <article><span>Mora causada</span><strong>{formatMoney(carteraExpedienteResumen.mora)}</strong></article>
-                            <article><span>Pagado</span><strong>{formatMoney(carteraExpedienteResumen.pagado)}</strong></article>
-                            <article><span>Cuotas pendientes</span><strong>{carteraExpedienteResumen.pendientes}</strong></article>
-                          </div>
-                          <div className="signature-send-grid">
-                            <input type="date" value={creditoCausacionForm.fechaCorte} onChange={(event) => setCreditoCausacionForm((current) => ({ ...current, fechaCorte: event.target.value }))} />
-                            <input value={creditoCausacionForm.observacion} onChange={(event) => setCreditoCausacionForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Observacion causacion" />
-                            <button type="button" disabled={loading || !creditoCausacionForm.fechaCorte} onClick={handleCausarCredito}>Causar cartera</button>
-                          </div>
-                          <div className="table-wrap">
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>No.</th>
-                                  <th>Corte</th>
-                                  <th>Pago oportuno</th>
-                                  <th>Vencimiento</th>
-                                  <th>Saldo inicial</th>
-                                  <th>Capital</th>
-                                  <th>Interes</th>
-                                  <th>Cargos</th>
-                                  <th>Cuota</th>
-                                  <th>Dias mora</th>
-                                  <th>Mora</th>
-                                  <th>Causado</th>
-                                  <th>Pagado</th>
-                                  <th>Pendiente</th>
-                                  <th>Saldo final</th>
-                                  <th>Estado</th>
-                                </tr>
-                              </thead>
-                              <tbody>{creditoExpediente?.cuotas.map((item) => (
-                                <tr key={item.id}>
-                                  <td>{item.numero}</td>
-                                  <td>{item.fechaCorte}</td>
-                                  <td>{item.fechaPagoOportuno}</td>
-                                  <td>{item.fechaVencimiento}</td>
-                                  <td>{formatMoney(item.saldoInicial)}</td>
-                                  <td>{formatMoney(item.capital)}</td>
-                                  <td>{formatMoney(item.interes)}</td>
-                                  <td>{formatMoney(item.cargos)}</td>
-                                  <td>{formatMoney(item.valorCuota)}</td>
-                                  <td>{item.diasMora}</td>
-                                  <td>{formatMoney(item.valorMora)}</td>
-                                  <td>{formatMoney(item.capitalCausado + item.interesCausado + item.cargosCausados + item.moraCausada)}</td>
-                                  <td>{formatMoney(item.valorPagado)}</td>
-                                  <td>{formatMoney(item.saldoCuota)}</td>
-                                  <td>{formatMoney(item.saldoFinal)}</td>
-                                  <td><span className={`status-pill small status-${normalizeStatusClass(item.estado)}`}>{item.estado}</span></td>
-                                </tr>
-                              ))}</tbody>
-                            </table>
-                          </div>
-                        </section>
-                      )}
-
-                      <section className="subsurface">
-                        <div className="surface-title compact"><h3>Historial</h3><span>{(creditoExpediente?.historial ?? []).length ?? 0} movimientos</span></div>
-                        {((creditoExpediente?.evaluaciones ?? []).length ?? 0) > 0 && (
-                          <div className="table-wrap decision-history">
-                            <h4>Evaluaciones registradas</h4>
-                            <table><thead><tr><th>Fecha</th><th>Recomendacion</th><th>Riesgo</th><th>Puntaje</th><th>Usuario</th></tr></thead>
-                              <tbody>{creditoExpediente?.evaluaciones.map((item) => (
-                                <tr key={item.id}><td>{formatDateTime(item.fecha)}</td><td>{item.recomendacion}</td><td>{item.nivelRiesgo}</td><td>{item.puntaje}</td><td>{item.usuario ?? '-'}</td></tr>
-                              ))}</tbody>
-                            </table>
-                          </div>
-                        )}
-                        {((creditoExpediente?.decisiones ?? []).length ?? 0) > 0 && (
-                          <div className="table-wrap decision-history">
-                            <table>
-                              <thead><tr><th>Decision</th><th>Comite</th><th>Monto</th><th>Plazo</th><th>Cuota</th><th>Usuario</th><th>Fecha</th></tr></thead>
-                              <tbody>{creditoExpediente?.decisiones.map((item) => (
-                                <tr key={item.id}>
-                                  <td><span className={`status-pill small status-${normalizeStatusClass(item.decision)}`}>{item.decision}</span></td>
-                                  <td>{item.requiereComite ? `${item.estadoComite ?? 'PENDIENTE'} ${item.votosActuales ?? 0}/${item.votosRequeridos ?? 0}` : '-'}</td>
-                                  <td>{formatMoney(item.montoAprobado)}</td>
-                                  <td>{item.plazoAprobado ? `${item.plazoAprobado} meses` : '-'}</td>
-                                  <td>{formatMoney(item.cuotaAprobada)}</td>
-                                  <td>{item.usuario ?? 'Sistema'}</td>
-                                  <td>{formatDateTime(item.fecha)}</td>
-                                </tr>
-                              ))}</tbody>
-                            </table>
-                          </div>
-                        )}
-                        <div className="history-list">
-                          {(creditoExpediente?.historial ?? []).map((item) => (
-                            <article key={item.id}>
-                              <strong>{item.accion.replaceAll('_', ' ')}</strong>
-                              <span>{formatDateTime(item.fecha)} - {item.usuario ?? 'Sistema'}</span>
-                              <small>{item.observacion ?? `${item.estadoAnterior ?? '-'} -> ${item.estadoNuevo ?? '-'}`}</small>
-                            </article>
+                                  Ver detalle →
+                                </button>
+                              </td>
+                            </tr>
                           ))}
-                        </div>
-                      </section>
-                    </>
-                  )}
-                </section>
-              </section>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                </div>
+              )
             )}
 
             {productosCreditoTab === 'general' && (
@@ -9356,6 +9037,222 @@ function App() {
 
         {view === 'docusign' && session && (
           <DocuSignFirmasView token={session.token} />
+        )}
+
+        {showSendDocumentsModal && (
+          <div className="modal-backdrop" style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}>
+            <div className="modal-dialog modal-md" style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '620px',
+              width: '100%',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                padding: '24px 28px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                color: '#ffffff'
+              }}>
+                <div>
+                  <span style={{
+                    display: 'inline-block',
+                    background: 'rgba(56, 189, 248, 0.2)',
+                    color: '#38bdf8',
+                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.5px',
+                    marginBottom: '8px'
+                  }}>
+                    DOCUSIGN eSIGNATURE · NOTIFICACIÓN OFICIAL
+                  </span>
+                  <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
+                    Enviar Documentos para Firma Electrónica
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#94a3b8' }}>
+                    Crédito #{selectedCredito?.consecutivo || selectedCreditoId} · Se enviará al correo del cliente
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowSendDocumentsModal(false)}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.4rem', cursor: 'pointer', padding: '0 4px' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSendDocumentsSubmit} style={{ padding: '24px 28px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Nombre del Cliente / Firmante *
+                    </label>
+                    <input
+                      value={sendDocumentsForm.firmanteNombre}
+                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteNombre: e.target.value }))}
+                      required
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Cédula / Identificación *
+                    </label>
+                    <input
+                      value={sendDocumentsForm.firmanteIdentificacion}
+                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteIdentificacion: e.target.value }))}
+                      required
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Correo Electrónico del Cliente (Receptor) *
+                    </label>
+                    <input
+                      type="email"
+                      value={sendDocumentsForm.firmanteCorreo}
+                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteCorreo: e.target.value }))}
+                      required
+                      placeholder="ejemplo@cliente.com"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '2px solid #0284c7', fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}
+                    />
+                    <small style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', marginTop: '4px' }}>
+                      Se enviará el enlace de firma electrónica y trazabilidad a este correo.
+                    </small>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Teléfono Móvil
+                    </label>
+                    <input
+                      value={sendDocumentsForm.firmanteTelefono}
+                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteTelefono: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Asunto del Correo
+                  </label>
+                  <input
+                    value={sendDocumentsForm.asunto}
+                    onChange={(e) => setSendDocumentsForm((c) => ({ ...c, asunto: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                {/* Document selection checklist */}
+                <div style={{ marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', marginBottom: '10px' }}>
+                    DOCUMENTOS INCLUIDOS EN EL PAQUETE DIGITAL (SOBRE):
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={sendDocumentsForm.includeContrato}
+                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includeContrato: e.target.checked }))}
+                      />
+                      <span><strong>Contrato de Mutuo</strong> con descuento</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={sendDocumentsForm.includePagare}
+                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includePagare: e.target.checked }))}
+                      />
+                      <span><strong>Pagaré en Blanco</strong> con carta</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={sendDocumentsForm.includeAutorizacion}
+                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includeAutorizacion: e.target.checked }))}
+                      />
+                      <span><strong>Autorización Descuento</strong> Nómina</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={sendDocumentsForm.includeSeguroVida}
+                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includeSeguroVida: e.target.checked }))}
+                      />
+                      <span><strong>Seguro de Vida</strong> Deudores</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: 'rgba(2, 132, 199, 0.08)',
+                  border: '1px solid rgba(2, 132, 199, 0.25)',
+                  borderRadius: '8px',
+                  padding: '12px 16px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '0.78rem',
+                  color: '#0369a1'
+                }}>
+                  <span>🛡️</span>
+                  <span>Al enviar, el estado del crédito pasará a <strong>ENVIADO</strong> y se activará la <strong>máquina de estados interactiva</strong> con trazabilidad legal (Ley 527 de 1999).</span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={sendingDocuments}
+                    onClick={() => setShowSendDocumentsModal(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="primary"
+                    disabled={sendingDocuments}
+                    style={{
+                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                      padding: '10px 24px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    {sendingDocuments ? 'Enviando documentos...' : '🚀 Enviar documentos al cliente'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
 
         <p className="message-line">{message}</p>
