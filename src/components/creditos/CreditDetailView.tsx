@@ -12,6 +12,7 @@ import type {
   SecurityUser
 } from '../../api';
 import { DocuSignStateMachine } from '../docusign/DocuSignStateMachine';
+import { AppTopBar } from '../layout/AppTopBar';
 
 export interface CreditDetailViewProps {
   credito: CreditoRow;
@@ -218,47 +219,16 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
   return (
     <div className="credit-detail-page">
       {/* 1. TOP BAR: Breadcrumb, Search, Notifications, User */}
-      <header className="credit-top-bar">
-        <nav className="credit-breadcrumb" aria-label="Navegación secundaria">
-          <button type="button" className="credit-breadcrumb-link" onClick={onBack} title="Volver a la lista de solicitudes">
-            <span>&lt; Créditos</span>
-          </button>
-          <span className="credit-breadcrumb-separator">&gt;</span>
-          <span className="credit-breadcrumb-current">Detalle del crédito</span>
-        </nav>
-
-        <div className="credit-top-right-group">
-          <div className="credit-top-search">
-            <span className="credit-top-search-icon">🔍</span>
-            <input
-              type="text"
-              placeholder="Buscar créditos, clientes..."
-              value={docSearch}
-              onChange={(e) => setDocSearch(e.target.value)}
-            />
-          </div>
-
-          <button
-            type="button"
-            className="credit-notification-bell"
-            title="Notificaciones de alertas y novedades"
-            onClick={() => alert('No hay nuevas alertas pendientes en este crédito.')}
-          >
-            🔔
-            <span className="credit-notification-badge" />
-          </button>
-
-          <div className="credit-user-pill">
-            <div className="credit-user-avatar">
-              {currentUser?.fullName ? getClientInitials(currentUser.fullName) : 'EC'}
-            </div>
-            <div className="credit-user-details">
-              <span className="credit-user-name">{currentUser?.fullName || 'Edwin Capdevilla'}</span>
-              <span className="credit-user-role">{currentUser?.roles?.[0] || 'Analista de crédito'}</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppTopBar
+        breadcrumbRoot="Créditos"
+        breadcrumbCurrent="Detalle del crédito"
+        onRootClick={onBack}
+        currentUser={currentUser}
+        searchQuery={docSearch}
+        onSearchChange={setDocSearch}
+        searchPlaceholder="Buscar créditos, clientes..."
+        onNotificationClick={() => alert('No hay nuevas alertas pendientes en este crédito.')}
+      />
 
       {/* 2. HERO HEADER: Consecutivo, Estado, Fecha, Historial y Acciones */}
       <section className="credit-hero-header">

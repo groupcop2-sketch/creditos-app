@@ -18,6 +18,8 @@ import { TiposSalariosView } from './components/configuracion-financiera/TiposSa
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
 import { DocuSignStateMachine } from './components/docusign/DocuSignStateMachine';
 import { CreditDetailView } from './components/creditos/CreditDetailView';
+import { AppSidebar } from './components/layout/AppSidebar';
+import { AppTopBar } from './components/layout/AppTopBar';
 import {
   api,
   type AddressCatalogs,
@@ -1330,6 +1332,8 @@ function App() {
   const [creditos, setCreditos] = useState<CreditoRow[]>([]);
   const [selectedCreditoId, setSelectedCreditoId] = useState<number | null>(null);
   const [showRadicarForm, setShowRadicarForm] = useState(false);
+  const [solicitudesSearch, setSolicitudesSearch] = useState('');
+  const [solicitudesEstadoFilter, setSolicitudesEstadoFilter] = useState('TODOS');
   const [creditoDocumentos, setCreditoDocumentos] = useState<CreditoDocumentoRow[]>([]);
   const [creditoEtapas, setCreditoEtapas] = useState<CreditoEtapaRow[]>([]);
   const [creditoExpediente, setCreditoExpediente] = useState<CreditoExpediente | null>(null);
@@ -5134,158 +5138,173 @@ function App() {
     );
   }
 
+  const breadcrumbInfo = useMemo(() => {
+    if (view === 'dashboard') {
+      return { root: 'Dashboard', current: 'Panel gerencial' };
+    }
+    if (isProductosCreditoModule) {
+      if (selectedCreditoId !== null && selectedCredito) {
+        return { root: '‹ Créditos', current: `Detalle del crédito #${selectedCredito.consecutivo}` };
+      }
+      return { root: 'Créditos', current: 'Solicitudes de crédito' };
+    }
+    if (isEmpresasModule) {
+      const sub =
+        empresaTab === 'registro' ? 'Crear empresa' : empresaTab === 'directorio' ? 'Directorio de empresas' : 'Empleados';
+      return { root: 'Empresas', current: sub };
+    }
+    if (isAliadosModule) {
+      const sub = aliadosTab === 'registro' ? 'Crear aliado' : 'Directorio de aliados';
+      return { root: 'Aliados', current: sub };
+    }
+    if (isComercialesModule) {
+      const sub =
+        comercialesTab === 'libranzera'
+          ? 'Libranzeras'
+          : comercialesTab === 'vendedor'
+            ? 'Vendedores'
+            : 'Directorio comercial';
+      return { root: 'Comerciales', current: sub };
+    }
+    if (isSociosModule) {
+      const sub =
+        sociosTab === 'registro' ? 'Crear socio' : sociosTab === 'directorio' ? 'Directorio de socios' : 'Inversiones';
+      return { root: 'Socios', current: sub };
+    }
+    if (view === 'usuarios') {
+      return { root: 'Seguridad', current: 'Gestión de usuarios' };
+    }
+    if (view === 'configuracion') {
+      return { root: 'Seguridad', current: `Configuración (${configTab})` };
+    }
+    if (view === 'salarios') {
+      return { root: 'Configuración financiera', current: 'Tipos de salarios / IVA' };
+    }
+    if (view === 'fianzas') {
+      return { root: 'Configuración financiera', current: 'Tipos de fianzas' };
+    }
+    if (view === 'formatos') {
+      return { root: 'Configuración financiera', current: 'Formatos de créditos' };
+    }
+    if (view === 'tasas') {
+      return { root: 'Configuración financiera', current: 'Tasas de interés' };
+    }
+    if (view === 'plazos') {
+      return { root: 'Configuración financiera', current: 'Plazos de pago' };
+    }
+    if (view === 'bancos') {
+      return { root: 'Configuración financiera', current: 'Entidades bancarias' };
+    }
+    if (view === 'docusign') {
+      return { root: 'Formalización & Legal', current: 'Firmas electrónicas y pagarés' };
+    }
+    return { root: selectedModule?.nombre || 'Módulo', current: 'General' };
+  }, [
+    view,
+    isProductosCreditoModule,
+    selectedCreditoId,
+    selectedCredito,
+    isEmpresasModule,
+    empresaTab,
+    isAliadosModule,
+    aliadosTab,
+    isComercialesModule,
+    comercialesTab,
+    isSociosModule,
+    sociosTab,
+    configTab,
+    selectedModule
+  ]);
+
   return (
     <div className="app-layout">
-      <aside className="side-nav">
-        <div className="brand-block">
-          <span className="brand-mark">CA</span>
-          <div>
-            <strong>Creditos App</strong>
-            <small>Panel administrativo</small>
-          </div>
-        </div>
-
-        <nav className="module-nav">
-          <button
-            type="button"
-            className={view === 'dashboard' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('dashboard')}
-          >
-            <span>DB</span>
-            Dashboard
-          </button>
-          {visibleUserModules.map((module) => (
-            <button
-              key={module.id}
-              type="button"
-              className={view === `modulo:${module.id}` ? 'module-link active' : 'module-link'}
-              onClick={() => setView(`modulo:${module.id}`)}
-            >
-              <span>{moduleCode(module.nombre)}</span>
-              {module.nombre}
-            </button>
-          ))}
-          <div className="nav-divider">Seguridad</div>
-          <button
-            type="button"
-            className={view === 'usuarios' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('usuarios')}
-          >
-            <span>US</span>
-            Usuarios
-          </button>
-          <button
-            type="button"
-            className={view === 'configuracion' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('configuracion')}
-          >
-            <span>CF</span>
-            Configuracion
-          </button>
-          <div className="nav-divider">Configuración Financiera</div>
-          <button
-            type="button"
-            className={view === 'salarios' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('salarios')}
-          >
-            <span>SL</span>
-            Tipos de salarios / IVA
-          </button>
-          <button
-            type="button"
-            className={view === 'fianzas' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('fianzas')}
-          >
-            <span>FZ</span>
-            Tipos de fianzas
-          </button>
-          <button
-            type="button"
-            className={view === 'formatos' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('formatos')}
-          >
-            <span>FC</span>
-            Formatos de créditos
-          </button>
-          <button
-            type="button"
-            className={view === 'tasas' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('tasas')}
-          >
-            <span>TS</span>
-            Tasas de interés
-          </button>
-          <button
-            type="button"
-            className={view === 'plazos' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('plazos')}
-          >
-            <span>PZ</span>
-            Plazo de pago
-          </button>
-          <button
-            type="button"
-            className={view === 'bancos' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('bancos')}
-          >
-            <span>BA</span>
-            Entidades bancarias
-          </button>
-          <div className="nav-divider">Formalización & Legal</div>
-          <button
-            type="button"
-            className={view === 'docusign' ? 'module-link active' : 'module-link'}
-            onClick={() => setView('docusign')}
-          >
-            <span>DS</span>
-            Firmas DocuSign & Pagarés
-          </button>
-        </nav>
-
-        <div className="user-card">
-          <span className="avatar">{initials(activeUser?.fullName)}</span>
-          <div>
-            <strong>{activeUser?.fullName}</strong>
-            <small>{activeUser?.roles.join(' / ') || 'Sin roles'}</small>
-          </div>
-          <button type="button" className="ghost-button" onClick={handleLogout}>Salir</button>
-        </div>
-      </aside>
+      <AppSidebar
+        view={view}
+        onNavigateView={(targetView) => {
+          setSelectedCreditoId(null);
+          setView(targetView);
+        }}
+        onNavigateModule={(modType) => {
+          setSelectedCreditoId(null);
+          if (modType === 'dashboard') {
+            setView('dashboard');
+            return;
+          }
+          if (modType === 'credito') {
+            const credMod = visibleUserModules.find(
+              (m) =>
+                m.nombre.toLowerCase().includes('credito') &&
+                !m.nombre.toLowerCase().includes('comercial') &&
+                !m.nombre.toLowerCase().includes('cartera')
+            );
+            if (credMod) setView(`modulo:${credMod.id}`);
+            setProductosCreditoTab('solicitudes');
+            return;
+          }
+          if (modType === 'empresa') {
+            const empMod = visibleUserModules.find(
+              (m) => m.nombre.toLowerCase().includes('empresa') || m.nombre.toLowerCase().includes('pagadur')
+            );
+            if (empMod) setView(`modulo:${empMod.id}`);
+            return;
+          }
+          if (modType === 'aliado') {
+            const alMod = visibleUserModules.find((m) => m.nombre.toLowerCase().includes('aliado'));
+            if (alMod) setView(`modulo:${alMod.id}`);
+            return;
+          }
+          if (modType === 'comercial') {
+            const comMod = visibleUserModules.find(
+              (m) =>
+                m.nombre.toLowerCase().includes('comercial') ||
+                m.nombre.toLowerCase().includes('vendedor') ||
+                m.nombre.toLowerCase().includes('libranz')
+            );
+            if (comMod) setView(`modulo:${comMod.id}`);
+            return;
+          }
+          if (modType === 'socio') {
+            const socMod = visibleUserModules.find((m) => m.nombre.toLowerCase().includes('socio'));
+            if (socMod) setView(`modulo:${socMod.id}`);
+            return;
+          }
+          if (modType === 'seguridad') {
+            const segMod = visibleUserModules.find((m) => m.nombre.toLowerCase().includes('seguridad'));
+            if (segMod) {
+              setView(`modulo:${segMod.id}`);
+            } else {
+              setView('configuracion');
+              setConfigTab('roles');
+            }
+            return;
+          }
+        }}
+        visibleUserModules={visibleUserModules}
+        activeUser={activeUser}
+        onLogout={handleLogout}
+        configTab={configTab}
+        isAliadosActive={Boolean(isAliadosModule)}
+        isComercialesActive={Boolean(isComercialesModule)}
+        isCreditosActive={Boolean(isProductosCreditoModule)}
+        isEmpresasActive={Boolean(isEmpresasModule)}
+        isSociosActive={Boolean(isSociosModule)}
+      />
 
       <main className="workspace">
         {!(isProductosCreditoModule && selectedCreditoId !== null) && (
-          <header className="workspace-header">
-            <div>
-              <span className="section-kicker">{pageKicker}</span>
-              <h1>{pageTitle}</h1>
-            </div>
-            <div className="header-actions">
-              <div className="theme-toolbar">
-                <div className="mode-switch" aria-label="Modo de visualizacion">
-                  <button
-                    type="button"
-                    className={themeMode === 'light' ? 'mode-button active' : 'mode-button'}
-                    onClick={() => setThemeMode('light')}
-                  >
-                    Dia
-                  </button>
-                  <button
-                    type="button"
-                    className={themeMode === 'dark' ? 'mode-button active' : 'mode-button'}
-                    onClick={() => setThemeMode('dark')}
-                  >
-                    Noche
-                  </button>
-                </div>
-                <select value={paletteKey} onChange={(event) => setPaletteKey(event.target.value as PaletteKey)}>
-                  {(Object.entries(palettes) as Array<[PaletteKey, Palette]>).map(([key, palette]) => (
-                    <option key={key} value={key}>{palette.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="status-pill">{apiStatus}</div>
-            </div>
-          </header>
+          <AppTopBar
+            breadcrumbRoot={breadcrumbInfo.root}
+            breadcrumbCurrent={breadcrumbInfo.current}
+            onRootClick={
+              isProductosCreditoModule && selectedCreditoId !== null
+                ? () => setSelectedCreditoId(null)
+                : undefined
+            }
+            currentUser={activeUser}
+            searchPlaceholder="Buscar créditos, clientes, empresas..."
+            themeMode={themeMode}
+            onToggleTheme={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+          />
         )}
 
         {!(isProductosCreditoModule && selectedCreditoId !== null) && (
@@ -7318,6 +7337,154 @@ function App() {
                     </div>
                   </div>
 
+                  {/* 5-KPI Cards Row matching the screenshot */}
+                  <div className="credit-kpi-row">
+                    <article className="credit-kpi-card">
+                      <div className="credit-kpi-icon-badge" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </div>
+                      <div className="credit-kpi-content">
+                        <span className="credit-kpi-label">Solicitudes</span>
+                        <strong className="credit-kpi-value">{creditos.length}</strong>
+                        <span className="credit-kpi-sub">Operaciones radicadas</span>
+                      </div>
+                    </article>
+
+                    <article className="credit-kpi-card">
+                      <div className="credit-kpi-icon-badge" style={{ background: '#f0fdf4', color: '#16a34a' }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="12" y1="1" x2="12" y2="23" />
+                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                      </div>
+                      <div className="credit-kpi-content">
+                        <span className="credit-kpi-label">Monto solicitado</span>
+                        <strong className="credit-kpi-value">
+                          {formatMoney(creditos.reduce((acc, c) => acc + (Number(c.montoSolicitado) || 0), 0))}
+                        </strong>
+                        <span className="credit-kpi-sub">Total en colocación</span>
+                      </div>
+                    </article>
+
+                    <article className="credit-kpi-card">
+                      <div className="credit-kpi-icon-badge" style={{ background: '#e0f2fe', color: '#0284c7' }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                      </div>
+                      <div className="credit-kpi-content">
+                        <span className="credit-kpi-label">En proceso</span>
+                        <strong className="credit-kpi-value">
+                          {creditos.filter((c) => (c.estado || '').toUpperCase().includes('PROCESO') || (c.estado || '').toUpperCase().includes('PENDIENTE')).length}
+                        </strong>
+                        <span className="credit-kpi-sub">Validación documental</span>
+                      </div>
+                    </article>
+
+                    <article className="credit-kpi-card">
+                      <div className="credit-kpi-icon-badge" style={{ background: '#f0fdf4', color: '#059669' }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                          <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg>
+                      </div>
+                      <div className="credit-kpi-content">
+                        <span className="credit-kpi-label">Aprobadas</span>
+                        <strong className="credit-kpi-value">
+                          {creditos.filter((c) => (c.estado || '').toUpperCase().includes('APROBADA')).length}
+                        </strong>
+                        <span className="credit-kpi-sub">Comité completado</span>
+                      </div>
+                    </article>
+
+                    <article className="credit-kpi-card">
+                      <div className="credit-kpi-icon-badge" style={{ background: '#faf5ff', color: '#9333ea' }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="2" y="4" width="20" height="16" rx="2" />
+                          <path d="M7 15h0M2 10h20" />
+                        </svg>
+                      </div>
+                      <div className="credit-kpi-content">
+                        <span className="credit-kpi-label">Desembolsadas</span>
+                        <strong className="credit-kpi-value">
+                          {creditos.filter((c) => (c.estado || '').toUpperCase().includes('DESEMBOLSADA')).length}
+                        </strong>
+                        <span className="credit-kpi-sub">Operaciones activas</span>
+                      </div>
+                    </article>
+                  </div>
+
+                  {/* Search & Filter Bar */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    background: '#ffffff',
+                    padding: '12px 18px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '260px' }}>
+                      <span style={{ fontSize: '1rem', color: '#94a3b8' }}>🔍</span>
+                      <input
+                        type="text"
+                        placeholder="Buscar por cliente, documento o consecutivo..."
+                        value={solicitudesSearch}
+                        onChange={(e) => setSolicitudesSearch(e.target.value)}
+                        style={{
+                          border: 'none',
+                          outline: 'none',
+                          width: '100%',
+                          fontSize: '0.88rem',
+                          color: '#0f172a',
+                          background: 'transparent'
+                        }}
+                      />
+                      {solicitudesSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setSolicitudesSearch('')}
+                          style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                        Estado:
+                      </span>
+                      {(['TODOS', 'PROCESO', 'APROBADA', 'RECHAZADA'] as const).map((st) => (
+                        <button
+                          key={st}
+                          type="button"
+                          onClick={() => setSolicitudesEstadoFilter(st)}
+                          style={{
+                            border: 'none',
+                            borderRadius: '9999px',
+                            padding: '4px 12px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            background: solicitudesEstadoFilter === st ? '#1d68f6' : '#f1f5f9',
+                            color: solicitudesEstadoFilter === st ? '#ffffff' : '#64748b',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          {st === 'TODOS' ? 'Todos' : st === 'PROCESO' ? 'En proceso' : st === 'APROBADA' ? 'Aprobadas' : 'Rechazadas'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {showRadicarForm && (
                     <form className="surface pagaduria-form" onSubmit={handleCreateCredito}>
                       <div className="surface-title">
@@ -7455,7 +7622,21 @@ function App() {
                           </tr>
                         </thead>
                         <tbody>
-                          {creditos.map((credito) => (
+                          {creditos
+                            .filter((credito) => {
+                              const q = solicitudesSearch.toLowerCase().trim();
+                              const matchesSearch =
+                                !q ||
+                                credito.nombreCliente.toLowerCase().includes(q) ||
+                                credito.identificacionCliente.toLowerCase().includes(q) ||
+                                String(credito.consecutivo).toLowerCase().includes(q) ||
+                                (credito.producto || '').toLowerCase().includes(q);
+                              const matchesEstado =
+                                solicitudesEstadoFilter === 'TODOS' ||
+                                (credito.estado || '').toUpperCase().includes(solicitudesEstadoFilter);
+                              return matchesSearch && matchesEstado;
+                            })
+                            .map((credito) => (
                             <tr
                               key={credito.id}
                               style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}
