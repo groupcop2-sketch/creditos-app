@@ -616,6 +616,92 @@ export type CampoCatalogoItem = {
   default: boolean;
 };
 
+export type DocuSignEstado =
+  | 'DRAFT'
+  | 'SENT'
+  | 'DELIVERED'
+  | 'COMPLETED'
+  | 'DECLINED'
+  | 'VOIDED'
+  | 'EXPIRED';
+
+export type DocuSignDocumentoItem = {
+  id: number;
+  tipoDocumento: 'PAGARE' | 'CONTRATO' | 'CARTA_INSTRUCCIONES' | string;
+  nombreArchivo: string;
+  orden: number;
+  tamanoBytes: number | null;
+  fechaCreacion: string;
+};
+
+export type DocuSignEventoItem = {
+  id: number;
+  estadoAnterior: string | null;
+  estadoNuevo: DocuSignEstado;
+  accion: string;
+  actor: string;
+  ipAddress: string | null;
+  descripcion: string | null;
+  payload: Record<string, unknown> | null;
+  fechaEvento: string;
+};
+
+export type DocuSignEnvelopeItem = {
+  id: number;
+  envelopeId: string;
+  creditoId: number;
+  consecutivo: string;
+  asunto: string;
+  firmanteNombre: string;
+  firmanteCorreo: string;
+  firmanteTelefono: string | null;
+  firmanteIdentificacion: string | null;
+  estado: DocuSignEstado;
+  modo: 'LIVE' | 'SIMULACION';
+  signUrl: string | null;
+  motivoRechazo: string | null;
+  motivoAnulacion: string | null;
+  hashSha256: string | null;
+  fechaEnvio: string | null;
+  fechaEntrega: string | null;
+  fechaFirma: string | null;
+  fechaRechazo: string | null;
+  fechaAnulacion: string | null;
+  fechaCreacion: string;
+  cantidadDocumentos: number;
+  cantidadEventos: number;
+};
+
+export type DocuSignEnvelopeDetail = DocuSignEnvelopeItem & {
+  mensaje: string | null;
+  montoSolicitado: number | string;
+  plazo: number;
+  documentos: DocuSignDocumentoItem[];
+  eventos: DocuSignEventoItem[];
+};
+
+export type DocuSignConfig = {
+  simulationMode: boolean;
+  accountIdConfigured: boolean;
+  clientIdConfigured: boolean;
+  authServer: string;
+  basePath: string;
+  webhookConfigured: boolean;
+  documentosSoportados: string[];
+  estadosMaquina: DocuSignEstado[];
+};
+
+export type CrearDocuSignEnvelopeInput = {
+  creditoId: number;
+  firmanteNombre: string;
+  firmanteCorreo: string;
+  firmanteTelefono?: string | null;
+  firmanteIdentificacion?: string | null;
+  asunto?: string;
+  mensaje?: string;
+  documentosTipos?: Array<'PAGARE' | 'CONTRATO' | 'CARTA_INSTRUCCIONES'>;
+};
+
 export type ValidarEndpointResult = {
   valido: boolean;
   url: string;
@@ -1592,6 +1678,66 @@ export const api = {
   updateSalarioParametro: (token: string, id: number, body: unknown) =>
     request<ParametroFinancieroItem>(`/api/v1/productos-creditos/salarios/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
   deleteSalarioParametro: (token: string, id: number) =>
-    request<void>(`/api/v1/productos-creditos/salarios/${id}`, { method: 'DELETE' }, token)
+    request<void>(`/api/v1/productos-creditos/salarios/${id}`, { method: 'DELETE' }, token),
+
+  // ==========================================
+  // DOCUSIGN (eSignature, Sobres, Máquina de Estados)
+  // ==========================================
+  getDocuSignConfig: (token: string) =>
+    request<DocuSignConfig>('/api/v1/firmas/docusign/config', {}, token),
+
+  listDocuSignEnvelopes: (token: string, filter?: { creditoId?: number; estado?: string }) => {
+    const params = new URLSearchParams();
+    if (filter?.creditoId) params.set('creditoId', String(filter.creditoId));
+    if (filter?.estado && filter.estado !== 'TODOS') params.set('estado', filter.estado);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<DocuSignEnvelopeItem[]>(`/api/v1/firmas/docusign/envelopes${qs}`, {}, token);
+  },
+
+  getDocuSignEnvelopeDetail: (token: string, envelopeId: string) =>
+    request<DocuSignEnvelopeDetail>(`/api/v1/firmas/docusign/envelopes/${envelopeId}`, {}, token),
+
+  createDocuSignEnvelope: (token: string, body: CrearDocuSignEnvelopeInput) =>
+    request<DocuSignEnvelopeDetail>('/api/v1/firmas/docusign/envelopes', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }, token),
+
+  transitionDocuSignEnvelope: (
+    token: string,
+    envelopeId: string,
+    body: { nuevoEstado: DocuSignEstado; accion?: string; actor?: string; motivo?: string }
+  ) =>
+    request<DocuSignEnvelopeDetail>(`/api/v1/firmas/docusign/envelopes/${envelopeId}/transition`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }, token),
+
+  simulateDocuSignAction: (
+    token: string,
+    envelopeId: string,
+    action: 'OPEN' | 'SIGN' | 'DECLINE' | 'VOID',
+    motivo?: string
+  ) =>
+    request<DocuSignEnvelopeDetail>(`/api/v1/firmas/docusign/envelopes/${envelopeId}/simulate-action`, {
+      method: 'POST',
+      body: JSON.stringify({ action, motivo })
+    }, token),
+
+  getDocuSignDocPdfBlob: async (token: string, envelopeId: string, docId: number): Promise<Blob> => {
+    const res = await fetch(`${API_URL}/api/v1/firmas/docusign/envelopes/${envelopeId}/docs/${docId}/pdf`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('No se pudo descargar el documento PDF');
+    return res.blob();
+  },
+
+  getDocuSignCombinedPdfBlob: async (token: string, envelopeId: string): Promise<Blob> => {
+    const res = await fetch(`${API_URL}/api/v1/firmas/docusign/envelopes/${envelopeId}/combined-pdf`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('El PDF firmado combinado aún no está disponible');
+    return res.blob();
+  }
 };
 

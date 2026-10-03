@@ -15,6 +15,7 @@ import { PlazosPagoView } from './components/configuracion-financiera/PlazosPago
 import { FormatosCreditoView } from './components/configuracion-financiera/FormatosCreditoView';
 import { TiposFianzasView } from './components/configuracion-financiera/TiposFianzasView';
 import { TiposSalariosView } from './components/configuracion-financiera/TiposSalariosView';
+import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
 import {
   api,
   type AddressCatalogs,
@@ -67,7 +68,7 @@ import {
   type UserRow
 } from './api';
 
-type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | `modulo:${number}`;
+type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | 'docusign' | `modulo:${number}`;
 type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
 type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
@@ -1554,7 +1555,9 @@ function App() {
                 ? 'Plazo de pago'
                 : view === 'formatos'
                   ? 'Formatos de créditos'
-                  : selectedModule?.nombre ?? 'Modulo';
+                  : view === 'docusign'
+                    ? 'Firmas Digitales & Pagarés (DocuSign)'
+                    : selectedModule?.nombre ?? 'Modulo';
   const pageKicker =
     view === 'dashboard'
       ? 'Vista general'
@@ -1574,7 +1577,9 @@ function App() {
                 ? 'Condiciones de Crédito'
                 : view === 'formatos'
                   ? 'Configuración de Producto'
-                  : 'Modulo operativo';
+                  : view === 'docusign'
+                    ? 'Formalización Jurídica'
+                    : 'Modulo operativo';
 
   const overview = [
     { label: 'Usuarios', value: users.length },
@@ -5092,6 +5097,15 @@ function App() {
           >
             <span>BA</span>
             Entidades bancarias
+          </button>
+          <div className="nav-divider">Formalización & Legal</div>
+          <button
+            type="button"
+            className={view === 'docusign' ? 'module-link active' : 'module-link'}
+            onClick={() => setView('docusign')}
+          >
+            <span>DS</span>
+            Firmas DocuSign & Pagarés
           </button>
         </nav>
 
@@ -9338,6 +9352,10 @@ function App() {
               onFormatSelected={() => reloadProductosCreditoData()}
             />
           </section>
+        )}
+
+        {view === 'docusign' && session && (
+          <DocuSignFirmasView token={session.token} />
         )}
 
         <p className="message-line">{message}</p>
