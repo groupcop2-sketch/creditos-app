@@ -11,6 +11,7 @@ export type ViewKey =
   | 'tasas'
   | 'plazos'
   | 'formatos'
+  | 'financieras'
   | 'docusign'
   | `modulo:${number}`;
 
@@ -309,6 +310,21 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </svg>
           </span>
           <span className="menu-text">Tasas de interés</span>
+        </button>
+
+        {/* Financieras & Integraciones */}
+        <button
+          type="button"
+          className={`module-link ${view === 'financieras' ? 'active' : ''}`}
+          onClick={() => onNavigateView('financieras')}
+          id="nav-financieras"
+        >
+          <span className="menu-icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 21h18M3 7v14M21 7v14M6 11h2M6 15h2M11 11h2M11 15h2M16 11h2M16 15h2M12 3L2 7h20L12 3z" />
+            </svg>
+          </span>
+          <span className="menu-text">Financieras & Integraciones</span>
         </button>
 
         {/* Toggle for extended financial views (Plazos, Bancos, DocuSign) */}

@@ -1738,6 +1738,77 @@ export const api = {
     });
     if (!res.ok) throw new Error('El PDF firmado combinado aún no está disponible');
     return res.blob();
-  }
+  },
+
+  // ==========================================
+  // FINANCIERAS E INTEGRACIONES (TBL_FINANCIERA, TBL_INTEGRACIONES_FINANCIERA)
+  // ==========================================
+  listFinancieras: (token: string) =>
+    request<FinancieraRow[]>('/api/v1/financieras', {}, token),
+  createFinanciera: (token: string, body: unknown) =>
+    request<FinancieraRow>('/api/v1/financieras', { method: 'POST', body: JSON.stringify(body) }, token),
+  updateFinanciera: (token: string, id: number, body: unknown) =>
+    request<FinancieraRow>(`/api/v1/financieras/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  listIntegracionesCatalogo: (token: string) =>
+    request<IntegracionRow[]>('/api/v1/financieras/catalogo/integraciones', {}, token),
+  createIntegracionCatalogo: (token: string, body: unknown) =>
+    request<IntegracionRow>('/api/v1/financieras/catalogo/integraciones', { method: 'POST', body: JSON.stringify(body) }, token),
+  listIntegracionesFinanciera: (token: string, idFinanciera: number) =>
+    request<IntegracionFinancieraRow[]>(`/api/v1/financieras/${idFinanciera}/integraciones`, {}, token),
+  upsertIntegracionFinanciera: (token: string, idFinanciera: number, body: unknown) =>
+    request<IntegracionFinancieraRow>(`/api/v1/financieras/${idFinanciera}/integraciones`, { method: 'POST', body: JSON.stringify(body) }, token),
+  toggleIntegracionFinanciera: (token: string, idFinanciera: number, idIntegracion: number, indActivo: boolean) =>
+    request<{ success: boolean }>(`/api/v1/financieras/${idFinanciera}/integraciones/${idIntegracion}/toggle`, {
+      method: 'PATCH',
+      body: JSON.stringify({ indActivo })
+    }, token)
 };
+
+export type FinancieraRow = {
+  id_financiera: number;
+  v_nit: string;
+  v_razon_social: string;
+  v_sigla: string | null;
+  v_correo: string | null;
+  v_telefono: string | null;
+  v_direccion: string | null;
+  v_sitio_web: string | null;
+  id_libranzera: number | null;
+  ind_activo: boolean;
+  fec_creacion: string;
+  fec_actualizacion: string;
+  total_integraciones?: number;
+  integraciones_activas?: string[];
+};
+
+export type IntegracionRow = {
+  id_integracion: number;
+  codigo: string;
+  nombre: string;
+  tipo: string;
+  descripcion: string | null;
+  url_base: string | null;
+  configuracion_schema: any;
+  ind_activo: boolean;
+};
+
+export type IntegracionFinancieraRow = {
+  id_integracion_financiera: number;
+  id_financiera: number;
+  id_integracion: number;
+  codigo_integracion: string;
+  nombre_integracion: string;
+  tipo_integracion: string;
+  ambiente: string;
+  client_id: string | null;
+  client_secret: string | null;
+  account_id: string | null;
+  api_key: string | null;
+  url_base: string | null;
+  webhook_url: string | null;
+  datos_conexion: any;
+  ind_activo: boolean;
+  ind_modo_prueba: boolean;
+};
+
 

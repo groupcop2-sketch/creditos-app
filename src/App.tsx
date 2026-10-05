@@ -13,6 +13,7 @@ import { EntidadesBancariasView } from './components/configuracion-financiera/En
 import { TasasInteresView } from './components/configuracion-financiera/TasasInteresView';
 import { PlazosPagoView } from './components/configuracion-financiera/PlazosPagoView';
 import { FormatosCreditoView } from './components/configuracion-financiera/FormatosCreditoView';
+import { FinancierasIntegracionesView } from './components/configuracion-financiera/FinancierasIntegracionesView';
 import { TiposFianzasView } from './components/configuracion-financiera/TiposFianzasView';
 import { TiposSalariosView } from './components/configuracion-financiera/TiposSalariosView';
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
@@ -73,7 +74,7 @@ import {
   type UserRow
 } from './api';
 
-type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | 'docusign' | `modulo:${number}`;
+type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | 'financieras' | 'docusign' | `modulo:${number}`;
 type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
 type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
@@ -1579,9 +1580,11 @@ function App() {
                 ? 'Plazo de pago'
                 : view === 'formatos'
                   ? 'Formatos de créditos'
-                  : view === 'docusign'
-                    ? 'Firmas Digitales & Pagarés (DocuSign)'
-                    : selectedModule?.nombre ?? 'Modulo';
+                  : view === 'financieras'
+                    ? 'Financieras & Integraciones'
+                    : view === 'docusign'
+                      ? 'Firmas Digitales & Pagarés (DocuSign)'
+                      : selectedModule?.nombre ?? 'Modulo';
   const pageKicker =
     view === 'dashboard'
       ? 'Vista general'
@@ -1601,9 +1604,11 @@ function App() {
                 ? 'Condiciones de Crédito'
                 : view === 'formatos'
                   ? 'Configuración de Producto'
-                  : view === 'docusign'
-                    ? 'Formalización Jurídica'
-                    : 'Modulo operativo';
+                  : view === 'financieras'
+                    ? 'Entidades Libranceras & Servicios API'
+                    : view === 'docusign'
+                      ? 'Formalización Jurídica'
+                      : 'Modulo operativo';
 
   const overview = [
     { label: 'Usuarios', value: users.length },
@@ -9213,6 +9218,12 @@ function App() {
               notify={notify}
               onFormatSelected={() => reloadProductosCreditoData()}
             />
+          </section>
+        )}
+
+        {view === 'financieras' && session && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <FinancierasIntegracionesView token={session.token} notify={notify} />
           </section>
         )}
 
