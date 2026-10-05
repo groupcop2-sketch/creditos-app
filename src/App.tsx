@@ -345,6 +345,7 @@ type LibranzeraFormState = {
 };
 
 type ComercialFormState = {
+  idFinanciera: string;
   idLibranzera: string;
   identificacion: string;
   primerNombre: string;
@@ -749,6 +750,7 @@ const initialLibranzeraForm: LibranzeraFormState = {
 };
 
 const initialComercialForm: ComercialFormState = {
+  idFinanciera: '',
   idLibranzera: '',
   identificacion: '',
   primerNombre: '',
@@ -2094,7 +2096,8 @@ function App() {
       }));
       setComercialForm((current) => ({
         ...current,
-        idLibranzera: current.idLibranzera || String(catalogsResponse.libranzeras[0]?.id ?? ''),
+        idFinanciera: current.idFinanciera || String(catalogsResponse.financieras?.[0]?.id ?? catalogsResponse.libranzeras[0]?.id ?? ''),
+        idLibranzera: current.idLibranzera || String(catalogsResponse.libranzeras[0]?.id ?? catalogsResponse.financieras?.[0]?.id ?? ''),
         idTipoIdentificacion: current.idTipoIdentificacion || String(identificationTypes[0]?.id ?? ''),
         idRolVendedor: current.idRolVendedor || String(catalogsResponse.rolesVendedor[0]?.id ?? ''),
         idFormulaComercial: current.idFormulaComercial || String(catalogsResponse.formulas[0]?.id ?? ''),
@@ -3226,7 +3229,8 @@ function App() {
 
     try {
       const payload = {
-        idLibranzera: Number(comercialForm.idLibranzera),
+        idFinanciera: Number(comercialForm.idFinanciera || comercialForm.idLibranzera),
+        idLibranzera: Number(comercialForm.idLibranzera || comercialForm.idFinanciera),
         identificacion: comercialForm.identificacion,
         primerNombre: comercialForm.primerNombre,
         segundoNombre: comercialForm.segundoNombre || null,
@@ -3254,6 +3258,7 @@ function App() {
       }
       setComercialForm({
         ...initialComercialForm,
+        idFinanciera: String(comercialesCatalogs.financieras?.[0]?.id ?? comercialesCatalogs.libranzeras[0]?.id ?? ''),
         idLibranzera: String(comercialesCatalogs.libranzeras[0]?.id ?? ''),
         idTipoIdentificacion: String(identificationTypes[0]?.id ?? ''),
         idRolVendedor: String(comercialesCatalogs.rolesVendedor[0]?.id ?? ''),
@@ -3282,7 +3287,8 @@ function App() {
     setSelectedComercialId(item.id);
     setComercialForm({
       ...initialComercialForm,
-      idLibranzera: String(item.idLibranzera),
+      idFinanciera: String(item.idFinanciera ?? item.idLibranzera ?? ''),
+      idLibranzera: String(item.idLibranzera ?? item.idFinanciera ?? ''),
       identificacion: item.identificacion,
       primerNombre,
       segundoNombre,
@@ -6845,14 +6851,30 @@ function App() {
                     {
                       id: 'personal',
                       title: 'Datos del asesor',
-                      subtitle: 'Libranzera e identificación',
+                      subtitle: 'Entidad financiera e identificación',
                       content: (
                         <div className="form-section">
                           <h3>Informacion personal</h3>
                           <div className="field-grid four-cols">
-                            <select value={comercialForm.idLibranzera} onChange={(event) => setComercialForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
-                              <option value="">Libranzera *</option>
-                              {comercialesCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
+                            <select
+                              value={comercialForm.idFinanciera || comercialForm.idLibranzera}
+                              onChange={(event) =>
+                                setComercialForm((current) => ({
+                                  ...current,
+                                  idFinanciera: event.target.value,
+                                  idLibranzera: event.target.value
+                                }))
+                              }
+                            >
+                              <option value="">Entidad financiera *</option>
+                              {(comercialesCatalogs.financieras && comercialesCatalogs.financieras.length > 0
+                                ? comercialesCatalogs.financieras
+                                : comercialesCatalogs.libranzeras
+                              ).map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.nombre}
+                                </option>
+                              ))}
                             </select>
                             <select value={comercialForm.idTipoIdentificacion} onChange={(event) => setComercialForm((current) => ({ ...current, idTipoIdentificacion: event.target.value }))}>
                               <option value="">Tipo documento *</option>
@@ -7005,7 +7027,7 @@ function App() {
                         <tr>
                           <th>Codigo</th>
                           <th>Nombre</th>
-                          <th>Libranzera</th>
+                          <th>Entidad Financiera</th>
                           <th>Rol</th>
                           <th>Comision</th>
                           <th>Cuenta</th>
@@ -7018,7 +7040,10 @@ function App() {
                           <tr key={item.id}>
                             <td>{item.codigoVendedor}</td>
                             <td>{item.nombreCompleto}<br />{item.identificacion}</td>
-                            <td>{item.libranzera}</td>
+                            <td>
+                              <strong>{item.financiera || item.libranzera}</strong>
+                              {item.siglaFinanciera && <div style={{ fontSize: '11px', color: '#64748b' }}>{item.siglaFinanciera}</div>}
+                            </td>
                             <td>{item.rolVendedor ?? '-'}</td>
                             <td>{item.tipoComision === 'PORCENTAJE' ? `${item.valorComision ?? 0}%` : formatMoney(item.valorComision)}</td>
                             <td>{item.banco ?? '-'}<br />{item.tipoCuenta ?? ''} {item.numeroCuenta ?? ''}</td>

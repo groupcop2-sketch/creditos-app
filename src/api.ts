@@ -439,6 +439,9 @@ export type LibranzeraRow = {
 
 export type ComercialRow = {
   id: number;
+  idFinanciera?: number | null;
+  financiera?: string;
+  siglaFinanciera?: string | null;
   idLibranzera: number;
   libranzera: string;
   identificacion: string;
@@ -466,6 +469,7 @@ export type ComercialesCatalogs = {
   rolesVendedor: AddressCatalogItem[];
   formulas: AddressCatalogItem[];
   libranzeras: AddressCatalogItem[];
+  financieras?: AddressCatalogItem[];
   generos: Array<{ id: string; nombre: string }>;
 };
 
