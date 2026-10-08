@@ -3351,12 +3351,13 @@ function App() {
 
   const getProductoAtributoValidation = () => {
     const errors: string[] = [];
-    const formula = productosCreditoCatalogs.tiposCalculo.find((item) => String(item.id) === productoAtributoForm.idTipoCalculo)?.nombre.toLowerCase() ?? '';
     if (!productoAtributoForm.idTipoAtributo) errors.push('Selecciona donde aplica el atributo.');
     if (!productoAtributoForm.idTipoCalculo) errors.push('Selecciona el tipo de formula.');
     if (!productoAtributoForm.nombre.trim()) errors.push('El nombre del atributo es obligatorio.');
-    if ((formula.includes('%') || formula.includes('porcentaje')) && !productoAtributoForm.porcentaje) errors.push('Esta formula requiere porcentaje.');
-    if (formula.includes('valor fijo') && !productoAtributoForm.valor) errors.push('La formula de valor fijo requiere valor.');
+    const tieneValor = productoAtributoForm.valor.trim() !== '';
+    const tienePorcentaje = productoAtributoForm.porcentaje.trim() !== '';
+    if (tieneValor === tienePorcentaje) errors.push('Configura solo uno: porcentaje o valor fijo.');
+    if ([productoAtributoForm.valor, productoAtributoForm.porcentaje].some(value => value.trim() !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0))) errors.push('El porcentaje o valor debe ser un numero mayor o igual a cero.');
     return errors;
   };
 
@@ -8043,8 +8044,8 @@ function App() {
                           nombre: item.nombre,
                           idTipoAtributo: tipoAtributoObj ? String(tipoAtributoObj.id) : (productosCreditoCatalogs.tiposAtributo[0]?.id ? String(productosCreditoCatalogs.tiposAtributo[0].id) : '1'),
                           idTipoCalculo: tipoCalculoObj ? String(tipoCalculoObj.id) : (productosCreditoCatalogs.tiposCalculo[0]?.id ? String(productosCreditoCatalogs.tiposCalculo[0].id) : '1'),
-                          valor: String(item.valorDefault),
-                          porcentaje: String(item.porcentajeDefault),
+                          valor: item.porcentajeDefault > 0 || /porcentaje|%/i.test(item.tipoFormula) ? '' : String(item.valorDefault),
+                          porcentaje: item.porcentajeDefault > 0 || /porcentaje|%/i.test(item.tipoFormula) ? String(item.porcentajeDefault) : '',
                           minimo: String(item.minimoDefault),
                           maximo: String(item.maximoDefault),
                           proveedor: item.proveedorDefault,
@@ -8073,8 +8074,8 @@ function App() {
                       <button type="button" className="ghost-button" onClick={handleCancelProductoAtributoEdit}>Cancelar</button>
                     </div>
                     <div className="field-grid four-cols">
-                      <label className="product-field"><span>Valor</span><input value={productoAtributoForm.valor} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, valor: e.target.value }))} placeholder="0" /></label>
-                      <label className="product-field"><span>Porcentaje (%)</span><input value={productoAtributoForm.porcentaje} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, porcentaje: e.target.value }))} placeholder="0" /></label>
+                      <label className="product-field"><span>Valor</span><input value={productoAtributoForm.valor} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, valor: e.target.value, porcentaje: e.target.value.trim() ? '' : cur.porcentaje }))} placeholder="0" /></label>
+                      <label className="product-field"><span>Porcentaje (%)</span><input value={productoAtributoForm.porcentaje} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, porcentaje: e.target.value, valor: e.target.value.trim() ? '' : cur.valor }))} placeholder="0" /></label>
                       <label className="product-field"><span>Mínimo</span><input value={productoAtributoForm.minimo} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, minimo: e.target.value }))} placeholder="0" /></label>
                       <label className="product-field"><span>Máximo</span><input value={productoAtributoForm.maximo} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, maximo: e.target.value }))} placeholder="0" /></label>
                     </div>
