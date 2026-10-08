@@ -3354,8 +3354,8 @@ function App() {
     if (!productoAtributoForm.idTipoAtributo) errors.push('Selecciona donde aplica el atributo.');
     if (!productoAtributoForm.idTipoCalculo) errors.push('Selecciona el tipo de formula.');
     if (!productoAtributoForm.nombre.trim()) errors.push('El nombre del atributo es obligatorio.');
-    const tieneValor = productoAtributoForm.valor.trim() !== '';
-    const tienePorcentaje = productoAtributoForm.porcentaje.trim() !== '';
+    const tieneValor = productoAtributoForm.valor.trim() !== '' && !(Number(productoAtributoForm.valor) === 0 && Number(productoAtributoForm.porcentaje) > 0);
+    const tienePorcentaje = productoAtributoForm.porcentaje.trim() !== '' && !(Number(productoAtributoForm.porcentaje) === 0 && Number(productoAtributoForm.valor) > 0);
     if (tieneValor === tienePorcentaje) errors.push('Configura solo uno: porcentaje o valor fijo.');
     if ([productoAtributoForm.valor, productoAtributoForm.porcentaje].some(value => value.trim() !== '' && (!Number.isFinite(Number(value)) || Number(value) < 0))) errors.push('El porcentaje o valor debe ser un numero mayor o igual a cero.');
     return errors;
@@ -3820,8 +3820,8 @@ function App() {
       idTipoAtributo: String(tipoAtributo?.id ?? ''),
       idTipoCalculo: String(tipoCalculo?.id ?? ''),
       nombre: atributo.nombre,
-      valor: String(atributo.valor ?? ''),
-      porcentaje: String(atributo.porcentaje ?? ''),
+      valor: atributo.valor === 0 && Number(atributo.porcentaje) > 0 ? '' : String(atributo.valor ?? ''),
+      porcentaje: atributo.porcentaje === 0 && Number(atributo.valor) > 0 ? '' : String(atributo.porcentaje ?? ''),
       valor2: String(atributo.valor2 ?? ''),
       minimo: String(atributo.minimo ?? ''),
       maximo: String(atributo.maximo ?? ''),
