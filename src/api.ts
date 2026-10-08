@@ -1200,6 +1200,8 @@ export type SimulacionCredito = {
     plazo: number;
     tasaMensual: number;
     cuotaEstimada: number;
+    cuotaBase: number;
+    cargosPorCuota: number;
     totalIntereses: number;
     totalPagar: number;
   };
@@ -1223,6 +1225,7 @@ export type SimulacionCredito = {
     aplicaIva: boolean;
     obligatorio: boolean;
     prioridad: number;
+    sumaALaCuota: boolean;
     sumaAlCredito: boolean;
     esDescuento: boolean;
   }>;
@@ -1233,6 +1236,7 @@ export type SimulacionCredito = {
     interes: number;
     cuota: number;
     saldoFinal: number;
+    cargos: number;
   }>;
 };
 
