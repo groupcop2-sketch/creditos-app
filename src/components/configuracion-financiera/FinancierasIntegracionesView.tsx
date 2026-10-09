@@ -128,6 +128,22 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
     }
   };
 
+  const handleRefreshAll = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        loadFinancieras(),
+        loadCatalogo(),
+        selectedFinancieraId ? loadIntegracionesFinanciera(selectedFinancieraId) : Promise.resolve()
+      ]);
+      notify('Datos actualizados correctamente', 'success');
+    } catch {
+      notify('Error al refrescar datos', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadFinancieras();
     loadCatalogo();
@@ -138,6 +154,14 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
       loadIntegracionesFinanciera(selectedFinancieraId);
     }
   }, [selectedFinancieraId]);
+
+  useEffect(() => {
+    if (activeTab === 'catalogo') {
+      loadCatalogo();
+    } else if (activeTab === 'integraciones' && selectedFinancieraId) {
+      loadIntegracionesFinanciera(selectedFinancieraId);
+    }
+  }, [activeTab]);
 
   // Filtered Financieras
   const filteredFinancieras = useMemo(() => {
@@ -319,7 +343,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
               Financieras & Integraciones
             </h1>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94a3b8' }}>
-              Gestión multi-entidad de libranceras y parametrización de biometría (Jumio) y firma digital (DocuSign)
+              Gestión multi-entidad de libranceras y parametrización de biometría (Jumio, Didit KYC) y firma digital (DocuSign)
             </p>
           </div>
         </div>
@@ -327,7 +351,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
             type="button"
-            onClick={loadFinancieras}
+            onClick={handleRefreshAll}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -1285,7 +1309,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
               <tbody>
                 {catalogoIntegraciones.map((cat) => (
                   <tr key={cat.id_integracion} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 700, color: '#2563eb' }}>
+                    <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 700, color: cat.codigo === 'DIDIT' ? '#7c3aed' : '#2563eb' }}>
                       {cat.codigo}
                     </td>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: '#0f172a' }}>
@@ -1294,12 +1318,13 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                     <td style={{ padding: '12px 16px' }}>
                       <span
                         style={{
-                          background: '#f1f5f9',
+                          background: cat.codigo === 'DIDIT' ? '#f5f3ff' : '#f1f5f9',
+                          color: cat.codigo === 'DIDIT' ? '#7c3aed' : '#475569',
+                          border: cat.codigo === 'DIDIT' ? '1px solid #ddd6fe' : 'none',
                           padding: '3px 8px',
                           borderRadius: '6px',
                           fontSize: '11px',
-                          fontWeight: 600,
-                          color: '#475569'
+                          fontWeight: 600
                         }}
                       >
                         {cat.tipo}
