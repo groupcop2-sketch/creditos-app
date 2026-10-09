@@ -585,9 +585,9 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                               <span
                                 key={code}
                                 style={{
-                                  background: code === 'JUMIO' ? '#eff6ff' : '#ecfdf5',
-                                  color: code === 'JUMIO' ? '#1d4ed8' : '#047857',
-                                  border: `1px solid ${code === 'JUMIO' ? '#bfdbfe' : '#a7f3d0'}`,
+                                  background: code === 'JUMIO' ? '#eff6ff' : code === 'DIDIT' ? '#f5f3ff' : '#ecfdf5',
+                                  color: code === 'JUMIO' ? '#1d4ed8' : code === 'DIDIT' ? '#6d28d9' : '#047857',
+                                  border: `1px solid ${code === 'JUMIO' ? '#bfdbfe' : code === 'DIDIT' ? '#ddd6fe' : '#a7f3d0'}`,
                                   padding: '2px 8px',
                                   borderRadius: '999px',
                                   fontSize: '11px',
@@ -748,8 +748,8 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
             <Info size={20} color="#0284c7" style={{ flexShrink: 0, marginTop: '2px' }} />
             <div style={{ fontSize: '13px', color: '#0369a1', lineHeight: '1.5' }}>
               <strong>Regla de Negocio Dinámica:</strong> Cada financiera tiene su propio switch y credenciales de
-              conexión para Jumio y DocuSign. Si el switch de <strong>JUMIO</strong> está apagado o las credenciales
-              están vacías, el portal de clientes activará automáticamente la{' '}
+              conexión para <strong>Jumio</strong>, <strong>Didit KYC</strong> y <strong>DocuSign</strong>. Si los switches de biometría
+              están apagados o las credenciales no están configuradas, el portal de clientes activará automáticamente la{' '}
               <strong>carga manual de documentos y foto selfie</strong> para las solicitudes de crédito asignadas a esta
               entidad.
             </div>
@@ -767,6 +767,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                 const form = integracionForms[cat.id_integracion] || {};
                 const isJumio = cat.codigo === 'JUMIO';
                 const isDocuSign = cat.codigo === 'DOCUSIGN';
+                const isDidit = cat.codigo === 'DIDIT';
                 const isActive = form.ind_activo ?? false;
                 const showSecret = showSecretMap[cat.id_integracion] || false;
                 const isSaving = savingIntegracionId === cat.id_integracion;
@@ -777,8 +778,12 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                     style={{
                       background: '#ffffff',
                       borderRadius: '16px',
-                      border: `1px solid ${isActive ? '#93c5fd' : '#e2e8f0'}`,
-                      boxShadow: isActive ? '0 4px 20px rgba(37, 99, 235, 0.08)' : '0 1px 3px rgba(0,0,0,0.04)',
+                      border: `1px solid ${isActive ? (isDidit ? '#c4b5fd' : '#93c5fd') : '#e2e8f0'}`,
+                      boxShadow: isActive
+                        ? isDidit
+                          ? '0 4px 20px rgba(124, 58, 237, 0.1)'
+                          : '0 4px 20px rgba(37, 99, 235, 0.08)'
+                        : '0 1px 3px rgba(0,0,0,0.04)',
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column'
@@ -805,6 +810,8 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                               ? 'linear-gradient(135deg, #0284c7, #0ea5e9)'
                               : isDocuSign
                               ? 'linear-gradient(135deg, #dc2626, #ef4444)'
+                              : isDidit
+                              ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
                               : 'linear-gradient(135deg, #4f46e5, #6366f1)',
                             display: 'flex',
                             alignItems: 'center',
@@ -812,7 +819,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                             color: '#ffffff'
                           }}
                         >
-                          {isJumio ? <ShieldCheck size={22} /> : isDocuSign ? <FileCheck2 size={22} /> : <Plug size={22} />}
+                          {isJumio ? <ShieldCheck size={22} /> : isDocuSign ? <FileCheck2 size={22} /> : isDidit ? <ShieldCheck size={22} /> : <Plug size={22} />}
                         </div>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -821,8 +828,8 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                             </h3>
                             <span
                               style={{
-                                background: '#f1f5f9',
-                                color: '#475569',
+                                background: isDidit ? '#f5f3ff' : '#f1f5f9',
+                                color: isDidit ? '#7c3aed' : '#475569',
                                 padding: '2px 6px',
                                 borderRadius: '4px',
                                 fontSize: '10px',
@@ -878,7 +885,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                       {/* Status summary */}
                       <div
                         style={{
-                          background: isActive ? '#eff6ff' : '#f8fafc',
+                          background: isActive ? (isDidit ? '#faf5ff' : '#eff6ff') : '#f8fafc',
                           borderRadius: '10px',
                           padding: '10px 14px',
                           display: 'flex',
@@ -893,13 +900,13 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                               width: '8px',
                               height: '8px',
                               borderRadius: '50%',
-                              background: isActive ? '#2563eb' : '#94a3b8'
+                              background: isActive ? (isDidit ? '#7c3aed' : '#2563eb') : '#94a3b8'
                             }}
                           />
                           <span style={{ fontWeight: 600, color: '#334155' }}>
                             {isActive
                               ? `Enrutamiento automático a ${cat.nombre}`
-                              : isJumio
+                              : isJumio || isDidit
                               ? 'Modo fallback: Carga manual de documentos'
                               : 'Servicio deshabilitado'}
                           </span>
@@ -964,14 +971,14 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                         </div>
                       </div>
 
-                      {/* Client ID / API Key */}
+                      {/* Client ID / Workflow ID */}
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
-                          {isJumio ? 'API Token / Client ID' : isDocuSign ? 'Integration Key (Client ID)' : 'Client ID'}
+                          {isJumio ? 'API Token / Client ID' : isDocuSign ? 'Integration Key (Client ID)' : isDidit ? 'Didit Workflow ID (UUID)' : 'Client ID'}
                         </label>
                         <input
                           type="text"
-                          placeholder={isJumio ? 'Ej: 9b1deb4d-3b7d-4bad-9bdd-...' : 'Ej: 7a68e8c8-...'}
+                          placeholder={isJumio ? 'Ej: 9b1deb4d-3b7d-4bad-9bdd-...' : isDocuSign ? 'Ej: 7a68e8c8-...' : isDidit ? 'Ej: e42a2607-2f9f-475e-a5b8-0cbfc0213b06' : 'Client ID'}
                           value={form.client_id || ''}
                           onChange={(e) =>
                             setIntegracionForms({
@@ -990,15 +997,67 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                         />
                       </div>
 
-                      {/* Client Secret */}
+                      {/* Didit Dedicated API Key */}
+                      {isDidit && (
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                            Didit API Key (x-api-key)
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type={showSecret ? 'text' : 'password'}
+                              placeholder="Ej: ddt_sec_..."
+                              value={form.api_key || ''}
+                              onChange={(e) =>
+                                setIntegracionForms({
+                                  ...integracionForms,
+                                  [cat.id_integracion]: { ...form, api_key: e.target.value }
+                                })
+                              }
+                              style={{
+                                width: '100%',
+                                padding: '8px 36px 8px 10px',
+                                borderRadius: '8px',
+                                border: '1px solid #cbd5e1',
+                                fontSize: '12px',
+                                fontFamily: 'monospace'
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowSecretMap({
+                                  ...showSecretMap,
+                                  [cat.id_integracion]: !showSecret
+                                })
+                              }
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                color: '#94a3b8',
+                                cursor: 'pointer',
+                                padding: '2px'
+                              }}
+                            >
+                              {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Client Secret / Webhook Secret */}
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
-                          {isJumio ? 'API Secret / Key' : isDocuSign ? 'Secret Key (HMAC / RSA)' : 'Client Secret'}
+                          {isJumio ? 'API Secret / Key' : isDocuSign ? 'Secret Key (HMAC / RSA)' : isDidit ? 'Webhook Secret (HMAC SHA-256)' : 'Client Secret'}
                         </label>
                         <div style={{ position: 'relative' }}>
                           <input
                             type={showSecret ? 'text' : 'password'}
-                            placeholder="••••••••••••••••••••••••••••••••"
+                            placeholder={isDidit ? 'Secreto de firma X-Signature-V2' : '••••••••••••••••••••••••••••••••'}
                             value={form.client_secret || ''}
                             onChange={(e) =>
                               setIntegracionForms({
@@ -1075,7 +1134,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                         </label>
                         <input
                           type="text"
-                          placeholder={cat.url_base || 'https://api.servicio.com'}
+                          placeholder={cat.url_base || (isDidit ? 'https://verification.didit.me/v3' : 'https://api.servicio.com')}
                           value={form.url_base || ''}
                           onChange={(e) =>
                             setIntegracionForms({
@@ -1100,7 +1159,7 @@ export const FinancierasIntegracionesView: React.FC<Props> = ({ token, notify })
                         </label>
                         <input
                           type="text"
-                          placeholder="https://ms-creditos-app-weld.vercel.app/api/v1/..."
+                          placeholder={isDidit ? 'https://ms-creditos-app-weld.vercel.app/api/v1/portal/didit/webhook' : 'https://ms-creditos-app-weld.vercel.app/api/v1/...'}
                           value={form.webhook_url || ''}
                           onChange={(e) =>
                             setIntegracionForms({
