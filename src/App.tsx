@@ -4774,6 +4774,84 @@ function App() {
     }
   };
 
+  const breadcrumbInfo = useMemo(() => {
+    if (view === 'dashboard') {
+      return { root: 'Dashboard', current: 'Panel gerencial' };
+    }
+    if (isProductosCreditoModule) {
+      if (selectedCreditoId !== null && selectedCredito) {
+        return { root: '‹ Créditos', current: `Detalle del crédito #${selectedCredito.consecutivo}` };
+      }
+      return { root: 'Créditos', current: 'Solicitudes de crédito' };
+    }
+    if (isEmpresasModule) {
+      const sub =
+        empresaTab === 'registro' ? 'Crear empresa' : empresaTab === 'directorio' ? 'Directorio de empresas' : 'Empleados';
+      return { root: 'Empresas', current: sub };
+    }
+    if (isAliadosModule) {
+      const sub = aliadosTab === 'registro' ? 'Crear aliado' : 'Directorio de aliados';
+      return { root: 'Aliados', current: sub };
+    }
+    if (isComercialesModule) {
+      const sub =
+        comercialesTab === 'libranzera'
+          ? 'Libranzeras'
+          : comercialesTab === 'vendedor'
+            ? 'Vendedores'
+            : 'Directorio comercial';
+      return { root: 'Comerciales', current: sub };
+    }
+    if (isSociosModule) {
+      const sub =
+        sociosTab === 'registro' ? 'Crear socio' : sociosTab === 'directorio' ? 'Directorio de socios' : 'Inversiones';
+      return { root: 'Socios', current: sub };
+    }
+    if (view === 'usuarios') {
+      return { root: 'Seguridad', current: 'Gestión de usuarios' };
+    }
+    if (view === 'configuracion') {
+      return { root: 'Seguridad', current: `Configuración (${configTab})` };
+    }
+    if (view === 'salarios') {
+      return { root: 'Configuración financiera', current: 'Tipos de salarios / IVA' };
+    }
+    if (view === 'fianzas') {
+      return { root: 'Configuración financiera', current: 'Tipos de fianzas' };
+    }
+    if (view === 'formatos') {
+      return { root: 'Configuración financiera', current: 'Formatos de créditos' };
+    }
+    if (view === 'tasas') {
+      return { root: 'Configuración financiera', current: 'Tasas de interés' };
+    }
+    if (view === 'plazos') {
+      return { root: 'Configuración financiera', current: 'Plazos de pago' };
+    }
+    if (view === 'bancos') {
+      return { root: 'Configuración financiera', current: 'Entidades bancarias' };
+    }
+    if (view === 'docusign') {
+      return { root: 'Formalización & Legal', current: 'Firmas electrónicas y pagarés' };
+    }
+    return { root: selectedModule?.nombre || 'Módulo', current: 'General' };
+  }, [
+    view,
+    isProductosCreditoModule,
+    selectedCreditoId,
+    selectedCredito,
+    isEmpresasModule,
+    empresaTab,
+    isAliadosModule,
+    aliadosTab,
+    isComercialesModule,
+    comercialesTab,
+    isSociosModule,
+    sociosTab,
+    configTab,
+    selectedModule
+  ]);
+
   if (isPortalRoute) {
     return (
       <div className="portal-screen">
@@ -5149,84 +5227,6 @@ function App() {
       </div>
     );
   }
-
-  const breadcrumbInfo = useMemo(() => {
-    if (view === 'dashboard') {
-      return { root: 'Dashboard', current: 'Panel gerencial' };
-    }
-    if (isProductosCreditoModule) {
-      if (selectedCreditoId !== null && selectedCredito) {
-        return { root: '‹ Créditos', current: `Detalle del crédito #${selectedCredito.consecutivo}` };
-      }
-      return { root: 'Créditos', current: 'Solicitudes de crédito' };
-    }
-    if (isEmpresasModule) {
-      const sub =
-        empresaTab === 'registro' ? 'Crear empresa' : empresaTab === 'directorio' ? 'Directorio de empresas' : 'Empleados';
-      return { root: 'Empresas', current: sub };
-    }
-    if (isAliadosModule) {
-      const sub = aliadosTab === 'registro' ? 'Crear aliado' : 'Directorio de aliados';
-      return { root: 'Aliados', current: sub };
-    }
-    if (isComercialesModule) {
-      const sub =
-        comercialesTab === 'libranzera'
-          ? 'Libranzeras'
-          : comercialesTab === 'vendedor'
-            ? 'Vendedores'
-            : 'Directorio comercial';
-      return { root: 'Comerciales', current: sub };
-    }
-    if (isSociosModule) {
-      const sub =
-        sociosTab === 'registro' ? 'Crear socio' : sociosTab === 'directorio' ? 'Directorio de socios' : 'Inversiones';
-      return { root: 'Socios', current: sub };
-    }
-    if (view === 'usuarios') {
-      return { root: 'Seguridad', current: 'Gestión de usuarios' };
-    }
-    if (view === 'configuracion') {
-      return { root: 'Seguridad', current: `Configuración (${configTab})` };
-    }
-    if (view === 'salarios') {
-      return { root: 'Configuración financiera', current: 'Tipos de salarios / IVA' };
-    }
-    if (view === 'fianzas') {
-      return { root: 'Configuración financiera', current: 'Tipos de fianzas' };
-    }
-    if (view === 'formatos') {
-      return { root: 'Configuración financiera', current: 'Formatos de créditos' };
-    }
-    if (view === 'tasas') {
-      return { root: 'Configuración financiera', current: 'Tasas de interés' };
-    }
-    if (view === 'plazos') {
-      return { root: 'Configuración financiera', current: 'Plazos de pago' };
-    }
-    if (view === 'bancos') {
-      return { root: 'Configuración financiera', current: 'Entidades bancarias' };
-    }
-    if (view === 'docusign') {
-      return { root: 'Formalización & Legal', current: 'Firmas electrónicas y pagarés' };
-    }
-    return { root: selectedModule?.nombre || 'Módulo', current: 'General' };
-  }, [
-    view,
-    isProductosCreditoModule,
-    selectedCreditoId,
-    selectedCredito,
-    isEmpresasModule,
-    empresaTab,
-    isAliadosModule,
-    aliadosTab,
-    isComercialesModule,
-    comercialesTab,
-    isSociosModule,
-    sociosTab,
-    configTab,
-    selectedModule
-  ]);
 
   return (
     <div className="app-layout">
