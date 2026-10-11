@@ -79,7 +79,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       </div>
 
       {/* 2. Navigation List */}
-      <nav className="module-nav">
+      <nav className="module-nav" aria-label="Navegación principal">
         {/* Dashboard */}
         <button
           type="button"
@@ -331,13 +331,15 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         <button
           type="button"
           className="sidebar-more-toggle"
+          aria-expanded={showMoreFinancial}
+          aria-controls="sidebar-financial-options"
           onClick={() => setShowMoreFinancial(!showMoreFinancial)}
         >
           <span>{showMoreFinancial ? '▴ Menos opciones' : '▾ Más opciones financieras'}</span>
         </button>
 
         {showMoreFinancial && (
-          <div className="sub-menu-group">
+          <div className="sub-menu-group" id="sidebar-financial-options">
             <button
               type="button"
               className={`module-link sub-link ${view === 'plazos' ? 'active' : ''}`}
