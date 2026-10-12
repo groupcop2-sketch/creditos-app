@@ -20,6 +20,8 @@ import { TiposSalariosView } from './components/configuracion-financiera/TiposSa
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
 import { DocuSignStateMachine } from './components/docusign/DocuSignStateMachine';
 import { SendDocumentsDrawer } from './components/creditos/SendDocumentsDrawer';
+import { AttributeCatalogView } from './components/creditos/AttributeCatalogView';
+import { CatalogFormDrawer, CatalogSectionHeader } from './components/creditos/CatalogFormDrawer';
 import { EditProductAttributeDrawer } from './components/creditos/EditProductAttributeDrawer';
 import { AttributeCatalogSelect } from './components/creditos/AttributeCatalogSelect';
 import { ProductConditionsView } from './components/creditos/ProductConditionsView';
@@ -1298,6 +1300,7 @@ function App() {
   const [tblAtributosList, setTblAtributosList] = useState<TblAtributoItem[]>(INITIAL_TBL_ATRIBUTOS);
   const [customFormulas, setCustomFormulas] = useState<string[]>(INITIAL_FORMULAS_CATALOG);
   const [tblAtributoForm, setTblAtributoForm] = useState<TblAtributoFormState>(initialTblAtributoForm);
+  const [catalogDrawer, setCatalogDrawer] = useState<'attribute' | 'formula' | null>(null);
   const [editingTblAtributoId, setEditingTblAtributoId] = useState<number | null>(null);
   const [productoCreditoForm, setProductoCreditoForm] = useState<ProductoCreditoFormState>(initialProductoCreditoForm);
   const [productoAtributoForm, setProductoAtributoForm] = useState<ProductoAtributoFormState>(initialProductoAtributoForm);
@@ -1306,8 +1309,6 @@ function App() {
   const [formulaCalculoForm, setFormulaCalculoForm] = useState<FormulaCalculoFormState>(initialFormulaCalculoForm);
   const [editingFormulaCalculoId, setEditingFormulaCalculoId] = useState<number | null>(null);
   const [subTabAtributos, setSubTabAtributos] = useState<'atributos' | 'formulas'>('atributos');
-  const [formulaSearchQuery, setFormulaSearchQuery] = useState<string>('');
-  const [atributoSearchQuery, setAtributoSearchQuery] = useState<string>('');
   const [productoDocumentoForm, setProductoDocumentoForm] = useState<ProductoDocumentoFormState>(initialProductoDocumentoForm);
   const [selectedProductoDocumentoId, setSelectedProductoDocumentoId] = useState<number | null>(null);
   const [productoEtapaForm, setProductoEtapaForm] = useState<ProductoEtapaFormState>(initialProductoEtapaForm);
@@ -3403,9 +3404,12 @@ function App() {
     }
 
     setTblAtributoForm(initialTblAtributoForm);
+    setCatalogDrawer(null);
   };
 
   const handleEditTblAtributo = (item: TblAtributoItem) => {
+    setMessage('');
+    setCatalogDrawer('attribute');
     setEditingTblAtributoId(item.id);
     let autoOp = 'Porcentaje';
     if (item.tipoFormula.includes('%') || item.porcentajeDefault > 0) {
@@ -3436,6 +3440,8 @@ function App() {
   };
 
   const handleCancelTblAtributoEdit = () => {
+    setCatalogDrawer(null);
+    setMessage('');
     setEditingTblAtributoId(null);
     setTblAtributoForm(initialTblAtributoForm);
   };
@@ -3782,6 +3788,7 @@ function App() {
       setMessage(editingFormulaCalculoId ? `Fórmula "${nombreFormula}" actualizada correctamente.` : `Fórmula "${nombreFormula}" registrada correctamente.`);
       setFormulaCalculoForm(initialFormulaCalculoForm);
       setEditingFormulaCalculoId(null);
+      setCatalogDrawer(null);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo guardar la fórmula');
     } finally {
@@ -3790,6 +3797,8 @@ function App() {
   };
 
   const handleEditFormulaCalculo = (formula: FormulaCalculoRow) => {
+    setMessage('');
+    setCatalogDrawer('formula');
     setEditingFormulaCalculoId(formula.id);
     setFormulaCalculoForm({
       nombre: formula.nombre,
@@ -3807,6 +3816,8 @@ function App() {
   };
 
   const handleCancelFormulaCalculoEdit = () => {
+    setCatalogDrawer(null);
+    setMessage('');
     setEditingFormulaCalculoId(null);
     setFormulaCalculoForm(initialFormulaCalculoForm);
   };
@@ -7726,96 +7737,29 @@ function App() {
             )}
 
             {productosCreditoTab === 'tblAtributos' && (
-              <section className="content-grid credit-product-grid" style={{ gridTemplateColumns: '1fr', gap: '20px' }}>
-                {/* Header Summary Card */}
-                <div className="surface" style={{ padding: '20px', background: 'linear-gradient(135deg, #0f4c3a 0%, #1e6b52 100%)', color: '#ffffff', borderRadius: '12px', boxShadow: '0 4px 15px rgba(15, 76, 58, 0.15)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                    <div>
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: '#a7f3d0' }}>MÓDULO OPERATIVO · CONFIGURACIÓN MAESTRA</span>
-                      <h2 style={{ margin: '4px 0 0 0', color: '#ffffff', fontSize: '1.5rem', fontWeight: 800 }}>Catálogo de Atributos & Reglas de Cálculo</h2>
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                      <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', padding: '10px 16px', borderRadius: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
-                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#d1fae5', textTransform: 'uppercase' }}>Atributos Maestros</span>
-                        <strong style={{ fontSize: '1.3rem', color: '#ffffff' }}>{tblAtributosList.length}</strong>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', padding: '10px 16px', borderRadius: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
-                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#d1fae5', textTransform: 'uppercase' }}>Tipos de Fórmulas</span>
-                        <strong style={{ fontSize: '1.3rem', color: '#ffffff' }}>{(productosCreditoCatalogs.tiposCalculo || []).length}</strong>
-                      </div>
-                      <div style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', padding: '10px 16px', borderRadius: '10px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.2)' }}>
-                        <span style={{ display: 'block', fontSize: '0.75rem', color: '#d1fae5', textTransform: 'uppercase' }}>Fórmulas Activas</span>
-                        <strong style={{ fontSize: '1.3rem', color: '#ffffff' }}>{(productosCreditoCatalogs.tiposCalculo || []).filter((f) => f.activo !== false).length}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sub-tabs Navigation */}
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '16px' }}>
-                    <button
-                      type="button"
-                      style={{
-                        padding: '10px 20px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontWeight: 700,
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        background: subTabAtributos === 'atributos' ? '#ffffff' : 'rgba(255,255,255,0.15)',
-                        color: subTabAtributos === 'atributos' ? '#0f4c3a' : '#ffffff',
-                        boxShadow: subTabAtributos === 'atributos' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
-                      }}
-                      onClick={() => setSubTabAtributos('atributos')}
-                    >
-                      📋 Atributos Maestros (tbl_atributos)
-                    </button>
-                    <button
-                      type="button"
-                      style={{
-                        padding: '10px 20px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        fontWeight: 700,
-                        fontSize: '0.9rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        background: subTabAtributos === 'formulas' ? '#ffffff' : 'rgba(255,255,255,0.15)',
-                        color: subTabAtributos === 'formulas' ? '#0f4c3a' : '#ffffff',
-                        boxShadow: subTabAtributos === 'formulas' ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
-                      }}
-                      onClick={() => setSubTabAtributos('formulas')}
-                    >
-                      🧮 Tipos de Fórmulas de Cálculo (tbl_tipo_calculo)
-                    </button>
-                  </div>
-                </div>
-
-                {/* SubTab 1: Atributos Maestros */}
-                {subTabAtributos === 'atributos' && (
-                  <>
-                    <form className="surface pagaduria-form" onSubmit={handleSaveTblAtributo} style={{ padding: '24px', borderRadius: '12px' }}>
-                      <div className="surface-title" style={{ marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-                        <div>
-                          <span className="section-kicker">CATÁLOGO MAESTRO DE CONCEPTOS</span>
-                          <h2>{editingTblAtributoId ? `Editando Atributo Maestro #${editingTblAtributoId}` : 'Registrar Nuevo Atributo Maestro'}</h2>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {editingTblAtributoId && (
-                            <button type="button" className="ghost-button" onClick={handleCancelTblAtributoEdit}>Cancelar</button>
-                          )}
-                          <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontWeight: 700 }}>
-                            {editingTblAtributoId ? 'Guardar Cambios' : 'Registrar Atributo'}
-                          </button>
-                        </div>
-                      </div>
-
+              <AttributeCatalogView
+                key={subTabAtributos}
+                tab={subTabAtributos}
+                attributes={tblAtributosList}
+                formulas={productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST}
+                busy={loading}
+                onTabChange={setSubTabAtributos}
+                onCreateAttribute={() => { handleCancelTblAtributoEdit(); setCatalogDrawer('attribute'); }}
+                onCreateFormula={() => { handleCancelFormulaCalculoEdit(); setCatalogDrawer('formula'); }}
+                onEditAttribute={handleEditTblAtributo}
+                onToggleAttribute={handleToggleTblAtributoEstado}
+                onDeleteAttribute={handleDeleteTblAtributo}
+                onEditFormula={handleEditFormulaCalculo}
+                onToggleFormula={handleToggleFormulaEstado}
+                onDeleteFormula={handleDeleteFormulaCalculo}
+              >
+                    {catalogDrawer === 'attribute' && <CatalogFormDrawer kind="attribute" editing={editingTblAtributoId !== null} busy={loading} message={message} messageTone={messageTone} onDismissMessage={() => setMessage('')} onClose={() => { if (!loading) handleCancelTblAtributoEdit(); }} onSubmit={handleSaveTblAtributo}>
                       <div className="form-section">
-                        <h3 style={{ fontSize: '0.95rem', color: '#0f4c3a', fontWeight: 700, marginBottom: '12px' }}>Información del Concepto</h3>
-                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+                        <CatalogSectionHeader title="Información del concepto" description="Datos generales del atributo maestro." />
+                        <div className="field-grid" >
                           <label className="product-field" style={{ gridColumn: 'span 2' }}>
                             <span>Nombre del Atributo *</span>
-                            <input value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA DE CREDITOS COOPHUMANA" />
+                            <input required value={tblAtributoForm.nombre} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, nombre: e.target.value.toUpperCase() }))} placeholder="EJ. FIANZA DE CREDITOS COOPHUMANA" />
                           </label>
                           <label className="product-field">
                             <span>Prioridad *</span>
@@ -7830,7 +7774,8 @@ function App() {
                           </label>
                         </div>
 
-                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                        <CatalogSectionHeader title="Configuración de cálculo" description="Define cómo se calcula el valor del atributo." kind="calculation" />
+                        <div className="field-grid catalog-three-cols">
                           <label className="product-field">
                             <span>Aplica a (Base) *</span>
                             <select value={tblAtributoForm.aplicaA} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, aplicaA: e.target.value }))}>
@@ -7911,9 +7856,12 @@ function App() {
                               </label>
                             </>
                           )}
+                          <label className="product-field"><span>Valor mínimo</span><input type="number" step="any" value={tblAtributoForm.minimoDefault} onChange={(event) => setTblAtributoForm((current) => ({ ...current, minimoDefault: event.target.value }))} /></label>
+                          <label className="product-field"><span>Valor máximo</span><input type="number" step="any" value={tblAtributoForm.maximoDefault} onChange={(event) => setTblAtributoForm((current) => ({ ...current, maximoDefault: event.target.value }))} /></label>
                         </div>
 
-                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                        <CatalogSectionHeader title="Información adicional" description="Proveedor, descripción y configuración del atributo." kind="additional" />
+                        <div className="field-grid">
                           <label className="product-field">
                             <span>Proveedor / Beneficiario</span>
                             <input value={tblAtributoForm.proveedorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, proveedorDefault: e.target.value }))} placeholder="Ej. 900528910 COOPHUMANA" />
@@ -7932,128 +7880,15 @@ function App() {
                           </div>
                         </div>
                       </div>
-                    </form>
-
-                    {/* Tabla de Atributos Maestros */}
-                    <section className="surface employees-panel" style={{ padding: '24px', borderRadius: '12px' }}>
-                      <div className="surface-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
-                        <div>
-                          <span className="section-kicker">Catálogo Configurado</span>
-                          <h2>Atributos Maestros Registrados (tbl_atributos)</h2>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <input
-                            type="text"
-                            value={atributoSearchQuery}
-                            onChange={(e) => setAtributoSearchQuery(e.target.value)}
-                            placeholder="🔍 Buscar por nombre, fórmula o proveedor..."
-                            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '280px', fontSize: '0.85rem' }}
-                          />
-                          <span style={{ background: '#e2e8f0', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
-                            {tblAtributosList.length} registros
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="table-wrap" style={{ overflowX: 'auto' }}>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th style={{ width: '60px' }}>ID</th>
-                              <th>Nombre y Descripción</th>
-                              <th>Aplica A</th>
-                              <th>Fórmula de Cálculo</th>
-                              <th>Valor / Porcentaje</th>
-                              <th>Proveedor</th>
-                              <th>IVA</th>
-                              <th>Obligatorio</th>
-                              <th>Estado</th>
-                              <th style={{ textAlign: 'center' }}>Acciones</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {tblAtributosList
-                              .filter((item) => {
-                                if (!atributoSearchQuery.trim()) return true;
-                                const q = atributoSearchQuery.toLowerCase();
-                                return item.nombre.toLowerCase().includes(q) || item.tipoFormula.toLowerCase().includes(q) || (item.proveedorDefault || '').toLowerCase().includes(q);
-                              })
-                              .map((item) => (
-                                <tr key={item.id}>
-                                  <td><strong>#{item.id}</strong></td>
-                                  <td>
-                                    <strong style={{ color: '#0f4c3a', display: 'block' }}>{item.nombre}</strong>
-                                    {item.descripcion && <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{item.descripcion}</span>}
-                                  </td>
-                                  <td>
-                                    <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: item.aplicaA === 'CREDITO' ? '#dbeafe' : item.aplicaA === 'CUOTA' ? '#fef3c7' : '#e0e7ff', color: item.aplicaA === 'CREDITO' ? '#1e40af' : item.aplicaA === 'CUOTA' ? '#92400e' : '#3730a3' }}>
-                                      {item.aplicaA}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <strong style={{ fontSize: '0.85rem', color: '#334155' }}>{item.tipoFormula}</strong>
-                                  </td>
-                                  <td>
-                                    {item.porcentajeDefault > 0 ? (
-                                      <span style={{ fontWeight: 700, color: '#059669' }}>{item.porcentajeDefault}%</span>
-                                    ) : item.valorDefault > 0 ? (
-                                      <span style={{ fontWeight: 700, color: '#2563eb' }}>{formatMoney(item.valorDefault)}</span>
-                                    ) : (
-                                      <span style={{ color: '#94a3b8' }}>$0</span>
-                                    )}
-                                  </td>
-                                  <td><small style={{ fontWeight: 600, color: '#475569' }}>{item.proveedorDefault || '-'}</small></td>
-                                  <td>{item.aplicaIvaDefault ? <span style={{ color: '#059669', fontWeight: 700 }}>Sí (19%)</span> : <span style={{ color: '#64748b' }}>No</span>}</td>
-                                  <td>{item.obligatorioDefault ? <span style={{ color: '#dc2626', fontWeight: 700 }}>Sí</span> : <span style={{ color: '#64748b' }}>No</span>}</td>
-                                  <td>
-                                    <span className={item.activo ? 'status-badge active' : 'status-badge inactive'}>
-                                      {item.activo ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className="row-actions compact-actions" style={{ justifyContent: 'center' }}>
-                                      <button type="button" onClick={() => handleEditTblAtributo(item)}>Editar</button>
-                                      <button type="button" onClick={() => handleToggleTblAtributoEstado(item.id)}>{item.activo ? 'Inactivar' : 'Activar'}</button>
-                                      <button type="button" className="danger" onClick={() => handleDeleteTblAtributo(item.id)}>Eliminar</button>
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </>
-                )}
-
-                {/* SubTab 2: Tipos de Fórmulas */}
-                {subTabAtributos === 'formulas' && (
-                  <>
-                    <form className="surface pagaduria-form" onSubmit={handleSaveFormulaCalculo} style={{ padding: '24px', borderRadius: '12px' }}>
-                      <div className="surface-title" style={{ marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-                        <div>
-                          <span className="section-kicker">CONSTRUCTOR DE REGLAS DE CÁLCULO</span>
-                          <h2>{editingFormulaCalculoId ? `Editando Fórmula #${editingFormulaCalculoId}: ${formulaCalculoForm.nombre}` : 'Crear Nueva Fórmula de Cálculo'}</h2>
-                          <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>Define y parametriza los tipos de fórmulas utilizados en la liquidación de créditos y atributos.</p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {editingFormulaCalculoId && (
-                            <button type="button" className="ghost-button" onClick={handleCancelFormulaCalculoEdit}>
-                              Cancelar Edición
-                            </button>
-                          )}
-                          <button type="submit" disabled={loading} style={{ padding: '10px 20px', fontWeight: 700 }}>
-                            {editingFormulaCalculoId ? 'Actualizar Fórmula' : 'Crear Fórmula'}
-                          </button>
-                        </div>
-                      </div>
-
+                    </CatalogFormDrawer>}
+                    {catalogDrawer === 'formula' && <CatalogFormDrawer kind="formula" editing={editingFormulaCalculoId !== null} busy={loading} message={message} messageTone={messageTone} onDismissMessage={() => setMessage('')} onClose={() => { if (!loading) handleCancelFormulaCalculoEdit(); }} onSubmit={handleSaveFormulaCalculo}>
                       <div className="form-section">
-                        <div className="field-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                          <label className="product-field" style={{ gridColumn: 'span 2' }}>
+                        <CatalogSectionHeader title="Información de la fórmula" description="Datos generales que identifican la fórmula." />
+                        <div className="field-grid" >
+                          <label className="product-field">
                             <span>Nombre de la Fórmula *</span>
                             <input
-                              value={formulaCalculoForm.nombre}
+                              required value={formulaCalculoForm.nombre}
                               onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, nombre: event.target.value }))}
                               placeholder="Ej. CUOTA * % O VALOR CRÉDITO * % * DÍAS"
                             />
@@ -8097,148 +7932,38 @@ function App() {
                         </div>
 
                         <div style={{ marginTop: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '10px' }}>
-                            Condiciones y Parámetros Requeridos:
-                          </span>
-                          <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <CatalogSectionHeader title="Condiciones y parámetros" description="Define los parámetros adicionales que aplican a la fórmula." kind="calculation" />
+                          <div className="catalog-formula-options">
                             <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
                                 checked={formulaCalculoForm.aplicaMinimo}
                                 onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMinimo: event.target.checked }))}
-                              />
-                              Aplica Mínimo Garantizado
-                            </label>
+                              /><span><strong>Aplica mínimo garantizado</strong><small>Define si la fórmula utiliza un valor mínimo.</small></span></label>
                             <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
                                 checked={formulaCalculoForm.aplicaMaximo}
                                 onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, aplicaMaximo: event.target.checked }))}
-                              />
-                              Aplica Tope Máximo
-                            </label>
+                              /><span><strong>Aplica tope máximo</strong><small>Define si la fórmula utiliza un límite máximo.</small></span></label>
                             <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
                                 checked={formulaCalculoForm.requierePorcentaje}
                                 onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, requierePorcentaje: event.target.checked }))}
-                              />
-                              Requiere Porcentaje (%)
-                            </label>
+                              /><span><strong>Requiere porcentaje (%)</strong><small>Indica si la fórmula utiliza un valor porcentual.</small></span></label>
                             <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
                                 checked={formulaCalculoForm.requiereValor}
                                 onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, requiereValor: event.target.checked }))}
-                              />
-                              Requiere Valor Fijo / Multiplicador
-                            </label>
+                              /><span><strong>Requiere valor fijo / multiplicador</strong><small>Indica si la fórmula utiliza un valor fijo o multiplicador.</small></span></label>
                           </div>
                         </div>
                       </div>
-                    </form>
-
-                    {/* Tabla de Tipos de Fórmulas */}
-                    <section className="surface employees-panel" style={{ padding: '24px', borderRadius: '12px' }}>
-                      <div className="surface-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
-                        <div>
-                          <span className="section-kicker">Catálogo de Algoritmos</span>
-                          <h2>Tabla de Tipos de Fórmulas de Cálculo</h2>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <input
-                            type="text"
-                            value={formulaSearchQuery}
-                            onChange={(e) => setFormulaSearchQuery(e.target.value)}
-                            placeholder="🔍 Buscar fórmula o código..."
-                            style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '280px', fontSize: '0.85rem' }}
-                          />
-                          <span style={{ background: '#e2e8f0', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
-                            {(productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST).length} fórmulas
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="table-wrap" style={{ overflowX: 'auto' }}>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th style={{ width: '50px' }}>ID</th>
-                              <th>Código</th>
-                              <th>Nombre de la Fórmula</th>
-                              <th>Base de Cálculo</th>
-                              <th>Operación</th>
-                              <th>Reglas / Parámetros</th>
-                              <th>Estado</th>
-                              <th style={{ textAlign: 'center' }}>Acciones</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST)
-                              .filter((item) => {
-                                if (!formulaSearchQuery.trim()) return true;
-                                const q = formulaSearchQuery.toLowerCase();
-                                return item.nombre.toLowerCase().includes(q) || (item.codigo || '').toLowerCase().includes(q) || (item.baseCalculo || '').toLowerCase().includes(q);
-                              })
-                              .map((item) => (
-                                <tr key={item.id}>
-                                  <td><strong>#{item.id}</strong></td>
-                                  <td>
-                                    <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontSize: '0.78rem', color: '#475569', fontWeight: 700 }}>
-                                      {item.codigo || `FORM_${item.id}`}
-                                    </code>
-                                  </td>
-                                  <td>
-                                    <strong style={{ color: '#0f4c3a', fontSize: '0.9rem' }}>{item.nombre}</strong>
-                                  </td>
-                                  <td>
-                                    <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 700, background: item.baseCalculo === 'VALOR_CREDITO' ? '#dbeafe' : item.baseCalculo === 'DESEMBOLSO' ? '#dcfce7' : item.baseCalculo === 'CUOTA' ? '#fef3c7' : '#f3e8ff', color: item.baseCalculo === 'VALOR_CREDITO' ? '#1e40af' : item.baseCalculo === 'DESEMBOLSO' ? '#166534' : item.baseCalculo === 'CUOTA' ? '#92400e' : '#6b21a8' }}>
-                                      {item.baseCalculo || 'VALOR_CREDITO'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#334155' }}>
-                                      {item.operacion || 'PORCENTAJE'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                                      {item.aplicaMinimo && <span style={{ background: '#e0f2fe', color: '#0369a1', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Mínimo</span>}
-                                      {item.aplicaMaximo && <span style={{ background: '#fef2f2', color: '#b91c1c', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Máximo</span>}
-                                      {item.requierePorcentaje && <span style={{ background: '#ecfdf5', color: '#047857', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Porcentaje %</span>}
-                                      {item.requiereValor && <span style={{ background: '#fff7ed', color: '#c2410c', fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Valor Fijo</span>}
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <span className={item.activo !== false ? 'status-badge active' : 'status-badge inactive'}>
-                                      {item.activo !== false ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <span className="row-actions compact-actions" style={{ justifyContent: 'center' }}>
-                                      <button type="button" onClick={() => handleEditFormulaCalculo(item)}>
-                                        Editar
-                                      </button>
-                                      <button type="button" onClick={() => handleToggleFormulaEstado(item)}>
-                                        {item.activo !== false ? 'Inactivar' : 'Activar'}
-                                      </button>
-                                      <button type="button" className="danger" onClick={() => handleDeleteFormulaCalculo(item.id)}>
-                                        Eliminar
-                                      </button>
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  </>
-                )}
-              </section>
+                    </CatalogFormDrawer>}
+              </AttributeCatalogView>
             )}
-
-
 
             {productosCreditoTab === 'convenios' && (
               <section className="surface employees-panel">
