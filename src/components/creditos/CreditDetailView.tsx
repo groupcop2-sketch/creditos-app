@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
 import type {
   CreditoRow,
   CreditoExpediente,
@@ -8,11 +8,11 @@ import type {
   FirmaCreditoRow,
   DocumentTemplateRow,
   FondeoDisponibleRow,
-  EmployeeCatalogs,
-  SecurityUser
+  EmployeeCatalogs
 } from '../../api';
+import { CreditHistoryDrawer } from './CreditHistoryDrawer';
 import { DocuSignStateMachine } from '../docusign/DocuSignStateMachine';
-import { AppTopBar } from '../layout/AppTopBar';
+import { Banknote, Building2, CalendarDays, Check, ChevronDown, ChevronRight, Download, MoreVertical, RefreshCw, ClipboardList, Clock3, FileText, History, Info, LockKeyhole, Mail, MessageSquare, Package, Percent, Phone, Search, ShieldCheck, UserRound, Users, Wallet } from 'lucide-react';
 
 export interface CreditDetailViewProps {
   credito: CreditoRow;
@@ -36,8 +36,6 @@ export interface CreditDetailViewProps {
   loading: boolean;
   formatMoney: (val?: number | null) => string;
   formatDateTime: (val?: string | null) => string;
-  onBack: () => void;
-  currentUser?: SecurityUser | null;
 
   // Extra stage handler props
   creditoDecisionForm?: {
@@ -114,8 +112,6 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
   loading,
   formatMoney,
   formatDateTime,
-  onBack,
-  currentUser,
   creditoDecisionForm,
   onChangeDecisionForm,
   onDecideCredito,
@@ -134,11 +130,18 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'documentos' | 'observaciones' | 'historial' | 'docusign'>('documentos');
   const [infoAccordionOpen, setInfoAccordionOpen] = useState(true);
+  const [summaryAccordionOpen, setSummaryAccordionOpen] = useState(true);
   const [liquidacionAccordionOpen, setLiquidacionAccordionOpen] = useState(true);
   const [docSearch, setDocSearch] = useState('');
   const [openDocMenuId, setOpenDocMenuId] = useState<number | null>(null);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [showHistorialModal, setShowHistorialModal] = useState(false);
+  const actionsId = useId();
+  const actionsTrigger = useRef<HTMLButtonElement>(null);
+  const actionsMenu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (quickActionsOpen) actionsMenu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+  }, [quickActionsOpen]);
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
 
   // Active Stage
@@ -218,18 +221,6 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
 
   return (
     <div className="credit-detail-page">
-      {/* 1. TOP BAR: Breadcrumb, Search, Notifications, User */}
-      <AppTopBar
-        breadcrumbRoot="Créditos"
-        breadcrumbCurrent="Detalle del crédito"
-        onRootClick={onBack}
-        currentUser={currentUser}
-        searchQuery={docSearch}
-        onSearchChange={setDocSearch}
-        searchPlaceholder="Buscar créditos, clientes..."
-        onNotificationClick={() => alert('No hay nuevas alertas pendientes en este crédito.')}
-      />
-
       {/* 2. HERO HEADER: Consecutivo, Estado, Fecha, Historial y Acciones */}
       <section className="credit-hero-header">
         <div className="credit-hero-title-group">
@@ -240,176 +231,34 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
             </span>
           </div>
           <p className="credit-hero-subtitle">
-            Solicitado el {credito.fechaRadicacion ? credito.fechaRadicacion.slice(0, 10) : '25/09/2026'} · Por:{' '}
+            Solicitado el {credito.fechaRadicacion ? formatDateTime(credito.fechaRadicacion) : '—'} · Por{' '}
             <strong>{credito.nombreCliente}</strong>
           </p>
         </div>
 
         <div className="credit-hero-actions">
-          <button
-            type="button"
-            className="credit-action-btn-secondary"
-            onClick={() => setShowHistorialModal(true)}
-            title="Ver trazabilidad de auditoría"
-          >
-            <span>↺</span> Historial
-          </button>
-
-          <div style={{ position: 'relative' }}>
-            <button
-              type="button"
-              className="credit-action-btn-secondary"
-              onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-            >
-              <span>⋮</span> Acciones <span>⌵</span>
-            </button>
-
-            {quickActionsOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  right: 0,
-                  top: '110%',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '10px',
-                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.12)',
-                  zIndex: 40,
-                  minWidth: '220px',
-                  overflow: 'hidden',
-                  padding: '6px 0'
-                }}
-              >
-                <button
-                  type="button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '8px 16px',
-                    border: 'none',
-                    background: 'none',
-                    fontSize: '0.82rem',
-                    color: '#1e293b',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                  onClick={() => {
-                    setQuickActionsOpen(false);
-                    onOpenSendDocumentsModal();
-                  }}
-                >
-                  ✉️ Enviar documentos al correo
-                </button>
-                {envelope?.estado === 'COMPLETED' && onDownloadSignedPdf && (
-                  <button
-                    type="button"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      width: '100%',
-                      padding: '8px 16px',
-                      border: 'none',
-                      background: 'none',
-                      fontSize: '0.82rem',
-                      color: '#059669',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                    onClick={() => {
-                      setQuickActionsOpen(false);
-                      void onDownloadSignedPdf(envelope.envelopeId);
-                    }}
-                  >
-                    📄 Descargar PDF firmado
-                  </button>
-                )}
-                <button
-                  type="button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '8px 16px',
-                    border: 'none',
-                    background: 'none',
-                    fontSize: '0.82rem',
-                    color: '#1e293b',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                  onClick={() => {
-                    setQuickActionsOpen(false);
-                    setActiveTab('docusign');
-                  }}
-                >
-                  🔄 Trazabilidad DocuSign
-                </button>
-              </div>
-            )}
+          <div className="credit-current-stage"><small>Etapa seleccionada</small><strong><Clock3 size={12} />{activeEtapa?.etapa || 'Sin etapa disponible'}</strong></div>
+          <div className="credit-actions-dropdown" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setQuickActionsOpen(false); }} onKeyDown={(event) => {
+            if (event.key === 'Escape') { event.preventDefault(); setQuickActionsOpen(false); actionsTrigger.current?.focus(); }
+            if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) && quickActionsOpen) {
+              event.preventDefault();
+              const items = Array.from(actionsMenu.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []);
+              const current = items.indexOf(document.activeElement as HTMLButtonElement);
+              const index = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : (current + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+              items[index]?.focus();
+            }
+          }}>
+            <button ref={actionsTrigger} type="button" className={`credit-action-btn-secondary credit-actions-trigger ${quickActionsOpen ? 'is-open' : ''}`} aria-haspopup="menu" aria-expanded={quickActionsOpen} aria-controls={actionsId} onClick={() => setQuickActionsOpen(!quickActionsOpen)}><MoreVertical size={16} />Acciones<ChevronDown size={15} /></button>
+            {quickActionsOpen && <div className="credit-actions-menu" id={actionsId} role="menu" aria-label="Acciones del crédito" ref={actionsMenu}>
+              <span className="credit-actions-menu-title">ACCIONES</span>
+              <button type="button" role="menuitem" className="credit-actions-option featured" disabled={loading} onClick={() => { setQuickActionsOpen(false); onOpenSendDocumentsModal(); }}><span className="credit-actions-icon"><Mail size={22} /></span><span><strong>Enviar documentos al correo</strong><small>Se enviará un enlace seguro al cliente</small></span><ChevronRight size={17} /></button>
+              <button type="button" role="menuitem" className="credit-actions-option" disabled={!envelope} onClick={() => { setQuickActionsOpen(false); setActiveTab('docusign'); }}><span className="credit-actions-icon"><RefreshCw size={21} /></span><span><strong>Trazabilidad DocuSign</strong><small>{envelope ? 'Consulta el estado de firma' : 'Disponible después del primer envío'}</small></span><ChevronRight size={17} /></button>
+              {envelope?.estado === 'COMPLETED' && onDownloadSignedPdf && <button type="button" role="menuitem" className="credit-actions-option" disabled={loading} onClick={() => { setQuickActionsOpen(false); void onDownloadSignedPdf(envelope.envelopeId); }}><span className="credit-actions-icon"><Download size={21} /></span><span><strong>Descargar PDF firmado</strong><small>Obtén los documentos completados</small></span><ChevronRight size={17} /></button>}
+              <div className="credit-actions-separator" />
+              <button type="button" role="menuitem" className="credit-actions-option" onClick={() => { setQuickActionsOpen(false); setShowHistorialModal(true); }}><span className="credit-actions-icon"><History size={22} /></span><span><strong>Ver historial de acciones</strong><small>Registro de actividades</small></span><ChevronRight size={17} /></button>
+            </div>}
           </div>
         </div>
-      </section>
-
-      {/* 3. 5 QUICK METRIC SUMMARY CARDS ROW */}
-      <section className="credit-kpi-row">
-        {/* Card 1: Cliente */}
-        <article className="credit-kpi-card">
-          <div className="credit-kpi-icon blue">👤</div>
-          <div className="credit-kpi-info">
-            <span className="credit-kpi-label">Cliente</span>
-            <strong className="credit-kpi-value" title={credito.nombreCliente}>{credito.nombreCliente}</strong>
-            <span className="credit-kpi-sub">CC {credito.identificacionCliente}</span>
-          </div>
-        </article>
-
-        {/* Card 2: Monto Solicitado */}
-        <article className="credit-kpi-card">
-          <div className="credit-kpi-icon green">$</div>
-          <div className="credit-kpi-info">
-            <span className="credit-kpi-label">Monto solicitado</span>
-            <strong className="credit-kpi-value">{formatMoney(credito.montoSolicitado)}</strong>
-            <span className="credit-kpi-sub">Neto: {formatMoney(expediente?.perfilCliente?.portal?.neto || credito.montoSolicitado)}</span>
-          </div>
-        </article>
-
-        {/* Card 3: Correo */}
-        <article className="credit-kpi-card">
-          <div className="credit-kpi-icon blue">📄</div>
-          <div className="credit-kpi-info">
-            <span className="credit-kpi-label">Correo</span>
-            <strong className="credit-kpi-value" title={expediente?.perfilCliente?.portal?.correo || credito.correoCliente || '-'}>
-              {expediente?.perfilCliente?.portal?.correo || credito.correoCliente || '-'}
-            </strong>
-            <span className="credit-kpi-sub">Tel: {expediente?.perfilCliente?.portal?.telefono || credito.telefonoCliente || '-'}</span>
-          </div>
-        </article>
-
-        {/* Card 4: Empresa */}
-        <article className="credit-kpi-card">
-          <div className="credit-kpi-icon blue">🏢</div>
-          <div className="credit-kpi-info">
-            <span className="credit-kpi-label">Empresa</span>
-            <strong className="credit-kpi-value" title={expediente?.perfilCliente?.empresa?.razonSocial || credito.empresa || '-'}>
-              {expediente?.perfilCliente?.empresa?.razonSocial || credito.empresa || 'Kaltire Colombia'}
-            </strong>
-            <span className="credit-kpi-sub">NIT {expediente?.perfilCliente?.empresa?.nit || '900.123.456-7'}</span>
-          </div>
-        </article>
-
-        {/* Card 5: Personas a cargo */}
-        <article className="credit-kpi-card">
-          <div className="credit-kpi-icon purple">👥</div>
-          <div className="credit-kpi-info">
-            <span className="credit-kpi-label">Personas a cargo</span>
-            <strong className="credit-kpi-value">{expediente?.perfilCliente?.empleado?.personasCargo ?? '0'}</strong>
-            <span className="credit-kpi-sub">Vivienda: {expediente?.perfilCliente?.empleado?.tipoVivienda || '-'}</span>
-          </div>
-        </article>
       </section>
 
       {/* 4. HORIZONTAL CONNECTED STEPPER (PIPELINE) */}
@@ -433,7 +282,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   title={`Ver etapa: ${etapa.etapa}`}
                 >
                   <div className="stepper-circle">
-                    {isCompleted ? '✓' : etapa.orden || idx + 1}
+                    {isCompleted ? <Check size={15} /> : etapa.orden || idx + 1}
                   </div>
                   <div className="stepper-labels">
                     <span className="stepper-title">{etapa.etapa}</span>
@@ -454,14 +303,24 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
 
       {/* 5. MAIN 2-COLUMN GRID */}
       <div className="credit-main-grid">
+        <div className="credit-detail-main-column">
+          <section className="credit-applicant-card">
+            <h2><Users size={16} />Información del solicitante</h2>
+            <div className="credit-applicant-grid">
+              <div className="credit-applicant-identity"><span className="credit-applicant-avatar"><UserRound size={23} /></span><div><strong>{credito.nombreCliente}</strong><small>{credito.identificacionCliente}</small><span className="credit-applicant-tag">CLIENTE</span></div></div>
+              <div className="credit-applicant-contact"><span><Mail size={13} />{expediente?.perfilCliente?.portal?.correo || credito.correoCliente || '—'}</span><span><Phone size={13} />{expediente?.perfilCliente?.portal?.telefono || credito.telefonoCliente || '—'}</span></div>
+              <div className="credit-applicant-company"><Building2 size={21} /><div><strong>{expediente?.perfilCliente?.empresa?.razonSocial || credito.empresa || 'Sin empresa asociada'}</strong><small>NIT {expediente?.perfilCliente?.empresa?.nit || '—'}</small></div></div>
+              <div className="credit-applicant-dependents"><Users size={21} /><div><small>Personas a cargo</small><strong>{expediente?.perfilCliente?.empleado?.personasCargo ?? '—'}</strong><small>Vivienda: {expediente?.perfilCliente?.empleado?.tipoVivienda || '—'}</small></div></div>
+            </div>
+          </section>
         {/* LEFT COLUMN: Main Stage Card */}
         <div className="stage-main-card">
           {/* Stage Header */}
           <div className="stage-header">
             <div className="stage-header-left">
-              <div className="stage-header-icon">📄</div>
+              <div className="stage-header-icon"><FileText size={20} /></div>
               <div className="stage-header-titles">
-                <h2>{activeEtapa?.etapa || 'Validación documental'}</h2>
+                <h2>{activeTab === 'documentos' ? 'Gestión documental' : activeEtapa?.etapa || 'Gestión de la solicitud'}</h2>
                 <p>{getStageDescription(activeEtapa?.etapa)}</p>
               </div>
             </div>
@@ -470,14 +329,14 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
               <div className="stage-meta-item">
                 <span className="stage-meta-label">Responsable</span>
                 <span className="stage-meta-value">
-                  👤 {activeEtapa?.responsable || 'ANALISTA DE CRÉDITO'}
+                  {activeEtapa?.responsable || '—'}
                 </span>
               </div>
 
               <div className="stage-meta-item">
                 <span className="stage-meta-label">Inicio</span>
                 <span className="stage-meta-value">
-                  📅 {formatDateTime(activeEtapa?.fechaInicio) || '25/09/2026, 4:01 p. m.'}
+                  {activeEtapa?.fechaInicio ? formatDateTime(activeEtapa.fechaInicio) : '—'}
                 </span>
               </div>
 
@@ -494,21 +353,21 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
               className={`stage-tab-btn ${activeTab === 'documentos' ? 'active' : ''}`}
               onClick={() => setActiveTab('documentos')}
             >
-              📄 Documentos ({documentos.length})
+              <FileText size={14} /> Documentos ({documentos.length})
             </button>
             <button
               type="button"
               className={`stage-tab-btn ${activeTab === 'observaciones' ? 'active' : ''}`}
               onClick={() => setActiveTab('observaciones')}
             >
-              💬 Observaciones
+              <MessageSquare size={14} /> Observaciones
             </button>
             <button
               type="button"
               className={`stage-tab-btn ${activeTab === 'historial' ? 'active' : ''}`}
               onClick={() => setActiveTab('historial')}
             >
-              ⏱ Historial de la etapa
+              <History size={14} /> Historial de la etapa
             </button>
             {envelope && (
               <button
@@ -526,6 +385,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
             <>
               {/* Progress and Top Action Buttons */}
               <div className="stage-progress-bar-row">
+                <label className="credit-doc-search"><Search size={14} aria-hidden="true" /><input type="search" aria-label="Buscar documentos del crédito" placeholder="Buscar documento…" value={docSearch} onChange={(event) => setDocSearch(event.target.value)} /></label>
                 <div className="stage-progress-info">
                   <span className="stage-progress-text">
                     {docsAprobadosCount} de {totalDocsCount} documentos aprobados
@@ -613,7 +473,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                             </div>
                           </td>
                           <td>
-                            <span className="doc-pill client">CLIENTE</span>
+                            <span className="doc-pill client">{item.aplicaA || '—'}</span>
                           </td>
                           <td>
                             {isDocSigned ? (
@@ -635,7 +495,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                           </td>
                           <td>
                             {item.archivoNombre ? (
-                              credito.fechaRadicacion?.slice(0, 10) || '24/09/2026'
+                              credito.fechaRadicacion?.slice(0, 10) || '—'
                             ) : (
                               '-'
                             )}
@@ -917,51 +777,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
               )}
 
               {/* Bottom Sticky Action Bar */}
-              <footer className="stage-footer-bar">
-                <div className="stage-footer-info">
-                  <span className="stage-footer-info-icon">ℹ</span>
-                  <div className="stage-footer-info-text">
-                    <strong>Para continuar, debes aprobar todos los documentos obligatorios.</strong>
-                    <small>
-                      {mandatoryPendingCount > 0
-                        ? `Faltan ${mandatoryPendingCount} documentos obligatorios por validar.`
-                        : 'Todos los documentos obligatorios han sido validados correctamente.'}
-                    </small>
-                  </div>
-                </div>
 
-                <div className="stage-footer-actions">
-                  <button
-                    type="button"
-                    className="stage-btn-outline"
-                    disabled={loading || !activeEtapa}
-                    onClick={() => onUpdateEtapa('DEVUELTA')}
-                  >
-                    Devolver
-                  </button>
-                  <button
-                    type="button"
-                    className="stage-btn-danger"
-                    disabled={loading || !activeEtapa}
-                    onClick={() => onUpdateEtapa('RECHAZADA')}
-                  >
-                    Rechazar
-                  </button>
-                  <button
-                    type="button"
-                    className="stage-btn-primary"
-                    disabled={loading || !activeEtapa || mandatoryPendingCount > 0}
-                    onClick={() => onUpdateEtapa('APROBADA')}
-                    title={
-                      mandatoryPendingCount > 0
-                        ? 'Aprueba los documentos obligatorios para avanzar'
-                        : 'Aprobar etapa y avanzar al siguiente paso'
-                    }
-                  >
-                    <span>✓</span> Aprobar etapa →
-                  </button>
-                </div>
-              </footer>
             </>
           )}
 
@@ -1028,86 +844,29 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
           )}
         </div>
 
+        </div>
         {/* RIGHT COLUMN: Collapsible Accordion Widgets */}
         <aside className="credit-sidebar-column">
-          {/* Accordion 1: Información del crédito */}
           <div className="accordion-card">
-            <button
-              type="button"
-              className="accordion-header"
-              onClick={() => setInfoAccordionOpen(!infoAccordionOpen)}
-            >
-              <div className="accordion-header-left">
-                <span className="accordion-header-icon">🗂</span>
-                <span>Información del crédito</span>
-              </div>
-              <span className={`accordion-header-chevron ${infoAccordionOpen ? '' : 'collapsed'}`}>
-                ⌃
-              </span>
-            </button>
-
-            {infoAccordionOpen && (
-              <div className="accordion-content">
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">📋</span> Tipo de crédito
-                  </span>
-                  <span className="accordion-row-value">{credito.tipoCredito || credito.producto || 'Comercial'}</span>
-                </div>
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">⏱</span> Plazo
-                  </span>
-                  <span className="accordion-row-value">{credito.plazo} meses</span>
-                </div>
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">％</span> Tasa de interés
-                  </span>
-                  <span className="accordion-row-value">{credito.tasa ?? 1.5}% mensual</span>
-                </div>
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">🛡</span> Embargos
-                  </span>
-                  <span className="accordion-row-value">
-                    {expediente?.perfilCliente?.portal?.tieneEmbargos ? 'Sí' : 'No'}
-                  </span>
-                </div>
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">✉</span> Correo confirmado
-                  </span>
-                  <span className="accordion-row-value">
-                    {expediente?.perfilCliente?.portal?.correoConfirmado ? 'Sí' : 'No'}
-                  </span>
-                </div>
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">📞</span> Teléfono
-                  </span>
-                  <span className="accordion-row-value">
-                    {expediente?.perfilCliente?.portal?.telefono || credito.telefonoCliente || '3859765'}
-                  </span>
-                </div>
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">💵</span> Neto
-                  </span>
-                  <span className="accordion-row-value">
-                    {formatMoney(expediente?.perfilCliente?.portal?.neto || credito.montoSolicitado)}
-                  </span>
-                </div>
-                <div className="accordion-row">
-                  <span className="accordion-row-label">
-                    <span className="accordion-row-icon">👥</span> Representante
-                  </span>
-                  <span className="accordion-row-value" title={expediente?.perfilCliente?.empresa?.representanteLegal || credito.nombreCliente}>
-                    {expediente?.perfilCliente?.empresa?.representanteLegal || credito.nombreCliente}
-                  </span>
-                </div>
-              </div>
-            )}
+            <button type="button" className="accordion-header" aria-expanded={summaryAccordionOpen} onClick={() => setSummaryAccordionOpen(!summaryAccordionOpen)}><div className="accordion-header-left"><span className="accordion-header-icon"><Wallet size={16} /></span><span>Resumen del crédito</span></div><span className={`accordion-header-chevron ${summaryAccordionOpen ? '' : 'collapsed'}`}>⌃</span></button>
+            {summaryAccordionOpen && <div className="accordion-content">
+              <div className="accordion-row"><span className="accordion-row-label"><ClipboardList size={14} />Tipo de crédito</span><span className="accordion-row-value">{credito.tipoCredito || '—'}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><Package size={14} />Producto</span><span className="accordion-row-value">{credito.producto || '—'}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><Banknote size={14} />Monto solicitado</span><span className="accordion-row-value">{formatMoney(credito.montoSolicitado)}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><Wallet size={14} />Neto estimado</span><span className="accordion-row-value">{expediente?.perfilCliente?.portal?.neto != null ? formatMoney(expediente.perfilCliente.portal.neto) : '—'}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><CalendarDays size={14} />Plazo</span><span className="accordion-row-value">{credito.plazo} meses</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><Percent size={14} />Tasa de interés</span><span className="accordion-row-value">{credito.tasa != null ? credito.tasa + '%' : '—'}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><Banknote size={14} />Cuota estimada</span><span className="accordion-row-value">{credito.cuotaEstimada != null ? formatMoney(credito.cuotaEstimada) : '—'}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><ShieldCheck size={14} />Embargos</span><span className="accordion-row-value">{expediente?.perfilCliente?.portal ? (expediente.perfilCliente.portal.tieneEmbargos ? 'Sí' : 'No') : '—'}</span></div>
+            </div>}
+          </div>
+          <div className="accordion-card">
+            <button type="button" className="accordion-header" aria-expanded={infoAccordionOpen} onClick={() => setInfoAccordionOpen(!infoAccordionOpen)}><div className="accordion-header-left"><span className="accordion-header-icon"><Info size={16} /></span><span>Información adicional</span></div><span className={`accordion-header-chevron ${infoAccordionOpen ? '' : 'collapsed'}`}>⌃</span></button>
+            {infoAccordionOpen && <div className="accordion-content">
+              <div className="accordion-row"><span className="accordion-row-label"><Mail size={14} />Correo confirmado</span><span className="accordion-row-value">{expediente?.perfilCliente?.portal ? (expediente.perfilCliente.portal.correoConfirmado ? 'Sí' : 'No') : '—'}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><Phone size={14} />Teléfono</span><span className="accordion-row-value">{expediente?.perfilCliente?.portal?.telefono || credito.telefonoCliente || '—'}</span></div>
+              <div className="accordion-row"><span className="accordion-row-label"><Users size={14} />Representante</span><span className="accordion-row-value">{expediente?.perfilCliente?.empresa?.representanteLegal || '—'}</span></div>
+            </div>}
           </div>
 
           {/* Accordion 2: Liquidación definitiva */}
@@ -1131,7 +890,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                 {/* If liquidation doesn't exist yet and stage is before approval, show locked box */}
                 {!liquidacionDefinitivaActual && (activeEtapa?.etapa?.toLowerCase().includes('document') || activeEtapa?.etapa?.toLowerCase().includes('radic')) ? (
                   <div className="accordion-locked-notice">
-                    <span className="accordion-locked-icon">🔒</span>
+                    <span className="accordion-locked-icon"><LockKeyhole size={18} /></span>
                     <span>Disponible después de aprobar el estudio de crédito.</span>
                   </div>
                 ) : (
@@ -1183,55 +942,56 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
           </div>
         </aside>
       </div>
-
-      {/* Historial Modal */}
-      {showHistorialModal && (
-        <div className="custom-modal-overlay" onClick={() => setShowHistorialModal(false)}>
-          <div className="custom-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
-            <div className="modal-header">
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>
-                Historial de Operaciones #{credito.consecutivo}
-              </h3>
-              <button
-                type="button"
-                className="modal-close-btn"
-                onClick={() => setShowHistorialModal(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="modal-body" style={{ maxHeight: '420px', overflowY: 'auto' }}>
-              {(expediente?.historial || []).length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {expediente?.historial.map((item) => (
-                    <div key={item.id} style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b' }}>
-                        <strong>{item.accion}</strong>
-                        <span>{formatDateTime(item.fecha)}</span>
-                      </div>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#1e293b' }}>
-                        {item.observacion || 'Sin observación'}
-                      </p>
-                      <small style={{ color: '#94a3b8' }}>Usuario: {item.usuario || 'Sistema'}</small>
-                    </div>
-                  ))}
+      {activeTab === 'documentos' && (
+              <footer className="stage-footer-bar">
+                <div className="stage-footer-info">
+                  <span className="stage-footer-info-icon">ℹ</span>
+                  <div className="stage-footer-info-text">
+                    <strong>Para continuar, debes aprobar todos los documentos obligatorios.</strong>
+                    <small>
+                      {mandatoryPendingCount > 0
+                        ? `Faltan ${mandatoryPendingCount} documentos obligatorios por validar.`
+                        : 'Todos los documentos obligatorios han sido validados correctamente.'}
+                    </small>
+                  </div>
                 </div>
-              ) : (
-                <p style={{ color: '#64748b', fontSize: '0.84rem' }}>No hay registros de historial aún.</p>
-              )}
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="stage-btn-outline"
-                onClick={() => setShowHistorialModal(false)}
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
+
+                <div className="stage-footer-actions">
+                  <button
+                    type="button"
+                    className="stage-btn-outline"
+                    disabled={loading || !activeEtapa}
+                    onClick={() => onUpdateEtapa('DEVUELTA')}
+                  >
+                    Devolver
+                  </button>
+                  <button
+                    type="button"
+                    className="stage-btn-danger"
+                    disabled={loading || !activeEtapa}
+                    onClick={() => onUpdateEtapa('RECHAZADA')}
+                  >
+                    Rechazar
+                  </button>
+                  <button
+                    type="button"
+                    className="stage-btn-primary"
+                    disabled={loading || !activeEtapa || mandatoryPendingCount > 0}
+                    onClick={() => onUpdateEtapa('APROBADA')}
+                    title={
+                      mandatoryPendingCount > 0
+                        ? 'Aprueba los documentos obligatorios para avanzar'
+                        : 'Aprobar etapa y avanzar al siguiente paso'
+                    }
+                  >
+                    <span>✓</span> Aprobar etapa →
+                  </button>
+                </div>
+              </footer>
       )}
+
+
+      {showHistorialModal && <CreditHistoryDrawer credito={credito} records={expediente?.historial ?? []} onClose={() => setShowHistorialModal(false)} />}
     </div>
   );
 };

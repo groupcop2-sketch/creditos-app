@@ -4,7 +4,9 @@ import type { SecurityUser } from '../../api';
 export interface AppTopBarProps {
   breadcrumbRoot: string;
   breadcrumbCurrent: string;
+  breadcrumbDetail?: string;
   onRootClick?: () => void;
+  onCurrentClick?: () => void;
   currentUser?: SecurityUser | null;
   searchQuery?: string;
   onSearchChange?: (val: string) => void;
@@ -17,7 +19,9 @@ export interface AppTopBarProps {
 export const AppTopBar: React.FC<AppTopBarProps> = ({
   breadcrumbRoot,
   breadcrumbCurrent,
+  breadcrumbDetail,
   onRootClick,
+  onCurrentClick,
   currentUser,
   searchQuery = '',
   onSearchChange,
@@ -77,7 +81,8 @@ export const AppTopBar: React.FC<AppTopBarProps> = ({
           <span className="credit-breadcrumb-root">{breadcrumbRoot}</span>
         )}
         <span className="credit-breadcrumb-separator">›</span>
-        <span className="credit-breadcrumb-current">{breadcrumbCurrent}</span>
+        {onCurrentClick ? <button type="button" className="credit-breadcrumb-current credit-breadcrumb-current-link" onClick={onCurrentClick} title="Volver al listado de solicitudes">{breadcrumbCurrent}</button> : <span className="credit-breadcrumb-current">{breadcrumbCurrent}</span>}
+        {breadcrumbDetail && <><span className="credit-breadcrumb-separator">›</span><span className="credit-breadcrumb-current" aria-current="page">{breadcrumbDetail}</span></>}
       </nav>
 
       {/* Right: Actions, Notifications, User Profile */}

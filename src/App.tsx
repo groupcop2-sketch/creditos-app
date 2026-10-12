@@ -18,6 +18,7 @@ import { TiposFianzasView } from './components/configuracion-financiera/TiposFia
 import { TiposSalariosView } from './components/configuracion-financiera/TiposSalariosView';
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
 import { DocuSignStateMachine } from './components/docusign/DocuSignStateMachine';
+import { SendDocumentsDrawer } from './components/creditos/SendDocumentsDrawer';
 import { CreditRequestDrawer } from './components/creditos/CreditRequestDrawer';
 import { CreditRequestsView } from './components/creditos/CreditRequestsView';
 import { CreditDetailView } from './components/creditos/CreditDetailView';
@@ -4675,6 +4676,7 @@ function App() {
       includePagare: true,
       includeSeguroVida: true
     });
+    setMessage('');
     setShowSendDocumentsModal(true);
   };
 
@@ -4697,6 +4699,7 @@ function App() {
       return;
     }
 
+    setMessage('');
     setSendingDocuments(true);
     try {
       const created = await api.createDocuSignEnvelope(session.token, {
@@ -4797,7 +4800,7 @@ function App() {
     }
     if (isProductosCreditoModule) {
       if (selectedCreditoId !== null && selectedCredito) {
-        return { root: '‹ Créditos', current: `Detalle del crédito #${selectedCredito.consecutivo}` };
+        return { root: 'Créditos', current: 'Solicitudes' };
       }
       return { root: 'Créditos', current: creditSubmodules.find((item) => item.key === productosCreditoTab)?.label ?? 'Solicitudes' };
     }
@@ -5316,11 +5319,11 @@ function App() {
       />
 
       <main className="workspace">
-        {!(isProductosCreditoModule && selectedCreditoId !== null) && (
           <AppTopBar
             breadcrumbRoot={breadcrumbInfo.root}
             breadcrumbCurrent={breadcrumbInfo.current}
-            onRootClick={
+            breadcrumbDetail={isProductosCreditoModule && selectedCreditoId !== null && selectedCredito ? 'Detalle del crédito' : undefined}
+            onCurrentClick={
               isProductosCreditoModule && selectedCreditoId !== null
                 ? () => setSelectedCreditoId(null)
                 : undefined
@@ -5330,7 +5333,6 @@ function App() {
             themeMode={themeMode}
             onToggleTheme={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
           />
-        )}
 
         {!isProductosCreditoModule && (
           <section className="metrics-strip">
@@ -7283,8 +7285,6 @@ function App() {
                   loading={loading}
                   formatMoney={formatMoney}
                   formatDateTime={formatDateTime}
-                  onBack={() => setSelectedCreditoId(null)}
-                  currentUser={session.user}
                   creditoDecisionForm={creditoDecisionForm}
                   onChangeDecisionForm={setCreditoDecisionForm}
                   onDecideCredito={handleDecideCredito}
@@ -8858,221 +8858,17 @@ function App() {
           <DocuSignFirmasView token={session.token} />
         )}
 
-        {showSendDocumentsModal && (
-          <div className="modal-backdrop" style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '20px'
-          }}>
-            <div className="modal-dialog modal-md" style={{
-              background: '#ffffff',
-              borderRadius: '16px',
-              maxWidth: '620px',
-              width: '100%',
-              overflow: 'hidden',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-              border: '1px solid #e2e8f0'
-            }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                padding: '24px 28px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                color: '#ffffff'
-              }}>
-                <div>
-                  <span style={{
-                    display: 'inline-block',
-                    background: 'rgba(56, 189, 248, 0.2)',
-                    color: '#38bdf8',
-                    border: '1px solid rgba(56, 189, 248, 0.4)',
-                    padding: '3px 10px',
-                    borderRadius: '999px',
-                    fontSize: '0.72rem',
-                    fontWeight: 800,
-                    letterSpacing: '0.5px',
-                    marginBottom: '8px'
-                  }}>
-                    DOCUSIGN eSIGNATURE · NOTIFICACIÓN OFICIAL
-                  </span>
-                  <h3 style={{ margin: '0 0 4px 0', fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
-                    Enviar Documentos para Firma Electrónica
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '0.82rem', color: '#94a3b8' }}>
-                    Crédito #{selectedCredito?.consecutivo || selectedCreditoId} · Se enviará al correo del cliente
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowSendDocumentsModal(false)}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.4rem', cursor: 'pointer', padding: '0 4px' }}
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form onSubmit={handleSendDocumentsSubmit} style={{ padding: '24px 28px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Nombre del Cliente / Firmante *
-                    </label>
-                    <input
-                      value={sendDocumentsForm.firmanteNombre}
-                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteNombre: e.target.value }))}
-                      required
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Cédula / Identificación *
-                    </label>
-                    <input
-                      value={sendDocumentsForm.firmanteIdentificacion}
-                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteIdentificacion: e.target.value }))}
-                      required
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Correo Electrónico del Cliente (Receptor) *
-                    </label>
-                    <input
-                      type="email"
-                      value={sendDocumentsForm.firmanteCorreo}
-                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteCorreo: e.target.value }))}
-                      required
-                      placeholder="ejemplo@cliente.com"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '2px solid #0284c7', fontSize: '0.85rem', fontWeight: 600, color: '#0f172a' }}
-                    />
-                    <small style={{ color: '#64748b', fontSize: '0.72rem', display: 'block', marginTop: '4px' }}>
-                      Se enviará el enlace de firma electrónica y trazabilidad a este correo.
-                    </small>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Teléfono Móvil
-                    </label>
-                    <input
-                      value={sendDocumentsForm.firmanteTelefono}
-                      onChange={(e) => setSendDocumentsForm((c) => ({ ...c, firmanteTelefono: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                    Asunto del Correo
-                  </label>
-                  <input
-                    value={sendDocumentsForm.asunto}
-                    onChange={(e) => setSendDocumentsForm((c) => ({ ...c, asunto: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                  />
-                </div>
-
-                {/* Document selection checklist */}
-                <div style={{ marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: '#1e293b', marginBottom: '10px' }}>
-                    DOCUMENTOS INCLUIDOS EN EL PAQUETE DIGITAL (SOBRE):
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={sendDocumentsForm.includeContrato}
-                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includeContrato: e.target.checked }))}
-                      />
-                      <span><strong>Contrato de Mutuo</strong> con descuento</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={sendDocumentsForm.includePagare}
-                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includePagare: e.target.checked }))}
-                      />
-                      <span><strong>Pagaré en Blanco</strong> con carta</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={sendDocumentsForm.includeAutorizacion}
-                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includeAutorizacion: e.target.checked }))}
-                      />
-                      <span><strong>Autorización Descuento</strong> Nómina</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.82rem', color: '#334155', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={sendDocumentsForm.includeSeguroVida}
-                        onChange={(e) => setSendDocumentsForm((c) => ({ ...c, includeSeguroVida: e.target.checked }))}
-                      />
-                      <span><strong>Seguro de Vida</strong> Deudores</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div style={{
-                  background: 'rgba(2, 132, 199, 0.08)',
-                  border: '1px solid rgba(2, 132, 199, 0.25)',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  marginBottom: '20px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  fontSize: '0.78rem',
-                  color: '#0369a1'
-                }}>
-                  <span>🛡️</span>
-                  <span>Al enviar, el estado del crédito pasará a <strong>ENVIADO</strong> y se activará la <strong>máquina de estados interactiva</strong> con trazabilidad legal (Ley 527 de 1999).</span>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                  <button
-                    type="button"
-                    className="secondary"
-                    disabled={sendingDocuments}
-                    onClick={() => setShowSendDocumentsModal(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="primary"
-                    disabled={sendingDocuments}
-                    style={{
-                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                      padding: '10px 24px',
-                      fontWeight: 800,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    {sendingDocuments ? 'Enviando documentos...' : '🚀 Enviar documentos al cliente'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        {showSendDocumentsModal && <SendDocumentsDrawer
+          value={sendDocumentsForm}
+          creditNumber={selectedCredito?.consecutivo || String(selectedCreditoId || '')}
+          busy={sendingDocuments}
+          message={message}
+          messageTone={messageTone}
+          onDismissMessage={() => setMessage('')}
+          onChange={(value) => { setSendDocumentsForm(value); setMessage(''); }}
+          onClose={() => { if (!sendingDocuments) setShowSendDocumentsModal(false); }}
+          onSubmit={handleSendDocumentsSubmit}
+        />}
 
         <p className="message-line">{message}</p>
       </main>
