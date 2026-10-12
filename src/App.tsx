@@ -4,6 +4,7 @@ import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
+import { Layers, Percent, RefreshCw, Save, ShieldCheck, Users } from 'lucide-react';
 import { RichDocumentEditor } from './RichDocumentEditor';
 import { PdfFieldMapper } from './PdfFieldMapper';
 import { FormStepper, type StepItem } from './FormStepper';
@@ -19,6 +20,8 @@ import { TiposSalariosView } from './components/configuracion-financiera/TiposSa
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
 import { DocuSignStateMachine } from './components/docusign/DocuSignStateMachine';
 import { SendDocumentsDrawer } from './components/creditos/SendDocumentsDrawer';
+import { CreditProductsView } from './components/creditos/CreditProductsView';
+import { ProductFormDrawer } from './components/creditos/ProductFormDrawer';
 import { CreditRequestDrawer } from './components/creditos/CreditRequestDrawer';
 import { CreditRequestsView } from './components/creditos/CreditRequestsView';
 import { CreditDetailView } from './components/creditos/CreditDetailView';
@@ -1315,6 +1318,7 @@ function App() {
     etapas: [],
     libranzeras: []
   });
+  const [showProductDrawer, setShowProductDrawer] = useState(false);
   const [productosCredito, setProductosCredito] = useState<ProductoCreditoRow[]>([]);
   const [parametrosFinancieros, setParametrosFinancieros] = useState<ParametroFinancieroRow[]>([]);
   const [parametroFinancieroForm, setParametroFinancieroForm] = useState<ParametroFinancieroFormState>(initialParametroFinancieroForm);
@@ -3496,6 +3500,8 @@ function App() {
   });
 
   const handleEditProductoCredito = (producto: ProductoCreditoRow) => {
+    setMessage('');
+    setShowProductDrawer(true);
     setSelectedProductoCreditoId(producto.id);
     setEditingProductoCreditoId(producto.id);
     setProductoCreditoForm({
@@ -3538,8 +3544,38 @@ function App() {
   };
 
   const handleCancelProductoCreditoEdit = () => {
+    setShowProductDrawer(false);
+    setMessage('');
     setEditingProductoCreditoId(null);
     setProductoCreditoForm({ ...initialProductoCreditoForm, idTipoCredito: String(productosCreditoCatalogs.tiposCredito[0]?.id ?? ''), idLibranzera: String(productosCreditoCatalogs.libranzeras[0]?.id ?? '') });
+  };
+
+  const handleSaveProductoDraft = () => {
+    if (!session || editingProductoCreditoId !== null) return;
+    try {
+      localStorage.setItem(`creditos.producto.borrador.${session.user.id}`, JSON.stringify({ version: 1, form: productoCreditoForm }));
+      setMessage('Borrador guardado en este navegador. El producto aún no se ha creado.');
+    } catch {
+      setMessage('No se pudo guardar el borrador en este navegador.');
+    }
+  };
+
+  const handleOpenNewProducto = () => {
+    if (!session) return;
+    handleCancelProductoCreditoEdit();
+    try {
+      const stored = localStorage.getItem(`creditos.producto.borrador.${session.user.id}`);
+      if (stored) {
+        const draft = JSON.parse(stored);
+        if (draft.version === 1 && draft.form && Object.entries(initialProductoCreditoForm).every(([key, value]) => typeof draft.form[key] === typeof value)) {
+          setProductoCreditoForm(Object.fromEntries(Object.keys(initialProductoCreditoForm).map((key) => [key, draft.form[key]])) as ProductoCreditoFormState);
+          setMessage('Borrador recuperado de este navegador.');
+        }
+      }
+    } catch {
+      setMessage('No se pudo recuperar el borrador. Puedes crear un nuevo producto.');
+    }
+    setShowProductDrawer(true);
   };
 
   const handleSaveProductoCredito = async (event: FormEvent) => {
@@ -3558,10 +3594,14 @@ function App() {
       const saved = editId
         ? await api.updateProductoCredito(session.token, editId, payload)
         : await api.createProductoCredito(session.token, payload);
+      if (!editId) {
+        try { localStorage.removeItem(`creditos.producto.borrador.${session.user.id}`); } catch { /* El producto ya se guardó en el servidor. */ }
+      }
       setEditingProductoCreditoId(null);
       setProductoCreditoForm({ ...initialProductoCreditoForm, idTipoCredito: String(productosCreditoCatalogs.tiposCredito[0]?.id ?? ''), idLibranzera: String(productosCreditoCatalogs.libranzeras[0]?.id ?? '') });
       await reloadProductosCreditoData();
       setSelectedProductoCreditoId(saved.id);
+      setShowProductDrawer(false);
       setMessage(editId ? 'Producto actualizado correctamente' : 'Producto de credito creado correctamente');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo guardar el producto');
@@ -7322,18 +7362,24 @@ function App() {
             )}
 
             {productosCreditoTab === 'general' && (
-              <section className="content-grid credit-product-grid">
+              <>
+                <CreditProductsView
+                  products={productosCredito}
+                  busy={loading}
+                  onCreate={handleOpenNewProducto}
+                  onEdit={handleEditProductoCredito}
+                  onVersion={handleCreateProductoCreditoVersion}
+                  onToggle={handleToggleProductoCreditoEstado}
+                  onDelete={handleDeleteProductoCredito}
+                  onConfigure={(product) => { setSelectedProductoCreditoId(product.id); setProductosCreditoTab('atributos'); }}
+                />
+                {showProductDrawer && <ProductFormDrawer editing={editingProductoCreditoId !== null} busy={loading} message={message} messageTone={messageTone} onDismissMessage={() => setMessage('')} onClose={() => { if (!loading) handleCancelProductoCreditoEdit(); }}>
                 <form className="surface pagaduria-form" onSubmit={handleSaveProductoCredito}>
-                  <div className="surface-title">
-                    <h2>{editingProductoCreditoId ? 'Editar producto de credito' : 'Crear producto de credito'}</h2>
-                    {editingProductoCreditoId && (
-                      <button type="button" className="ghost-button" onClick={handleCancelProductoCreditoEdit}>
-                        Cancelar edición
-                      </button>
-                    )}
-                  </div>
-
+                  <fieldset disabled={loading}>
                   <FormStepper
+                    validateBeforeNext={true}
+                    onCancel={handleCancelProductoCreditoEdit}
+                    extraFooterActions={editingProductoCreditoId === null ? <button type="button" className="stepper-btn product-save-draft" disabled={loading} onClick={handleSaveProductoDraft}><Save size={14} />Guardar borrador</button> : undefined}
                     steps={[
                       {
                         id: 'general',
@@ -7342,9 +7388,10 @@ function App() {
                         content: (
                           <div className="form-section">
                             <h3>Informacion general</h3>
-                            <div className="field-grid four-cols">
-                              <label className="product-field"><span>Nombre *</span><input value={productoCreditoForm.nombre} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Libranza Plus" /></label>
-                              <label className="product-field"><span>Tipo de credito *</span><select value={productoCreditoForm.idTipoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idTipoCredito: event.target.value }))}>
+                            <div className="field-grid four-cols product-general-fields">
+                              <label className="product-field"><span>Nombre *</span><input required value={productoCreditoForm.nombre} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Libranza Plus" /></label>
+                              <label className="product-field"><span>Código del producto</span><input readOnly value={editingProductoCreditoId ? productosCredito.find((product) => product.id === editingProductoCreditoId)?.consecutivo || 'Automático' : 'Se genera automáticamente'} /><small>Asignado por el sistema al guardar.</small></label>
+                              <label className="product-field"><span>Tipo de credito *</span><select required value={productoCreditoForm.idTipoCredito} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, idTipoCredito: event.target.value }))}>
                                 <option value="">Tipo de credito *</option>
                                 {productosCreditoCatalogs.tiposCredito.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
                               </select></label>
@@ -7390,13 +7437,13 @@ function App() {
                               </select></label>
                               <label className="product-field"><span>Codeudores requeridos</span><input value={productoCreditoForm.numeroCodeudores} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, numeroCodeudores: event.target.value }))} placeholder="0" /></label>
                             </div>
-                            <div className="field-grid four-cols">
-                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteCreditoMultiple} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteCreditoMultiple: event.target.checked }))} />Credito multiple</label>
-                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.interesAjustable} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, interesAjustable: event.target.checked }))} />Interes ajustable</label>
-                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRefinanciacion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRefinanciacion: event.target.checked }))} />Refinanciacion</label>
-                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRetanqueo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRetanqueo: event.target.checked }))} />Retanqueo</label>
-                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.requiereCodeudor} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, requiereCodeudor: event.target.checked }))} />Codeudor</label>
-                            </div>
+                            <div className="product-feature-section"><h3>Características del producto</h3><p>Selecciona las opciones que aplican para este producto.</p><div className="field-grid four-cols product-feature-grid">
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteCreditoMultiple} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteCreditoMultiple: event.target.checked }))} /><Layers size={20} /><span>Credito multiple</span></label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.interesAjustable} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, interesAjustable: event.target.checked }))} /><Percent size={20} /><span>Interes ajustable</span></label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRefinanciacion} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRefinanciacion: event.target.checked }))} /><RefreshCw size={20} /><span>Refinanciacion</span></label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.permiteRetanqueo} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, permiteRetanqueo: event.target.checked }))} /><ShieldCheck size={20} /><span>Retanqueo</span></label>
+                              <label className="inline-check"><input type="checkbox" checked={productoCreditoForm.requiereCodeudor} onChange={(event) => setProductoCreditoForm((current) => ({ ...current, requiereCodeudor: event.target.checked }))} /><Users size={20} /><span>Codeudor</span></label>
+                            </div></div>
                           </div>
                         )
                       },
@@ -7531,7 +7578,7 @@ function App() {
                                       type="button"
                                       className="ghost-button"
                                       style={{ fontSize: '0.8rem', padding: '4px 10px' }}
-                                      onClick={() => setProductosCreditoTab('formatos')}
+                                      onClick={() => { setShowProductDrawer(false); setProductosCreditoTab('formatos'); }}
                                     >
                                       Editar formatos →
                                     </button>
@@ -7580,46 +7627,12 @@ function App() {
                     ]}
                     submitButtonText={loading ? 'Guardando...' : editingProductoCreditoId ? 'Guardar cambios' : 'Guardar producto'}
                     submitButtonDisabled={loading}
-                    showSubmitAlways={true}
+                    showSubmitAlways={false}
                   />
+                  </fieldset>
                 </form>
-
-                <section className="surface employees-panel">
-                  <div className="surface-title">
-                    <h2>Productos configurados</h2>
-                    <span>{productosCredito.length}</span>
-                  </div>
-                  {selectedProductoCredito && (
-                    <div className="product-summary-grid">
-                      <article><span>Monto</span><strong>{formatMoney(selectedProductoCredito.montoMinimo)} - {formatMoney(selectedProductoCredito.montoMaximo)}</strong></article>
-                      <article><span>Plazo</span><strong>{selectedProductoCredito.plazoMinimo ?? '-'} - {selectedProductoCredito.plazoMaximo ?? '-'} {selectedProductoCredito.modeloPlazo?.toLowerCase()}</strong></article>
-                      <article><span>Tasa</span><strong>{selectedProductoCredito.tipoTasa}</strong></article>
-                      <article><span>Reglas</span><strong>{selectedProductoCredito.atributos} atributos - {selectedProductoCredito.documentos} docs - {selectedProductoCredito.etapas} etapas</strong></article>
-                      <article><span>Calendario</span><strong>{selectedProductoCredito.periodicidad ?? 'Mensual'} - corte {selectedProductoCredito.diaCorte ?? '-'}</strong></article>
-                      <article><span>Codeudor</span><strong>{selectedProductoCredito.requiereCodeudor ? String(selectedProductoCredito.numeroCodeudores) + ' requerido(s)' : 'No requerido'}</strong></article>
-                    </div>
-                  )}
-                  <div className="list-panel">
-                    {productosCredito.map((producto) => (
-                      <div
-                        key={producto.id}
-                        className={selectedProductoCreditoId === producto.id ? 'company-row product-row active' : 'company-row product-row'}
-                      >
-                        <button type="button" className="product-row-main" onClick={() => setSelectedProductoCreditoId(producto.id)}>
-                          <strong>{producto.nombre} <small>v{producto.version ?? 1}</small></strong>
-                          <span>{producto.consecutivo ?? 'Auto'} - {producto.tipoCredito} - {producto.tipoTasa} - {producto.activo ? 'Activo' : 'Inactivo'} - {producto.atributos} atributos - {producto.documentos} documentos - {producto.etapas} etapas</span>
-                        </button>
-                        <span className="row-actions compact-actions">
-                          <button type="button" onClick={() => handleEditProductoCredito(producto)}>Editar</button>
-                          <button type="button" onClick={() => handleCreateProductoCreditoVersion(producto)}>Nueva version</button>
-                          <button type="button" onClick={() => handleToggleProductoCreditoEstado(producto)}>{producto.activo ? 'Inactivar' : 'Activar'}</button>
-                          <button type="button" className="danger" onClick={() => handleDeleteProductoCredito(producto)}>Eliminar</button>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </section>
+                </ProductFormDrawer>}
+              </>
             )}
 
             {productosCreditoTab === 'atributos' && (

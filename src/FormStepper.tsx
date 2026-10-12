@@ -16,6 +16,9 @@ interface FormStepperProps {
   className?: string;
   showSubmitAlways?: boolean;
   extraHeaderActions?: React.ReactNode;
+  validateBeforeNext?: boolean;
+  onCancel?: () => void;
+  extraFooterActions?: React.ReactNode;
 }
 
 export function FormStepper({
@@ -25,7 +28,10 @@ export function FormStepper({
   onStepChange,
   className = '',
   showSubmitAlways = false,
-  extraHeaderActions
+  extraHeaderActions,
+  validateBeforeNext = false,
+  onCancel,
+  extraFooterActions
 }: FormStepperProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -45,6 +51,7 @@ export function FormStepper({
 
   const handleNext = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (validateBeforeNext && !e.currentTarget.closest('form')?.reportValidity()) return;
     if (!isLastStep) {
       setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     }
@@ -57,7 +64,8 @@ export function FormStepper({
     }
   };
 
-  const handleStepClick = (index: number) => {
+  const handleStepClick = (index: number, event: React.MouseEvent<HTMLButtonElement>) => {
+    if (validateBeforeNext && index > activeIndex && !event.currentTarget.closest('form')?.reportValidity()) return;
     setCurrentStep(index);
   };
 
@@ -77,7 +85,8 @@ export function FormStepper({
                 key={step.id || idx}
                 type="button"
                 className={`stepper-step-badge ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
-                onClick={() => handleStepClick(idx)}
+                onClick={(event) => handleStepClick(idx, event)}
+                disabled={validateBeforeNext && submitButtonDisabled}
                 title={step.title}
               >
                 <div className="step-number">
@@ -113,18 +122,20 @@ export function FormStepper({
         <button
           type="button"
           className="stepper-btn stepper-btn-prev"
-          onClick={handlePrev}
-          disabled={isFirstStep}
+          onClick={isFirstStep && onCancel ? onCancel : handlePrev}
+          disabled={(isFirstStep && !onCancel) || (validateBeforeNext && submitButtonDisabled)}
         >
-          ← Anterior
+          {isFirstStep && onCancel ? 'Cancelar' : '← Anterior'}
         </button>
 
         <div className="stepper-actions-right">
+          {extraFooterActions}
           {!isLastStep && (
             <button
               type="button"
               className="stepper-btn stepper-btn-next"
               onClick={handleNext}
+              disabled={validateBeforeNext && submitButtonDisabled}
             >
               Siguiente →
             </button>
