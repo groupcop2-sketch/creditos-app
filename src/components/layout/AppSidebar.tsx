@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { ClipboardList, Package, SlidersHorizontal, ListTree, Handshake, Files, GitBranch, Settings2, FileText, Percent, Clock, Landmark, ChevronRight } from 'lucide-react';
 import type { CatalogModule, SecurityUser } from '../../api';
 
 export type ViewKey =
@@ -17,6 +18,23 @@ export type ViewKey =
 
 export type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
 
+export const creditSubmodules = [
+  { key: 'solicitudes', label: 'Solicitudes', icon: ClipboardList },
+  { key: 'general', label: 'Productos', icon: Package },
+  { key: 'atributos', label: 'Condiciones y cargos', icon: SlidersHorizontal },
+  { key: 'tblAtributos', label: 'Catálogo atributos', icon: ListTree },
+  { key: 'convenios', label: 'Convenios', icon: Handshake },
+  { key: 'documentos', label: 'Documentación', icon: Files },
+  { key: 'etapas', label: 'Flujo del crédito', icon: GitBranch },
+  { key: 'parametros', label: 'Parámetros', icon: Settings2 },
+  { key: 'formatos', label: 'Formatos de créditos', icon: FileText },
+  { key: 'tasas', label: 'Tasas (Usura / DTF)', icon: Percent },
+  { key: 'plazos', label: 'Plazos de pago', icon: Clock },
+  { key: 'bancos', label: 'Entidades bancarias', icon: Landmark }
+] as const;
+
+export type ProductosCreditoTab = typeof creditSubmodules[number]['key'];
+
 interface AppSidebarProps {
   view: ViewKey;
   onNavigateView: (view: ViewKey) => void;
@@ -30,6 +48,8 @@ interface AppSidebarProps {
   isAliadosActive: boolean;
   isComercialesActive: boolean;
   isCreditosActive: boolean;
+  creditTab: ProductosCreditoTab;
+  onNavigateCreditTab: (tab: ProductosCreditoTab) => void;
   isEmpresasActive: boolean;
   isSociosActive: boolean;
 }
@@ -45,11 +65,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   isAliadosActive,
   isComercialesActive,
   isCreditosActive,
+  creditTab,
+  onNavigateCreditTab,
   isEmpresasActive,
   isSociosActive
 }) => {
   const isSecondaryFinancialActive = ['plazos', 'bancos', 'docusign'].includes(view);
   const [showMoreFinancial, setShowMoreFinancial] = useState(isSecondaryFinancialActive);
+  const [showCreditSubmodules, setShowCreditSubmodules] = useState(isCreditosActive);
+
+  useEffect(() => {
+    if (isCreditosActive) setShowCreditSubmodules(true);
+  }, [isCreditosActive]);
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'EE';
@@ -135,7 +162,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         <button
           type="button"
           className={`module-link ${isCreditosActive ? 'active' : ''}`}
-          onClick={() => onNavigateModule('credito')}
+          onClick={() => {
+            if (isCreditosActive) {
+              setShowCreditSubmodules((current) => !current);
+            } else {
+              setShowCreditSubmodules(true);
+              onNavigateModule('credito');
+            }
+          }}
+          aria-expanded={isCreditosActive && showCreditSubmodules}
+          aria-controls="sidebar-credit-submodules"
           id="nav-creditos"
         >
           <span className="menu-icon-box">
@@ -145,7 +181,25 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </svg>
           </span>
           <span className="menu-text">Créditos</span>
+          <ChevronRight className={`credit-menu-chevron ${isCreditosActive && showCreditSubmodules ? 'expanded' : ''}`} size={14} aria-hidden="true" />
         </button>
+
+        {isCreditosActive && showCreditSubmodules && (
+          <div className="credit-submodules" id="sidebar-credit-submodules">
+            {creditSubmodules.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                className={`module-link credit-submodule-link ${creditTab === key ? 'active' : ''}`}
+                aria-current={creditTab === key ? 'page' : undefined}
+                onClick={() => onNavigateCreditTab(key)}
+              >
+                <span className="menu-icon-box"><Icon aria-hidden="true" /></span>
+                <span className="menu-text">{label}</span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Empresas */}
         <button

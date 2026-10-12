@@ -18,8 +18,10 @@ import { TiposFianzasView } from './components/configuracion-financiera/TiposFia
 import { TiposSalariosView } from './components/configuracion-financiera/TiposSalariosView';
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
 import { DocuSignStateMachine } from './components/docusign/DocuSignStateMachine';
+import { CreditRequestDrawer } from './components/creditos/CreditRequestDrawer';
+import { CreditRequestsView } from './components/creditos/CreditRequestsView';
 import { CreditDetailView } from './components/creditos/CreditDetailView';
-import { AppSidebar } from './components/layout/AppSidebar';
+import { AppSidebar, creditSubmodules, type ProductosCreditoTab } from './components/layout/AppSidebar';
 import { AppTopBar } from './components/layout/AppTopBar';
 import {
   api,
@@ -80,7 +82,6 @@ type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
 type AliadosTab = 'registro' | 'directorio';
 type ComercialesTab = 'libranzera' | 'vendedor' | 'directorio';
-type ProductosCreditoTab = 'solicitudes' | 'general' | 'atributos' | 'tblAtributos' | 'convenios' | 'documentos' | 'etapas' | 'parametros' | 'formatos' | 'tasas' | 'plazos' | 'bancos';
 type ThemeMode = 'light' | 'dark';
 type PaletteKey = 'azul' | 'verde' | 'vino' | 'grafito';
 
@@ -1335,8 +1336,6 @@ function App() {
   const [creditos, setCreditos] = useState<CreditoRow[]>([]);
   const [selectedCreditoId, setSelectedCreditoId] = useState<number | null>(null);
   const [showRadicarForm, setShowRadicarForm] = useState(false);
-  const [solicitudesSearch, setSolicitudesSearch] = useState('');
-  const [solicitudesEstadoFilter, setSolicitudesEstadoFilter] = useState('TODOS');
   const [creditoDocumentos, setCreditoDocumentos] = useState<CreditoDocumentoRow[]>([]);
   const [creditoEtapas, setCreditoEtapas] = useState<CreditoEtapaRow[]>([]);
   const [creditoExpediente, setCreditoExpediente] = useState<CreditoExpediente | null>(null);
@@ -2149,7 +2148,6 @@ function App() {
       setFormatosCreditoList(formatosResponse);
       setPlazosPagoList(plazosResponse);
       setSelectedProductoCreditoId((current) => current ?? productosResponse[0]?.id ?? null);
-      setSelectedCreditoId((current) => current ?? creditosResponse[0]?.id ?? null);
       setProductoCreditoForm((current) => ({
         ...current,
         idTipoCredito: current.idTipoCredito || String(catalogsResponse.tiposCredito[0]?.id ?? ''),
@@ -4165,6 +4163,8 @@ function App() {
         idComercial: String(creditosCatalogs.comerciales[0]?.id ?? '')
       });
       await reloadProductosCreditoData();
+      setShowRadicarForm(false);
+      setCreditoSimulacion(null);
       setSelectedCreditoId(created.id);
       setProductosCreditoTab('solicitudes');
       setMessage('Credito radicado correctamente');
@@ -4774,6 +4774,23 @@ function App() {
     }
   };
 
+  const handleNavigateCreditTab = (tab: ProductosCreditoTab) => {
+    const creditModule = visibleUserModules.find((module) => {
+      const name = module.nombre.toLowerCase();
+      return name.includes('credito') && !['comercial', 'vendedor', 'libranz', 'cartera'].some((keyword) => name.includes(keyword));
+    });
+    if (!creditModule) {
+      setMessage('No tienes un módulo de créditos disponible.');
+      return;
+    }
+
+    setSelectedCreditoId(null);
+    setShowRadicarForm(false);
+    setProductosCreditoTab(tab);
+    setView(`modulo:${creditModule.id}`);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  };
+
   const breadcrumbInfo = useMemo(() => {
     if (view === 'dashboard') {
       return { root: 'Dashboard', current: 'Panel gerencial' };
@@ -4782,7 +4799,7 @@ function App() {
       if (selectedCreditoId !== null && selectedCredito) {
         return { root: '‹ Créditos', current: `Detalle del crédito #${selectedCredito.consecutivo}` };
       }
-      return { root: 'Créditos', current: 'Solicitudes de crédito' };
+      return { root: 'Créditos', current: creditSubmodules.find((item) => item.key === productosCreditoTab)?.label ?? 'Solicitudes' };
     }
     if (isEmpresasModule) {
       const sub =
@@ -4838,6 +4855,7 @@ function App() {
   }, [
     view,
     isProductosCreditoModule,
+    productosCreditoTab,
     selectedCreditoId,
     selectedCredito,
     isEmpresasModule,
@@ -5243,14 +5261,7 @@ function App() {
             return;
           }
           if (modType === 'credito') {
-            const credMod = visibleUserModules.find(
-              (m) =>
-                m.nombre.toLowerCase().includes('credito') &&
-                !m.nombre.toLowerCase().includes('comercial') &&
-                !m.nombre.toLowerCase().includes('cartera')
-            );
-            if (credMod) setView(`modulo:${credMod.id}`);
-            setProductosCreditoTab('solicitudes');
+            handleNavigateCreditTab('solicitudes');
             return;
           }
           if (modType === 'empresa') {
@@ -5291,6 +5302,8 @@ function App() {
             return;
           }
         }}
+        creditTab={productosCreditoTab}
+        onNavigateCreditTab={handleNavigateCreditTab}
         visibleUserModules={visibleUserModules}
         activeUser={activeUser}
         onLogout={handleLogout}
@@ -5319,7 +5332,7 @@ function App() {
           />
         )}
 
-        {!(isProductosCreditoModule && selectedCreditoId !== null) && (
+        {!isProductosCreditoModule && (
           <section className="metrics-strip">
             {overview.map((item) => (
               <div key={item.label} className="metric-item">
@@ -7226,34 +7239,6 @@ function App() {
 
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
-            {!(productosCreditoTab === 'solicitudes' && selectedCreditoId !== null) && (
-              <div className="config-tabs">
-                {(['solicitudes', 'general', 'atributos', 'tblAtributos', 'convenios', 'documentos', 'etapas', 'parametros', 'formatos', 'tasas', 'plazos', 'bancos'] as ProductosCreditoTab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    className={productosCreditoTab === tab ? 'tab-button active' : 'tab-button'}
-                    onClick={() => setProductosCreditoTab(tab)}
-                  >
-                    {{
-                      solicitudes: 'Solicitudes',
-                      general: 'Productos',
-                      atributos: 'Condiciones y cargos',
-                      tblAtributos: 'Catálogo Atributos',
-                      convenios: 'Convenios',
-                      documentos: 'Documentacion',
-                      etapas: 'Flujo del credito',
-                      parametros: 'Parametros',
-                      formatos: 'Formatos de créditos',
-                      tasas: 'Tasas (Usura / DTF)',
-                      plazos: 'Plazos de pago',
-                      bancos: 'Entidades bancarias'
-                    }[tab]}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
               <div className="product-context-bar">
                 <div>
@@ -7318,405 +7303,21 @@ function App() {
                   onFirmaManualEstado={handleFirmaManualEstado}
                 />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '1rem',
-                    background: '#ffffff',
-                    padding: '1.25rem 1.5rem',
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
-                  }}>
-                    <div>
-                      <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                        Solicitudes de Crédito
-                      </h2>
-                      <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '4px 0 0 0' }}>
-                        Gestiona, valida y realiza seguimiento integral a las solicitudes de crédito.
-                      </p>
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <span style={{
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        padding: '6px 14px',
-                        borderRadius: '9999px',
-                        background: '#e0f2fe',
-                        color: '#0369a1'
-                      }}>
-                        {creditos.length} solicitudes
-                      </span>
-                      <button
-                        type="button"
-                        className="primary"
-                        style={{
-                          fontWeight: 700,
-                          padding: '8px 16px',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                        onClick={() => setShowRadicarForm(!showRadicarForm)}
-                      >
-                        {showRadicarForm ? 'Ocultar formulario' : '+ Radicar nuevo crédito'}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 5-KPI Cards Row matching the screenshot */}
-                  <div className="credit-kpi-row">
-                    <article className="credit-kpi-card">
-                      <div className="credit-kpi-icon-badge" style={{ background: '#eff6ff', color: '#2563eb' }}>
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                        </svg>
-                      </div>
-                      <div className="credit-kpi-content">
-                        <span className="credit-kpi-label">Solicitudes</span>
-                        <strong className="credit-kpi-value">{creditos.length}</strong>
-                        <span className="credit-kpi-sub">Operaciones radicadas</span>
-                      </div>
-                    </article>
-
-                    <article className="credit-kpi-card">
-                      <div className="credit-kpi-icon-badge" style={{ background: '#f0fdf4', color: '#16a34a' }}>
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                          <line x1="12" y1="1" x2="12" y2="23" />
-                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                        </svg>
-                      </div>
-                      <div className="credit-kpi-content">
-                        <span className="credit-kpi-label">Monto solicitado</span>
-                        <strong className="credit-kpi-value">
-                          {formatMoney(creditos.reduce((acc, c) => acc + (Number(c.montoSolicitado) || 0), 0))}
-                        </strong>
-                        <span className="credit-kpi-sub">Total en colocación</span>
-                      </div>
-                    </article>
-
-                    <article className="credit-kpi-card">
-                      <div className="credit-kpi-icon-badge" style={{ background: '#e0f2fe', color: '#0284c7' }}>
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                      </div>
-                      <div className="credit-kpi-content">
-                        <span className="credit-kpi-label">En proceso</span>
-                        <strong className="credit-kpi-value">
-                          {creditos.filter((c) => (c.estado || '').toUpperCase().includes('PROCESO') || (c.estado || '').toUpperCase().includes('PENDIENTE')).length}
-                        </strong>
-                        <span className="credit-kpi-sub">Validación documental</span>
-                      </div>
-                    </article>
-
-                    <article className="credit-kpi-card">
-                      <div className="credit-kpi-icon-badge" style={{ background: '#f0fdf4', color: '#059669' }}>
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                          <polyline points="22 4 12 14.01 9 11.01" />
-                        </svg>
-                      </div>
-                      <div className="credit-kpi-content">
-                        <span className="credit-kpi-label">Aprobadas</span>
-                        <strong className="credit-kpi-value">
-                          {creditos.filter((c) => (c.estado || '').toUpperCase().includes('APROBADA')).length}
-                        </strong>
-                        <span className="credit-kpi-sub">Comité completado</span>
-                      </div>
-                    </article>
-
-                    <article className="credit-kpi-card">
-                      <div className="credit-kpi-icon-badge" style={{ background: '#faf5ff', color: '#9333ea' }}>
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="4" width="20" height="16" rx="2" />
-                          <path d="M7 15h0M2 10h20" />
-                        </svg>
-                      </div>
-                      <div className="credit-kpi-content">
-                        <span className="credit-kpi-label">Desembolsadas</span>
-                        <strong className="credit-kpi-value">
-                          {creditos.filter((c) => (c.estado || '').toUpperCase().includes('DESEMBOLSADA')).length}
-                        </strong>
-                        <span className="credit-kpi-sub">Operaciones activas</span>
-                      </div>
-                    </article>
-                  </div>
-
-                  {/* Search & Filter Bar */}
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                    gap: '12px',
-                    background: '#ffffff',
-                    padding: '12px 18px',
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '260px' }}>
-                      <span style={{ fontSize: '1rem', color: '#94a3b8' }}>🔍</span>
-                      <input
-                        type="text"
-                        placeholder="Buscar por cliente, documento o consecutivo..."
-                        value={solicitudesSearch}
-                        onChange={(e) => setSolicitudesSearch(e.target.value)}
-                        style={{
-                          border: 'none',
-                          outline: 'none',
-                          width: '100%',
-                          fontSize: '0.88rem',
-                          color: '#0f172a',
-                          background: 'transparent'
-                        }}
-                      />
-                      {solicitudesSearch && (
-                        <button
-                          type="button"
-                          onClick={() => setSolicitudesSearch('')}
-                          style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8' }}
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-                        Estado:
-                      </span>
-                      {(['TODOS', 'PROCESO', 'APROBADA', 'RECHAZADA'] as const).map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          onClick={() => setSolicitudesEstadoFilter(st)}
-                          style={{
-                            border: 'none',
-                            borderRadius: '9999px',
-                            padding: '4px 12px',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            background: solicitudesEstadoFilter === st ? '#1d68f6' : '#f1f5f9',
-                            color: solicitudesEstadoFilter === st ? '#ffffff' : '#64748b',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {st === 'TODOS' ? 'Todos' : st === 'PROCESO' ? 'En proceso' : st === 'APROBADA' ? 'Aprobadas' : 'Rechazadas'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {showRadicarForm && (
-                    <form className="surface pagaduria-form" onSubmit={handleCreateCredito}>
-                      <div className="surface-title">
-                        <h2>Radicar crédito</h2>
-                      </div>
-
-                  <FormStepper
-                    steps={[
-                      {
-                        id: 'origen',
-                        title: 'Producto y origen',
-                        subtitle: 'Selección de entidad y comercial',
-                        content: (
-                          <div className="form-section">
-                            <h3>Producto y origen</h3>
-                            <div className="field-grid four-cols">
-                              <select value={creditoForm.idProductoCredito} onChange={(event) => setCreditoForm((current) => ({ ...current, idProductoCredito: event.target.value }))}>
-                                <option value="">Producto de credito *</option>
-                                {creditosCatalogs.productos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                              </select>
-                              <select value={creditoForm.idLibranzera} onChange={(event) => setCreditoForm((current) => ({ ...current, idLibranzera: event.target.value }))}>
-                                <option value="">Libranzera</option>
-                                {creditosCatalogs.libranzeras.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                              </select>
-                              <select value={creditoForm.idEmpresa} onChange={(event) => setCreditoForm((current) => ({ ...current, idEmpresa: event.target.value }))}>
-                                <option value="">Empresa</option>
-                                {creditosCatalogs.empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                              </select>
-                              <select value={creditoForm.idComercial} onChange={(event) => setCreditoForm((current) => ({ ...current, idComercial: event.target.value }))}>
-                                <option value="">Comercial</option>
-                                {creditosCatalogs.comerciales.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                        )
-                      },
-                      {
-                        id: 'cliente',
-                        title: 'Cliente y condiciones',
-                        subtitle: 'Datos de solicitud y plazo',
-                        content: (
-                          <div className="form-section">
-                            <h3>Cliente y condiciones</h3>
-                            <div className="field-grid four-cols">
-                              <select value={creditoForm.idEmpleadoEmpresa} onChange={(event) => setCreditoForm((current) => ({ ...current, idEmpleadoEmpresa: event.target.value }))}>
-                                <option value="">Empleado asociado</option>
-                                {creditosCatalogs.empleados.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                              </select>
-                              <input value={creditoForm.identificacionCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, identificacionCliente: event.target.value }))} placeholder="Identificacion cliente *" />
-                              <input value={creditoForm.nombreCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, nombreCliente: event.target.value }))} placeholder="Nombre cliente *" />
-                              <input value={creditoForm.telefonoCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, telefonoCliente: event.target.value }))} placeholder="Telefono" />
-                              <input value={creditoForm.correoCliente} onChange={(event) => setCreditoForm((current) => ({ ...current, correoCliente: event.target.value }))} placeholder="Correo" />
-                              <input value={creditoForm.montoSolicitado} onChange={(event) => setCreditoForm((current) => ({ ...current, montoSolicitado: event.target.value }))} placeholder="Monto solicitado *" />
-                              <select value={creditoForm.plazo} onChange={(event) => setCreditoForm((current) => ({ ...current, plazo: event.target.value }))}>
-                                <option value="">Plazo *</option>
-                                {monthOptions.map((month) => <option key={month} value={month}>{month}</option>)}
-                              </select>
-                              <input value={creditoForm.tasa} onChange={(event) => setCreditoForm((current) => ({ ...current, tasa: event.target.value }))} placeholder="Tasa %" />
-                            </div>
-                          </div>
-                        )
-                      }
-                    ]}
-                    submitButtonText={loading ? 'Radicando...' : 'Guardar solicitud'}
-                    submitButtonDisabled={loading}
-                    showSubmitAlways={true}
-                    extraHeaderActions={
-                      <button type="button" className="stepper-btn stepper-btn-prev" disabled={loading} onClick={handleSimularCredito}>
-                        📊 Simular crédito
-                      </button>
-                    }
-                  />
-                </form>
-              )}
-
-              {showRadicarForm && creditoSimulacion && (
-                <section className="surface employees-panel">
-                    <div className="surface-title">
-                      <h2>Simulacion</h2>
-                      <span>{creditoSimulacion.producto.nombre}</span>
-                    </div>
-                    <div className="summary-grid">
-                      <article>
-                        <span>Cuota estimada</span>
-                        <strong>{formatMoney(creditoSimulacion.resumen.cuotaEstimada)}</strong>
-                      </article>
-                      <article>
-                        <span>Valor credito</span>
-                        <strong>{formatMoney(creditoSimulacion.resumen.valorCredito)}</strong>
-                      </article>
-                      <article>
-                        <span>Desembolso</span>
-                        <strong>{formatMoney(creditoSimulacion.resumen.valorDesembolso)}</strong>
-                      </article>
-                      <article>
-                        <span>Total a pagar</span>
-                        <strong>{formatMoney(creditoSimulacion.resumen.totalPagar)}</strong>
-                      </article>
-                    </div>
-                    {creditoSimulacion.evaluacion && (
-                      <div className={`capacity-panel ${creditoSimulacion.evaluacion.aprobado ? 'approved' : 'blocked'}`}>
-                        <strong>{creditoSimulacion.evaluacion.aprobado ? 'Capacidad aprobada' : 'Capacidad bloqueada'}</strong>
-                        {creditoSimulacion.evaluacion.capacidad && <span>Cuota {formatMoney(creditoSimulacion.evaluacion.capacidad.cuota)} / capacidad {formatMoney(creditoSimulacion.evaluacion.capacidad.capacidadMaxima)} ({creditoSimulacion.evaluacion.capacidad.usoCapacidad ?? 0}%)</span>}
-                        {[...creditoSimulacion.evaluacion.bloqueos, ...creditoSimulacion.evaluacion.alertas].map((item) => <small key={item}>{item}</small>)}
-                      </div>
-                    )}
-                    <div className="table-wrap">
-                      <table>
-                        <thead><tr><th>Concepto</th><th>Tipo</th><th>Valor</th></tr></thead>
-                        <tbody>{creditoSimulacion.atributos.map((item) => <tr key={item.id}><td>{item.nombre}</td><td>{item.tipoAtributo}</td><td>{formatMoney(item.valorCalculado)}</td></tr>)}</tbody>
-                      </table>
-                    </div>
-                    <div className="table-wrap">
-                      <table>
-                        <thead><tr><th>No.</th><th>Saldo inicial</th><th>Capital</th><th>Interes</th><th>Cuota</th></tr></thead>
-                        <tbody>{creditoSimulacion.plan.slice(0, 6).map((item) => <tr key={item.numero}><td>{item.numero}</td><td>{formatMoney(item.saldoInicial)}</td><td>{formatMoney(item.capital)}</td><td>{formatMoney(item.interes)}</td><td>{formatMoney(item.cuota)}</td></tr>)}</tbody>
-                      </table>
-                    </div>
-                  </section>
-                )}
-
-                  <section className="surface" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.25rem', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                    <div className="table-wrap">
-                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Consecutivo</th>
-                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Cliente</th>
-                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Producto</th>
-                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Monto solicitado</th>
-                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Plazo</th>
-                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Cuota estimada</th>
-                            <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Estado</th>
-                            <th style={{ padding: '12px 14px', textAlign: 'right', fontSize: '0.74rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Acción</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {creditos
-                            .filter((credito) => {
-                              const q = solicitudesSearch.toLowerCase().trim();
-                              const matchesSearch =
-                                !q ||
-                                credito.nombreCliente.toLowerCase().includes(q) ||
-                                credito.identificacionCliente.toLowerCase().includes(q) ||
-                                String(credito.consecutivo).toLowerCase().includes(q) ||
-                                (credito.producto || '').toLowerCase().includes(q);
-                              const matchesEstado =
-                                solicitudesEstadoFilter === 'TODOS' ||
-                                (credito.estado || '').toUpperCase().includes(solicitudesEstadoFilter);
-                              return matchesSearch && matchesEstado;
-                            })
-                            .map((credito) => (
-                            <tr
-                              key={credito.id}
-                              style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s' }}
-                              onClick={() => setSelectedCreditoId(credito.id)}
-                            >
-                              <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0284c7' }}>
-                                #{credito.consecutivo}
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                <strong>{credito.nombreCliente}</strong>
-                                <small style={{ display: 'block', color: '#64748b' }}>CC {credito.identificacionCliente}</small>
-                              </td>
-                              <td style={{ padding: '12px 14px', color: '#334155', fontWeight: 600 }}>
-                                {credito.producto}
-                              </td>
-                              <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>
-                                {formatMoney(credito.montoSolicitado)}
-                              </td>
-                              <td style={{ padding: '12px 14px', color: '#64748b' }}>
-                                {credito.plazo} meses
-                              </td>
-                              <td style={{ padding: '12px 14px', fontWeight: 600, color: '#0f172a' }}>
-                                {formatMoney(credito.cuotaEstimada)}
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                <span className={`status-pill small status-${normalizeStatusClass(credito.estado)}`}>
-                                  {credito.estado || 'EN PROCESO'}
-                                </span>
-                              </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                                <button
-                                  type="button"
-                                  className="primary tiny"
-                                  style={{ fontWeight: 700, padding: '6px 14px', borderRadius: '6px' }}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedCreditoId(credito.id);
-                                  }}
-                                >
-                                  Ver detalle →
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </section>
-                </div>
+                <CreditRequestsView creditos={creditos} showForm={showRadicarForm} onToggleForm={() => { setMessage(''); setCreditoSimulacion(null); setShowRadicarForm(true); }} onOpenCredit={setSelectedCreditoId}>
+                  {showRadicarForm && <CreditRequestDrawer
+                    value={creditoForm}
+                    catalogs={creditosCatalogs}
+                    busy={loading}
+                    simulation={creditoSimulacion}
+                    message={message}
+                    messageTone={messageTone}
+                    onDismissMessage={() => setMessage('')}
+                    onChange={(value) => { setCreditoForm(value); setCreditoSimulacion(null); setMessage(''); }}
+                    onClose={() => { if (!loading) setShowRadicarForm(false); }}
+                    onSubmit={handleCreateCredito}
+                    onSimulate={handleSimularCredito}
+                  />}
+                </CreditRequestsView>
               )
             )}
 
