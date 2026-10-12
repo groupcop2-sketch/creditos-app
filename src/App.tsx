@@ -20,6 +20,9 @@ import { TiposSalariosView } from './components/configuracion-financiera/TiposSa
 import { DocuSignFirmasView } from './components/docusign/DocuSignFirmasView';
 import { DocuSignStateMachine } from './components/docusign/DocuSignStateMachine';
 import { SendDocumentsDrawer } from './components/creditos/SendDocumentsDrawer';
+import { EditProductAttributeDrawer } from './components/creditos/EditProductAttributeDrawer';
+import { AttributeCatalogSelect } from './components/creditos/AttributeCatalogSelect';
+import { ProductConditionsView } from './components/creditos/ProductConditionsView';
 import { CreditProductsView } from './components/creditos/CreditProductsView';
 import { ProductFormDrawer } from './components/creditos/ProductFormDrawer';
 import { CreditRequestDrawer } from './components/creditos/CreditRequestDrawer';
@@ -1325,6 +1328,7 @@ function App() {
   const [selectedProductoCreditoId, setSelectedProductoCreditoId] = useState<number | null>(null);
   const [formatosCreditoList, setFormatosCreditoList] = useState<FormatoCreditoItem[]>([]);
   const [plazosPagoList, setPlazosPagoList] = useState<PlazoPagoItem[]>([]);
+  const [selectedCatalogAtributoId, setSelectedCatalogAtributoId] = useState('');
   const [productoAtributos, setProductoAtributos] = useState<ProductoAtributoRow[]>([]);
   const [productoConvenios, setProductoConvenios] = useState<ProductoConvenioRow[]>([]);
   const [productoConvenioForm, setProductoConvenioForm] = useState<ProductoConvenioFormState>(initialProductoConvenioForm);
@@ -3852,6 +3856,7 @@ function App() {
   };
 
   const handleEditProductoAtributo = (atributo: ProductoAtributoRow) => {
+    setMessage('');
     const tipoAtributo = productosCreditoCatalogs.tiposAtributo.find((item) => item.nombre === atributo.tipoAtributo);
     const tipoCalculo = productosCreditoCatalogs.tiposCalculo.find((item) => item.nombre === atributo.tipoCalculo);
     setEditingProductoAtributoId(atributo.id);
@@ -3872,6 +3877,7 @@ function App() {
   };
 
   const handleCancelProductoAtributoEdit = () => {
+    setSelectedCatalogAtributoId('');
     setEditingProductoAtributoId(null);
     setProductoAtributoForm(initialProductoAtributoForm);
   };
@@ -7281,7 +7287,7 @@ function App() {
 
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
-            {productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
+            {productosCreditoTab !== 'atributos' && productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
               <div className="product-context-bar">
                 <div>
                   <span className="section-kicker">Producto en configuracion</span>
@@ -7636,19 +7642,23 @@ function App() {
             )}
 
             {productosCreditoTab === 'atributos' && (
-              <section className="surface employees-panel">
-                <div className="surface-title">
-                  <h2>Atributos Asignados a {selectedProductoCredito?.nombre ?? 'producto'}</h2>
-                  <span>{productoAtributos.length} asignaciones</span>
-                </div>
-
+              <ProductConditionsView
+                key={selectedProductoCreditoId ?? 'none'}
+                products={productosCredito}
+                product={selectedProductoCredito}
+                attributes={productoAtributos}
+                descriptions={Object.fromEntries(tblAtributosList.map((item) => [item.nombre, item.descripcion]))}
+                busy={loading}
+                onSelectProduct={(id) => { if (id === selectedProductoCreditoId) return; handleCancelProductoAtributoEdit(); setSelectedCatalogAtributoId(''); setProductoAtributos([]); setSelectedProductoCreditoId(id); setMessage(''); }}
+                onEdit={handleEditProductoAtributo}
+                onDelete={handleDeleteProductoAtributo}
+              >
                 {!editingProductoAtributoId ? (
-                  <form className="employee-form attribute-form" onSubmit={handleSaveProductoAtributo} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', marginBottom: '20px' }}>
-                    <label className="product-field" style={{ flex: '1', minWidth: '280px' }}>
-                      <span>Seleccionar Atributo de tbl_atributos *</span>
-                      <select onChange={(event) => {
-                        const selectedId = Number(event.target.value);
-                        if (!selectedId) return;
+                  <form className="employee-form attribute-form" onSubmit={handleSaveProductoAtributo} >
+                    <AttributeCatalogSelect options={tblAtributosList} value={selectedCatalogAtributoId} disabled={!selectedProductoCreditoId || loading} onChange={(value) => {
+                        setSelectedCatalogAtributoId(value);
+                        const selectedId = Number(value);
+                        if (!selectedId) { handleCancelProductoAtributoEdit(); return; }
                         const item = tblAtributosList.find((a) => a.id === selectedId);
                         if (!item) return;
                         const tipoAtributoObj = productosCreditoCatalogs.tiposAtributo.find((t) => t.nombre.toUpperCase() === item.aplicaA.toUpperCase());
@@ -7667,77 +7677,30 @@ function App() {
                           aplicaIva: item.aplicaIvaDefault,
                           obligatorio: item.obligatorioDefault
                         }));
-                      }}>
-                        <option value="">-- Selecciona concepto de tbl_atributos --</option>
-                        {tblAtributosList.filter((a) => a.activo).map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.nombre} ({item.aplicaA} - {item.tipoFormula})
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    }} />
 
                     <button type="submit" disabled={!selectedProductoCreditoId || !productoAtributoForm.nombre || loading}>
                       Asignar atributo al producto
                     </button>
                   </form>
                 ) : (
-                  <form className="surface pagaduria-form" onSubmit={handleSaveProductoAtributo} style={{ marginBottom: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <h3 style={{ margin: 0 }}>Editando Atributo: <strong>{productoAtributoForm.nombre}</strong></h3>
-                      <button type="button" className="ghost-button" onClick={handleCancelProductoAtributoEdit}>Cancelar</button>
-                    </div>
-                    <div className="field-grid four-cols">
-                      <label className="product-field"><span>Valor</span><input value={productoAtributoForm.valor} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, valor: e.target.value, porcentaje: e.target.value.trim() ? '' : cur.porcentaje }))} placeholder="0" /></label>
-                      <label className="product-field"><span>Porcentaje (%)</span><input value={productoAtributoForm.porcentaje} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, porcentaje: e.target.value, valor: e.target.value.trim() ? '' : cur.valor }))} placeholder="0" /></label>
-                      <label className="product-field"><span>Mínimo</span><input value={productoAtributoForm.minimo} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, minimo: e.target.value }))} placeholder="0" /></label>
-                      <label className="product-field"><span>Máximo</span><input value={productoAtributoForm.maximo} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, maximo: e.target.value }))} placeholder="0" /></label>
-                    </div>
-                    <div className="field-grid" style={{ marginTop: '12px', display: 'flex', gap: '16px', alignItems: 'center' }}>
-                      <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.aplicaIva} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, aplicaIva: e.target.checked }))} /> Aplica IVA</label>
-                      <label className="inline-check"><input type="checkbox" checked={productoAtributoForm.obligatorio} onChange={(e) => setProductoAtributoForm((cur) => ({ ...cur, obligatorio: e.target.checked }))} /> Obligatorio</label>
-                      <button type="submit" disabled={loading} style={{ marginLeft: 'auto' }}>Guardar Cambio</button>
-                    </div>
-                  </form>
+                  <EditProductAttributeDrawer
+                    name={productoAtributoForm.nombre}
+                    description={tblAtributosList.find((item) => item.nombre === productoAtributoForm.nombre)?.descripcion || ''}
+                    type={productosCreditoCatalogs.tiposAtributo.find((item) => String(item.id) === productoAtributoForm.idTipoAtributo)?.nombre || productoAtributos.find((item) => item.id === editingProductoAtributoId)?.tipoAtributo || ''}
+                    value={productoAtributoForm}
+                    busy={loading}
+                    message={message}
+                    messageTone={messageTone}
+                    onDismissMessage={() => setMessage('')}
+                    onChange={(patch) => { setProductoAtributoForm((current) => ({ ...current, ...patch })); setMessage(''); }}
+                    onClose={() => { if (!loading) { handleCancelProductoAtributoEdit(); setMessage(''); } }}
+                    onSubmit={handleSaveProductoAtributo}
+                  />
                 )}
 
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Nombre</th>
-                        <th>Tipo</th>
-                        <th>Cálculo</th>
-                        <th>Valor</th>
-                        <th>%</th>
-                        <th>IVA</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {productoAtributos.map((item) => (
-                        <tr key={item.id}>
-                          <td><strong>{item.nombre}</strong></td>
-                          <td>{item.tipoAtributo}</td>
-                          <td>{item.tipoCalculo}</td>
-                          <td>{item.valor ? formatMoney(item.valor) : '-'}</td>
-                          <td>{item.porcentaje ? `${item.porcentaje}%` : '-'}</td>
-                          <td>{item.aplicaIva ? 'Sí' : 'No'}</td>
-                          <td>
-                            <span className="row-actions compact-actions">
-                              <button type="button" onClick={() => handleEditProductoAtributo(item)}>Editar</button>
-                              <button type="button" className="danger" onClick={() => handleDeleteProductoAtributo(item)}>Eliminar</button>
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+              </ProductConditionsView>
             )}
-
-
 
             {productosCreditoTab === 'parametros' && (
               <section className="content-grid credit-product-grid">
