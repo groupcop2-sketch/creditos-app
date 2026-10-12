@@ -566,8 +566,8 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                                     position: 'absolute',
                                     right: 0,
                                     top: '100%',
-                                    background: '#ffffff',
-                                    border: '1px solid #cbd5e1',
+                                    background: 'var(--bg-surface)',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '8px',
                                     boxShadow: '0 8px 20px rgba(0, 0, 0, 0.12)',
                                     zIndex: 30,
@@ -586,7 +586,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                                         border: 'none',
                                         background: 'none',
                                         fontSize: '0.8rem',
-                                        color: '#15803d',
+                                        color: 'var(--color-success)',
                                         cursor: 'pointer',
                                         textAlign: 'left',
                                         fontWeight: 600
@@ -609,7 +609,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                                         border: 'none',
                                         background: 'none',
                                         fontSize: '0.8rem',
-                                        color: '#b91c1c',
+                                        color: 'var(--color-danger)',
                                         cursor: 'pointer',
                                         textAlign: 'left',
                                         fontWeight: 600
@@ -631,7 +631,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                                       border: 'none',
                                       background: 'none',
                                       fontSize: '0.8rem',
-                                      color: '#0284c7',
+                                      color: 'var(--color-info)',
                                       cursor: 'pointer',
                                       textAlign: 'left'
                                     }}
@@ -672,19 +672,19 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
 
               {/* Decision details if stage is Aprobación */}
               {isApprovalStage && creditoDecisionForm && onChangeDecisionForm && onDecideCredito && (
-                <div style={{ margin: '0 1.5rem 1.5rem 1.5rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+                <div style={{ margin: '0 1.5rem 1.5rem 1.5rem', padding: '1.25rem', background: 'var(--bg-soft)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
                     Decisión de Aprobación
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
                     <input
-                      style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
                       value={creditoDecisionForm.montoAprobado}
                       onChange={(e) => onChangeDecisionForm((c) => ({ ...c, montoAprobado: e.target.value }))}
                       placeholder="Monto aprobado"
                     />
                     <select
-                      style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
                       value={creditoDecisionForm.plazoAprobado}
                       onChange={(e) => onChangeDecisionForm((c) => ({ ...c, plazoAprobado: e.target.value }))}
                     >
@@ -692,13 +692,13 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                       {monthOptions.map((m) => <option key={m} value={m}>{m} meses</option>)}
                     </select>
                     <input
-                      style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
                       value={creditoDecisionForm.tasaAprobada}
                       onChange={(e) => onChangeDecisionForm((c) => ({ ...c, tasaAprobada: e.target.value }))}
                       placeholder="Tasa %"
                     />
                     <input
-                      style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
                       value={creditoDecisionForm.cuotaAprobada}
                       onChange={(e) => onChangeDecisionForm((c) => ({ ...c, cuotaAprobada: e.target.value }))}
                       placeholder="Cuota estimada"
@@ -735,25 +735,25 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
 
               {/* Disbursement details if stage is Desembolso */}
               {isDisbursementStage && creditoDesembolsoForm && onChangeDesembolsoForm && onRegistrarDesembolso && (
-                <div style={{ margin: '0 1.5rem 1.5rem 1.5rem', padding: '1.25rem', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+                <div style={{ margin: '0 1.5rem 1.5rem 1.5rem', padding: '1.25rem', background: 'var(--bg-soft)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
                     Registro de Desembolso
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '12px' }}>
                     <input
-                      style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
                       value={creditoDesembolsoForm.valorDesembolso}
                       onChange={(e) => onChangeDesembolsoForm((c: any) => ({ ...c, valorDesembolso: e.target.value }))}
                       placeholder="Valor desembolso"
                     />
                     <input
                       type="date"
-                      style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
                       value={creditoDesembolsoForm.fechaDesembolso}
                       onChange={(e) => onChangeDesembolsoForm((c: any) => ({ ...c, fechaDesembolso: e.target.value }))}
                     />
                     <select
-                      style={{ padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.82rem' }}
+                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
                       value={creditoDesembolsoForm.idInversion}
                       onChange={(e) => onChangeDesembolsoForm((c: any) => ({ ...c, idInversion: e.target.value }))}
                     >
@@ -784,22 +784,22 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
           {/* TAB 2: Observaciones */}
           {activeTab === 'observaciones' && (
             <div style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1rem' }}>
                 Observaciones y Comentarios de la Gestión
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '1.5rem' }}>
                 {(expediente?.historial || []).length > 0 ? (
                   expediente?.historial.map((h) => (
-                    <div key={h.id} style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', marginBottom: '4px' }}>
+                    <div key={h.id} style={{ padding: '12px 16px', background: 'var(--bg-soft)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
                         <strong>{h.usuario || 'Sistema'}</strong>
                         <span>{formatDateTime(h.fecha)}</span>
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.84rem', color: '#1e293b' }}>{h.observacion || h.accion}</p>
+                      <p style={{ margin: 0, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>{h.observacion || h.accion}</p>
                     </div>
                   ))
                 ) : (
-                  <p style={{ color: '#64748b', fontSize: '0.84rem' }}>No hay observaciones previas registradas.</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem' }}>No hay observaciones previas registradas.</p>
                 )}
               </div>
             </div>
@@ -808,18 +808,18 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
           {/* TAB 3: Historial */}
           {activeTab === 'historial' && (
             <div style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '1rem' }}>
                 Historial de Transiciones de la Etapa
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {displayEtapas.map((et, i) => (
-                  <div key={et.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px' }}>
-                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: et.estadoEtapa === 'APROBADA' ? '#10b981' : '#cbd5e1', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
+                  <div key={et.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'var(--bg-soft)', borderRadius: '8px' }}>
+                    <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: et.estadoEtapa === 'APROBADA' ? '#10b981' : 'var(--border-color)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
                       {i + 1}
                     </span>
-                    <strong style={{ fontSize: '0.84rem', color: '#0f172a' }}>{et.etapa}</strong>
-                    <span style={{ fontSize: '0.76rem', color: '#64748b' }}>({et.estadoEtapa})</span>
-                    <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: '#64748b' }}>
+                    <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>{et.etapa}</strong>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>({et.estadoEtapa})</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                       {formatDateTime(et.fechaInicio) || '-'}
                     </span>
                   </div>
@@ -898,28 +898,28 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                     {liquidacionDefinitivaActual ? (
                       <>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                          <span style={{ color: '#64748b' }}>Monto solicitado:</span>
+                          <span style={{ color: 'var(--text-muted)' }}>Monto solicitado:</span>
                           <strong>{formatMoney(liquidacionDefinitivaActual.montoSolicitado)}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                          <span style={{ color: '#64748b' }}>Cargos financiados:</span>
+                          <span style={{ color: 'var(--text-muted)' }}>Cargos financiados:</span>
                           <strong>{formatMoney(liquidacionDefinitivaActual.cargosFinanciados)}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                          <span style={{ color: '#64748b' }}>Valor desembolso:</span>
-                          <strong style={{ color: '#059669' }}>{formatMoney(liquidacionDefinitivaActual.valorDesembolso)}</strong>
+                          <span style={{ color: 'var(--text-muted)' }}>Valor desembolso:</span>
+                          <strong style={{ color: 'var(--color-success)' }}>{formatMoney(liquidacionDefinitivaActual.valorDesembolso)}</strong>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                          <span style={{ color: '#64748b' }}>Cuota mensual:</span>
+                          <span style={{ color: 'var(--text-muted)' }}>Cuota mensual:</span>
                           <strong>{formatMoney(liquidacionDefinitivaActual.cuota)}</strong>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderTop: '1px solid #e2e8f0', paddingTop: '6px' }}>
-                          <span style={{ color: '#0f172a', fontWeight: 700 }}>Total a pagar:</span>
-                          <strong style={{ color: '#0f172a' }}>{formatMoney(liquidacionDefinitivaActual.totalPagar)}</strong>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
+                          <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>Total a pagar:</span>
+                          <strong style={{ color: 'var(--text-main)' }}>{formatMoney(liquidacionDefinitivaActual.totalPagar)}</strong>
                         </div>
                       </>
                     ) : (
-                      <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
                         Sin liquidación definitiva registrada para esta versión.
                       </p>
                     )}

@@ -6136,6 +6136,42 @@ tbody tr:hover {
 .attribute-catalog-view .catalog-row-actions button:hover:not(:disabled) { background: var(--bg-muted); transform: none; box-shadow: none; }
 @media (max-width: 1100px) { .catalog-list-filters { grid-template-columns: minmax(200px, 2fr) 1fr 1fr; } .catalog-overview-metrics { flex-wrap: wrap; } }
 @media (max-width: 650px) { .catalog-list-heading { flex-wrap: wrap; } .catalog-list-heading > div { min-width: 200px; } .catalog-list-filters { grid-template-columns: 1fr; } .catalog-overview-metrics article { padding: 8px; } }
+:root[data-theme='dark'] .attribute-catalog-view { --catalog-blue: #8abaff; --catalog-blue-soft: #1b3150; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-overview-title > small { color: #9cb6d6; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-overview-icon,
+:root[data-theme='dark'] .attribute-catalog-view .catalog-overview-metrics article > span { color: var(--catalog-blue); background: var(--catalog-blue-soft); border-color: #29466b; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-view-tabs button.selected { color: var(--catalog-blue); background: #192d48; border-color: #4576b6; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-table-scroll { border: 1px solid var(--border-color); border-radius: 7px; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-list table { background: var(--bg-surface); }
+:root[data-theme='dark'] .attribute-catalog-view .requests-list th { background: #182840; color: #a8bed9; border-color: #293d58; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-list td { color: #c9d7e9; border-color: #24344d; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-list td strong { color: #edf4ff; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-list tbody tr:hover { background: #192b44; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-code { color: #adc7e8; background: #1b2c44; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-base-tag { color: #a1c6ff; background: #1b3556; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-base-tag.cuota { color: #f9ce8e; background: #403221; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-base-tag.saldo { color: #d4b8fa; background: #35264b; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-base-tag.desembolso { color: #8ae3c1; background: #173c33; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-rule-tags span { color: #95ceff; background: #193752; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-rule-tags .red { color: #ffa7b4; background: #442632; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-rule-tags .orange { color: #ffd09a; background: #403020; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-rule-tags .purple { color: #d6b9ff; background: #34264b; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-rule-tags .green { color: #86e5bd; background: #163b32; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-state { color: #b6c7dc; background: #223249; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-state.aprobada { color: #8de8bd; background: #153d32; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-row-actions button { color: #b2c6df; background: #1c2c43; border-color: #2b3f5b; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-row-actions button.edit { color: #99c3ff; background: #1b3352; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-row-actions button.delete { color: #ffa4b2; background: #3e2530; }
+:root[data-theme='dark'] .attribute-catalog-view .catalog-row-actions button:hover:not(:disabled) { background: #2b415f; }
+:root[data-theme='dark'] .attribute-catalog-view .requests-button.secondary,
+:root[data-theme='dark'] .attribute-catalog-view .requests-pagination button,
+:root[data-theme='dark'] .attribute-catalog-view .requests-page { color: var(--catalog-blue); }
+:root[data-theme='dark'] .attribute-catalog-view .dropdown-trigger:focus-visible,
+:root[data-theme='dark'] .attribute-catalog-view .is-open .dropdown-trigger { border-color: #6ca7f8; }
+:root[data-theme='dark'] .attribute-catalog-view .dropdown-option.selected { color: var(--catalog-blue); background: #1c3453; }
+:root[data-theme='dark'] .attribute-catalog-view input::placeholder { color: #91a6bf; opacity: 1; }
+:root[data-theme='dark'] .catalog-form-drawer .catalog-section-heading > span { color: #9ac6ff; background: #1c3453; }
+:root[data-theme='dark'] .catalog-form-drawer .requests-button.secondary { color: #adc8ee; }
 .credit-requests-view { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .requests-heading, .requests-list-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
 .requests-heading h1 { font-size: 1.6rem; letter-spacing: -0.04em; margin: 0; color: var(--text-main); }
@@ -6248,9 +6284,9 @@ tbody tr:hover {
 .requests-sort-control { width: 290px; max-width: 100%; }
 .requests-sort-control .dropdown-panel { left: auto; right: 0; width: 100%; }
 .requests-table-scroll { overflow-x: auto; }
-.requests-list table { width: 100%; min-width: 950px; border-collapse: collapse; }
+.requests-list table { width: 100%; min-width: 950px; border-collapse: collapse; background: var(--bg-surface); }
 .requests-list thead { background: color-mix(in srgb, #dcebff 35%, var(--bg-surface)); }
-.requests-list th { padding: 12px 10px; color: var(--text-muted); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.025em; font-weight: 600; white-space: nowrap; text-align: left; border-bottom: 1px solid var(--border-subtle); }
+.requests-list th { padding: 12px 10px; color: var(--text-muted); background: var(--bg-soft); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.025em; font-weight: 600; white-space: nowrap; text-align: left; border-bottom: 1px solid var(--border-subtle); }
 .requests-list td { padding: 10px; font-size: 0.7rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-subtle); vertical-align: middle; }
 .requests-list tbody tr:hover { background: var(--bg-soft); }
 .requests-list td strong { font-size: 0.7rem; font-weight: 650; color: var(--text-main); display: block; min-width: 130px; }
@@ -7265,6 +7301,65 @@ tbody tr:hover {
 .credit-detail-page .stage-btn-primary { background: #1769ff; color: #fff; }
 .credit-detail-page .stage-btn-primary:hover:not(:disabled) { background: #0958de; }
 .credit-detail-page .stage-btn-primary:disabled { background: #cbd5e1; color: #fff; opacity: 1; cursor: not-allowed; }
+
+/* Credit detail: keep document surfaces and status accents readable at night. */
+:root[data-theme='dark'] .credit-detail-page .stage-progress-bar-row,
+:root[data-theme='dark'] .credit-detail-page .modern-docs-table,
+:root[data-theme='dark'] .credit-detail-page .modern-docs-table td { background: var(--bg-surface); }
+:root[data-theme='dark'] .credit-detail-page .modern-docs-table th { background: var(--bg-soft); color: #a8bed9; }
+:root[data-theme='dark'] .credit-detail-page .modern-docs-table tr:hover td { background: #192b44; }
+:root[data-theme='dark'] .credit-detail-page .credit-doc-search { background: #0e192a; border-color: #334e70; }
+:root[data-theme='dark'] .credit-detail-page input::placeholder,
+:root[data-theme='dark'] .credit-detail-page textarea::placeholder { color: #91a6bf; opacity: 1; }
+:root[data-theme='dark'] .credit-detail-page .credit-hero-subtitle strong,
+:root[data-theme='dark'] .credit-detail-page .stage-meta-value,
+:root[data-theme='dark'] .credit-detail-page .stage-progress-text,
+:root[data-theme='dark'] .credit-detail-page .stage-footer-info-text strong { color: var(--text-main); }
+:root[data-theme='dark'] .credit-detail-page .stage-progress-percent,
+:root[data-theme='dark'] .credit-detail-page .doc-name-file,
+:root[data-theme='dark'] .credit-detail-page .stage-observation-counter { color: var(--text-muted); }
+:root[data-theme='dark'] .credit-detail-page .stage-progress-bar-container { background: #263a54; }
+:root[data-theme='dark'] .credit-detail-page .stepper-step.pending .stepper-circle { background: var(--bg-soft); color: #c9d7e9; border-color: #446080; }
+:root[data-theme='dark'] .credit-detail-page .stepper-connector { background: #334e70; }
+:root[data-theme='dark'] .credit-detail-page .stepper-connector.completed { background: #34d399; }
+:root[data-theme='dark'] .credit-detail-page .credit-current-stage strong,
+:root[data-theme='dark'] .credit-detail-page .stepper-step.active .stepper-subtitle,
+:root[data-theme='dark'] .credit-detail-page .stage-tab-btn.active,
+:root[data-theme='dark'] .credit-detail-page .stage-tab-btn:hover:not(:disabled),
+:root[data-theme='dark'] .credit-detail-page .credit-applicant-card h2 svg { color: #8abaff; }
+:root[data-theme='dark'] .credit-detail-page .stage-header-icon,
+:root[data-theme='dark'] .credit-detail-page .accordion-header-icon,
+:root[data-theme='dark'] .credit-detail-page .stage-footer-info-icon,
+:root[data-theme='dark'] .credit-detail-page .credit-actions-icon,
+:root[data-theme='dark'] .credit-detail-page .stage-header-badge { background: #1b3352; color: #99c3ff; border-color: #2b466b; }
+:root[data-theme='dark'] .credit-detail-page .credit-actions-trigger.is-open { background: #1b3352; color: #99c3ff; border-color: #6ca7f8; }
+:root[data-theme='dark'] .credit-detail-page .credit-actions-option.featured > svg { color: #99c3ff; }
+:root[data-theme='dark'] .credit-detail-page .credit-applicant-avatar { background: #35264b; color: #d4b8fa; }
+:root[data-theme='dark'] .credit-detail-page .doc-action-btn:not(.primary),
+:root[data-theme='dark'] .credit-detail-page .stage-menu-btn { background: #1c2c43; color: #adc8ee; border-color: #2b3f5b; }
+:root[data-theme='dark'] .credit-detail-page .doc-action-btn:not(.primary):hover:not(:disabled),
+:root[data-theme='dark'] .credit-detail-page .stage-menu-btn:hover:not(:disabled) { background: #2b415f; }
+:root[data-theme='dark'] .credit-detail-page .credit-applicant-tag,
+:root[data-theme='dark'] .credit-detail-page .doc-pill.client,
+:root[data-theme='dark'] .credit-detail-page .doc-pill.sent { background: #1b3556; color: #a1c6ff; border-color: #29466b; }
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge,
+:root[data-theme='dark'] .credit-detail-page .doc-pill.approved,
+:root[data-theme='dark'] .credit-detail-page .doc-pill.mandatory-yes,
+:root[data-theme='dark'] .credit-detail-page .stepper-step.completed .stepper-circle { background: #153d32; color: #8de8bd; border-color: #285b48; }
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-en-proceso,
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-en_proceso,
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-radicado,
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-pendiente { background: #1b3556; color: #a1c6ff; border-color: #29466b; }
+:root[data-theme='dark'] .credit-detail-page .doc-pill.pending,
+:root[data-theme='dark'] .credit-detail-page .accordion-locked-notice { background: #352b1d; color: #f9ce8e; border-color: #56432a; }
+:root[data-theme='dark'] .credit-detail-page .doc-pill.open { background: #35264b; color: #d4b8fa; border-color: #51396d; }
+:root[data-theme='dark'] .credit-detail-page .doc-pill.declined,
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-rechazado,
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-rechazada,
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-anulada,
+:root[data-theme='dark'] .credit-detail-page .credit-hero-badge.status-anulado { background: #442632; color: #ffa7b4; border-color: #643746; }
+:root[data-theme='dark'] .credit-detail-page .doc-pill.mandatory-no { background: #223249; color: #b6c7dc; }
+:root[data-theme='dark'] .credit-detail-page .stage-btn-primary:disabled { background: #263a54; color: #9eafc5; border: 1px solid #334e70; }
 @media (max-width: 1400px) { .credit-applicant-grid { grid-template-columns: 1fr 1fr; } .credit-applicant-grid > div:nth-child(3) { border-left: 0; padding-left: 0; } }
 @media (max-width: 1100px) { .credit-detail-page .credit-main-grid { grid-template-columns: 1fr; } .credit-detail-page .credit-sidebar-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 @media (max-width: 600px) { .credit-detail-page .credit-sidebar-column, .credit-applicant-grid { grid-template-columns: 1fr; } .credit-applicant-grid > div + div { border-left: 0; padding-left: 0; } .credit-detail-page .credit-hero-main-title { flex-wrap: wrap; } .credit-detail-page .stage-footer-actions { width: 100%; flex-wrap: wrap; } }
