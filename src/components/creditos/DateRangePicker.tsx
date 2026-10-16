@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 export const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -24,11 +24,13 @@ export function quickDateRange(label: string, today: Date): [string, string] {
   return [dateKey(start), dateKey(end)];
 }
 
-type Props = { from: string; to: string; onChange: (from: string, to: string) => void };
+type Props = { from: string; to: string; fromLabel?: string; toLabel?: string; floating?: boolean; onChange: (from: string, to: string) => void };
 
-export function DateRangePicker({ from, to, onChange }: Props) {
+export function DateRangePicker({ from, to, fromLabel = 'Desde', toLabel = 'Hasta', floating = false, onChange }: Props) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 8, left: 8, width: 440 });
   const firstTrigger = useRef<HTMLButtonElement>(null);
   const today = todayKey();
   const [open, setOpen] = useState(false);
@@ -37,6 +39,23 @@ export function DateRangePicker({ from, to, onChange }: Props) {
   const [picking, setPicking] = useState<'from' | 'to'>('from');
   const [month, setMonth] = useState(() => { const date = parse(from || today); return new Date(date.getFullYear(), date.getMonth(), 1, 12); });
   const [quick, setQuick] = useState('');
+  useLayoutEffect(() => {
+    if (!open || !floating) return;
+    const place = () => {
+      if (!root.current || !panel.current) return;
+      const bounds = root.current.getBoundingClientRect();
+      const width = Math.min(bounds.width, window.innerWidth - 24);
+      const height = Math.min(panel.current.scrollHeight, window.innerHeight - 24);
+      const below = bounds.bottom + 8;
+      const above = bounds.top - height - 8;
+      const top = below + height <= window.innerHeight - 12 ? below : above >= 12 ? above : Math.max(12, window.innerHeight - height - 12);
+      setPosition({ top, left: Math.max(12, Math.min(bounds.left, window.innerWidth - width - 12)), width });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open, floating]);
   const show = (field: 'from' | 'to') => {
     if (!open) { setDraftFrom(from); setDraftTo(to); setQuick(''); const date = parse((field === 'from' ? from : to) || today); setMonth(new Date(date.getFullYear(), date.getMonth(), 1, 12)); }
     setPicking(field); setOpen(true);
@@ -63,10 +82,10 @@ export function DateRangePicker({ from, to, onChange }: Props) {
   };
   return <div className="date-range-picker" ref={root} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); close(); } }}>
     <div className="date-range-fields">{(['from', 'to'] as const).map((field) => {
-      const value = field === 'from' ? from : to; const label = field === 'from' ? 'Desde' : 'Hasta';
+      const value = field === 'from' ? from : to; const label = field === 'from' ? fromLabel : toLabel;
       return <div className={`date-range-field ${open && picking === field ? 'focused' : ''}`} key={field}><span>{label}</span><div><button ref={field === 'from' ? firstTrigger : undefined} type="button" className="date-range-trigger" aria-label={`${label}: ${display(value)}`} aria-haspopup="dialog" aria-expanded={open} aria-controls={`${id}-panel`} onClick={() => show(field)}><CalendarDays size={15} /><span>{display(value)}</span></button>{value && <button type="button" className="date-range-clear" aria-label={`Limpiar fecha ${label.toLowerCase()}`} onClick={() => { onChange(field === 'from' ? '' : from, field === 'to' ? '' : to); setOpen(false); }}><X size={13} /></button>}</div></div>;
     })}</div>
-    {open && <div className="date-range-panel" role="dialog" aria-label="Seleccionar rango de fechas" id={`${id}-panel`}>
+    {open && <div ref={panel} className={`date-range-panel ${floating ? 'date-range-floating' : ''}`} style={floating ? { position: 'fixed', top: position.top, left: position.left, right: 'auto', width: position.width, maxHeight: 'calc(100dvh - 24px)', marginTop: 0 } : undefined} role="dialog" aria-label="Seleccionar rango de fechas" id={`${id}-panel`}>
       <div className="date-range-body">{calendar(0)}{calendar(1)}<section className="date-range-presets"><strong>Rangos rápidos</strong>{quickLabels.map((label) => <button type="button" key={label} className={quick === label ? 'selected' : ''} onClick={() => { const [start, end] = quickDateRange(label, parse(today)); setDraftFrom(start); setDraftTo(end); const date = parse(start); setMonth(new Date(date.getFullYear(), date.getMonth(), 1, 12)); setQuick(label); }}>{label}</button>)}</section></div>
       <footer className="date-range-footer"><span>{shortDate(draftFrom)}<ArrowRight size={15} />{shortDate(draftTo)}</span><div><button type="button" className="requests-button secondary" onClick={() => { setDraftFrom(''); setDraftTo(''); setQuick(''); setPicking('from'); onChange('', ''); close(); }}>Limpiar</button><button type="button" className="requests-button" onClick={() => { onChange(draftFrom, draftTo); close(); }}>Aplicar</button></div></footer>
     </div>}

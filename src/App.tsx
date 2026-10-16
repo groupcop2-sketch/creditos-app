@@ -24,6 +24,7 @@ import { AttributeCatalogView } from './components/creditos/AttributeCatalogView
 import { CatalogFormDrawer, CatalogSectionHeader } from './components/creditos/CatalogFormDrawer';
 import { EditProductAttributeDrawer } from './components/creditos/EditProductAttributeDrawer';
 import { AttributeCatalogSelect } from './components/creditos/AttributeCatalogSelect';
+import { ProductAgreementsView } from './components/creditos/ProductAgreementsView';
 import { ProductConditionsView } from './components/creditos/ProductConditionsView';
 import { CreditProductsView } from './components/creditos/CreditProductsView';
 import { ProductFormDrawer } from './components/creditos/ProductFormDrawer';
@@ -3965,6 +3966,7 @@ function App() {
       setProductoConvenios(response);
       handleCancelProductoConvenioEdit();
       setMessage('Convenio guardado');
+      return true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo guardar el convenio');
     } finally {
@@ -7298,7 +7300,7 @@ function App() {
 
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
-            {productosCreditoTab !== 'atributos' && productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
+            {productosCreditoTab !== 'convenios' && productosCreditoTab !== 'atributos' && productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
               <div className="product-context-bar">
                 <div>
                   <span className="section-kicker">Producto en configuracion</span>
@@ -7966,26 +7968,10 @@ function App() {
             )}
 
             {productosCreditoTab === 'convenios' && (
-              <section className="surface employees-panel">
-                <div className="surface-title"><div><span className="section-kicker">Pagadurias habilitadas</span><h2>Convenios de {selectedProductoCredito?.nombre ?? 'producto'}</h2></div><span>{productoConvenios.length} empresas</span></div>
-                <form className="employee-form attribute-form" onSubmit={handleSaveProductoConvenio}>
-                  <label className="product-field"><span>Empresa *</span><select value={productoConvenioForm.idEmpresa} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, idEmpresa: event.target.value }))}>
-                    <option value="">Selecciona empresa</option>
-                    {creditosCatalogs.empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                  </select></label>
-                  <label className="product-field"><span>Cupo total</span><input value={productoConvenioForm.cupoTotal} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, cupoTotal: event.target.value }))} placeholder="0" /></label>
-                  <label className="product-field"><span>Cupo usado</span><input value={productoConvenioForm.cupoUsado} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, cupoUsado: event.target.value }))} placeholder="0" /></label>
-                  <label className="product-field"><span>Endeudamiento %</span><input value={productoConvenioForm.porcentajeEndeudamientoMaximo} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, porcentajeEndeudamientoMaximo: event.target.value }))} placeholder="Producto" /></label>
-                  <label className="product-field"><span>Desde</span><input type="date" value={productoConvenioForm.vigenciaDesde} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, vigenciaDesde: event.target.value }))} /></label>
-                  <label className="product-field"><span>Hasta</span><input type="date" value={productoConvenioForm.vigenciaHasta} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, vigenciaHasta: event.target.value }))} /></label>
-                  <label className="inline-check"><input type="checkbox" checked={productoConvenioForm.requiereValidacionPagaduria} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, requiereValidacionPagaduria: event.target.checked }))} />Validacion pagaduria</label>
-                  <label className="inline-check"><input type="checkbox" checked={productoConvenioForm.activo} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, activo: event.target.checked }))} />Activo</label>
-                  <label className="product-field"><span>Observacion</span><input value={productoConvenioForm.observacion} onChange={(event) => setProductoConvenioForm((current) => ({ ...current, observacion: event.target.value }))} placeholder="Condicion especial" /></label>
-                  <button type="submit" disabled={!selectedProductoCreditoId || loading}>{selectedProductoConvenioId ? 'Guardar convenio' : 'Agregar convenio'}</button>
-                  {selectedProductoConvenioId && <button type="button" className="ghost-button" onClick={handleCancelProductoConvenioEdit}>Cancelar</button>}
-                </form>
-                <div className="table-wrap"><table><thead><tr><th>Empresa</th><th>Cupo</th><th>Disponible</th><th>Endeudamiento</th><th>Validacion</th><th>Vigencia</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{productoConvenios.map((item) => <tr key={item.id}><td><strong>{item.empresa}</strong><small>{item.nit ?? ''}</small></td><td>{item.cupoTotal ? formatMoney(item.cupoTotal) : 'Sin limite'}</td><td>{item.cupoDisponible !== null ? formatMoney(item.cupoDisponible) : '-'}</td><td>{item.porcentajeEndeudamientoMaximo ? String(item.porcentajeEndeudamientoMaximo) + '%' : 'Producto'}</td><td>{item.requiereValidacionPagaduria ? 'Si' : 'No'}</td><td>{item.vigenciaDesde ?? '-'} / {item.vigenciaHasta ?? '-'}</td><td>{item.activo ? 'Activo' : 'Inactivo'}</td><td><span className="row-actions compact-actions"><button type="button" onClick={() => handleEditProductoConvenio(item)}>Editar</button><button type="button" className="danger" onClick={() => handleDeleteProductoConvenio(item)}>Eliminar</button></span></td></tr>)}</tbody></table></div>
-              </section>
+              <ProductAgreementsView key={selectedProductoCreditoId ?? 'none'} products={productosCredito} product={selectedProductoCredito} agreements={productoConvenios} companies={creditosCatalogs.empresas} companyNits={empresas}
+                value={productoConvenioForm} editing={selectedProductoConvenioId !== null} busy={loading} message={message} messageTone={messageTone} onDismissMessage={() => setMessage('')}
+                onChange={(patch) => setProductoConvenioForm(current => ({ ...current, ...patch }))} onSelectProduct={setSelectedProductoCreditoId}
+                onEdit={handleEditProductoConvenio} onCancel={handleCancelProductoConvenioEdit} onDelete={handleDeleteProductoConvenio} onSave={handleSaveProductoConvenio} formatMoney={formatMoney} />
             )}
 
             {productosCreditoTab === 'documentos' && (
