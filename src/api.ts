@@ -736,10 +736,30 @@ export type FormulaCalculoRow = {
   activo: boolean;
 };
 
+export type TblAtributoRow = {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  aplicaA: string;
+  tipoFormula: string;
+  valorDefault: number;
+  valor2Default?: number;
+  porcentajeDefault: number;
+  minimoDefault: number;
+  maximoDefault: number;
+  proveedorDefault: string;
+  prioridadDefault: number;
+  aplicaIvaDefault: boolean;
+  obligatorioDefault: boolean;
+  activo: boolean;
+};
+
 export type ProductoAtributoRow = {
   id: number;
   tipoAtributo: string;
   tipoCalculo: string;
+  idTipoAtributo?: number;
+  idTipoCalculo?: number;
   nombre: string;
   valor: number | null;
   porcentaje: number | null;
@@ -1457,6 +1477,16 @@ export const api = {
   updateComercialEstado: (token: string, id: number, activo: boolean) =>
     request<ComercialRow>(`/api/v1/comerciales/vendedores/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ activo }) }, token),
   listProductosCreditoCatalogs: (token: string) => request<ProductosCreditoCatalogs>('/api/v1/productos-creditos/catalogos', {}, token),
+  listTblAtributos: (token: string) =>
+    request<TblAtributoRow[]>('/api/v1/productos-creditos/atributos-catalogo', {}, token),
+  createTblAtributo: (token: string, body: unknown) =>
+    request<TblAtributoRow>('/api/v1/productos-creditos/atributos-catalogo', { method: 'POST', body: JSON.stringify(body) }, token),
+  updateTblAtributo: (token: string, id: number, body: unknown) =>
+    request<TblAtributoRow>(`/api/v1/productos-creditos/atributos-catalogo/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+  updateTblAtributoEstado: (token: string, id: number, activo: boolean) =>
+    request<TblAtributoRow>(`/api/v1/productos-creditos/atributos-catalogo/${id}/estado`, { method: 'PATCH', body: JSON.stringify({ activo }) }, token),
+  deleteTblAtributo: (token: string, id: number) =>
+    request<{ deleted: boolean }>(`/api/v1/productos-creditos/atributos-catalogo/${id}`, { method: 'DELETE' }, token),
   listProductosCredito: (token: string) => request<ProductoCreditoRow[]>('/api/v1/productos-creditos', {}, token),
   createTipoCalculoCredito: (token: string, body: unknown) => request<FormulaCalculoRow>('/api/v1/productos-creditos/formulas', { method: 'POST', body: JSON.stringify(body) }, token),
   updateTipoCalculoCredito: (token: string, id: number, body: unknown) => request<FormulaCalculoRow>(`/api/v1/productos-creditos/formulas/${id}`, { method: 'PUT', body: JSON.stringify(body) }, token),
