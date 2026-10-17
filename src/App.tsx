@@ -918,56 +918,9 @@ const initialTblAtributoForm: TblAtributoFormState = {
   obligatorioDefault: false
 };
 
-const INITIAL_TBL_ATRIBUTOS: TblAtributoItem[] = [
-  { id: 10, nombre: 'FIANZA DE CREDITOS COOPHUMANA', descripcion: 'Fianza de créditos Coophumana - Beneficiario 900528910 COOPHUMANA', aplicaA: 'CREDITO', tipoFormula: 'FIANZA', valorDefault: 0, porcentajeDefault: 100, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '900528910 COOPHUMANA', prioridadDefault: 1, aplicaIvaDefault: true, obligatorioDefault: true, activo: true },
-  { id: 11, nombre: 'SEGURO DE VIDA DEUDORES', descripcion: 'Póliza seguro de vida deudores - Beneficiario 901342794 WOW DESARROLLOS', aplicaA: 'CREDITO', tipoFormula: 'SEGURO DE VIDA', valorDefault: 0, porcentajeDefault: 100, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901342794 WOW DESARROLLOS', prioridadDefault: 2, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
-  { id: 12, nombre: 'CORRETAJE', descripcion: 'Comisión de corretaje sobre valor desembolso 8% - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR DESEMBOLSO * %', valorDefault: 0, porcentajeDefault: 8, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 3, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
-  { id: 13, nombre: 'INTERESES ANTICIPADOS', descripcion: 'Intereses anticipados sobre valor crédito 5% - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * % * DIAS', valorDefault: 0, porcentajeDefault: 5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 4, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
-  { id: 14, nombre: 'AFILIACION COOPHUMANA', descripcion: 'Cuota afiliación Coophumana (SMMLV * 0.2%) * Plazo + $7,000 - Beneficiario 900528910 COOPHUMANA', aplicaA: 'CREDITO', tipoFormula: '(SMMLV * % ) * PLAZO + VALOR', valorDefault: 7000, porcentajeDefault: 0.2, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '900528910 COOPHUMANA', prioridadDefault: 4, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
-  { id: 15, nombre: 'CORRETAJE GARANTIA REAL', descripcion: 'Corretaje garantía real 14% valor crédito - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * %', valorDefault: 0, porcentajeDefault: 14, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 4, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
-  { id: 16, nombre: 'INTERES PRIMAS', descripcion: 'Interés primas 2% valor crédito - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * %', valorDefault: 0, porcentajeDefault: 2, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 5, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
-  { id: 17, nombre: 'INTERES GARANTIA REAL', descripcion: 'Interés garantía real 10% valor desembolso - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR DESEMBOLSO * %', valorDefault: 0, porcentajeDefault: 10, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 5, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
-  { id: 18, nombre: 'CORRETAJE PRIMAS', descripcion: 'Corretaje primas 8% valor crédito - Beneficiario 901898386 P&S SOLUCIONES', aplicaA: 'CREDITO', tipoFormula: 'VALOR CRÉDITO * %', valorDefault: 0, porcentajeDefault: 8, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '901898386 P&S SOLUCIONES', prioridadDefault: 6, aplicaIvaDefault: false, obligatorioDefault: false, activo: true },
-  { id: 19, nombre: 'FIANZA TRES', descripcion: 'Fianza Tres FIANZA LI3M - Beneficiario 900528910 COOPHUMANA', aplicaA: 'CREDITO', tipoFormula: 'FIANZA', valorDefault: 0, porcentajeDefault: 100, minimoDefault: 0, maximoDefault: 0, proveedorDefault: '900528910 COOPHUMANA', prioridadDefault: 10, aplicaIvaDefault: true, obligatorioDefault: true, activo: true },
-  { id: 20, nombre: 'ESTUDIO DE CREDITO', descripcion: 'Cargo único por análisis crediticio y verificación', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 25000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'P&S SOLUCIONES', prioridadDefault: 11, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 21, nombre: 'PLATAFORMA Y TECNOLOGIA', descripcion: 'Costo de uso de plataforma digital y procesamiento', aplicaA: 'CREDITO', tipoFormula: 'Valor fijo', valorDefault: 15000, porcentajeDefault: 0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Sistema', prioridadDefault: 12, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 22, nombre: 'COMISION POR MIPYME', descripcion: 'Comisión mipyme aplicable según ley', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 1.5, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Entidad', prioridadDefault: 13, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 23, nombre: 'GASTOS DE COBRANZA', descripcion: 'Recargo administrativo por gestión de mora', aplicaA: 'CUOTA', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 5.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Cartera', prioridadDefault: 14, aplicaIvaDefault: true, obligatorioDefault: false, activo: true },
-  { id: 24, nombre: 'IVA SOBRE CARGOS', descripcion: 'Impuesto al valor agregado aplicable a comisiones', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 19.0, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'DIAN', prioridadDefault: 15, aplicaIvaDefault: false, obligatorioDefault: true, activo: true },
-  { id: 25, nombre: 'GMF / 4 X 1000', descripcion: 'Gravamen a los movimientos financieros', aplicaA: 'CREDITO', tipoFormula: 'Porcentaje', valorDefault: 0, porcentajeDefault: 0.4, minimoDefault: 0, maximoDefault: 0, proveedorDefault: 'Banco', prioridadDefault: 16, aplicaIvaDefault: false, obligatorioDefault: false, activo: true }
-];
-
-const INITIAL_FORMULAS_CATALOG: string[] = [
-  'VALOR FIJO',
-  'FIANZA',
-  'SMMLV * %',
-  'SEGURO DE VIDA',
-  'VALOR CRÉDITO * %',
-  'VALOR CRÉDITO * % * DÍAS ANTICIPADOS',
-  'VALOR SALDO * %',
-  'VALOR CRÉDITO * % > (MÍNIMO)',
-  '(VALOR DESEMBOLSO * VALOR) / VALOR2',
-  'VALOR DESEMBOLSO * %',
-  'VALOR DESEMBOLSO * % > (MÍNIMO)',
-  '(SMMLV * % ) * PLAZO + VALOR',
-  'VALOR * PLAZO',
-  'Porcentaje',
-  'Manual',
-  'Base * valor / valor2'
-];
-
-const INITIAL_TIPOS_CALCULO_LIST: FormulaCalculoRow[] = [
-  { id: 1, nombre: 'FIANZA DE CREDITOS', codigo: 'FIANZA', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: true, aplicaMaximo: false, activo: true },
-  { id: 2, nombre: 'SEGURO DE VIDA DEUDORES', codigo: 'SEG_VIDA', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 3, nombre: 'VALOR DESEMBOLSO * %', codigo: 'DESEMB_PORC', baseCalculo: 'DESEMBOLSO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 4, nombre: 'VALOR CRÉDITO * % * DIAS', codigo: 'VAL_CRED_DIAS', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 5, nombre: '(SMMLV * % ) * PLAZO + VALOR', codigo: 'SMMLV_PLAZO_VAL', baseCalculo: 'SMMLV', operacion: 'MULTIPLICAR_DIVIDIR', requiereValor: true, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 6, nombre: 'VALOR CRÉDITO * %', codigo: 'VAL_CRED_PORC', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 7, nombre: 'Valor fijo', codigo: 'VALOR_FIJO', baseCalculo: 'VALOR_CREDITO', operacion: 'VALOR_FIJO', requiereValor: true, requiereValor2: false, requierePorcentaje: false, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 8, nombre: 'Porcentaje', codigo: 'PORCENTAJE_GENERICO', baseCalculo: 'VALOR_CREDITO', operacion: 'PORCENTAJE', requiereValor: false, requiereValor2: false, requierePorcentaje: true, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 9, nombre: 'Manual', codigo: 'MANUAL', baseCalculo: 'VALOR_CREDITO', operacion: 'MANUAL', requiereValor: true, requiereValor2: false, requierePorcentaje: false, aplicaMinimo: false, aplicaMaximo: false, activo: true },
-  { id: 10, nombre: 'Base * valor / valor2', codigo: 'BASE_VAL_VAL2', baseCalculo: 'DESEMBOLSO', operacion: 'MULTIPLICAR_DIVIDIR', requiereValor: true, requiereValor2: true, requierePorcentaje: false, aplicaMinimo: false, aplicaMaximo: false, activo: true }
-];
+const INITIAL_TBL_ATRIBUTOS: TblAtributoItem[] = [];
+const INITIAL_FORMULAS_CATALOG: string[] = [];
+const INITIAL_TIPOS_CALCULO_LIST: FormulaCalculoRow[] = [];
 
 const initialParametroFinancieroForm: ParametroFinancieroFormState = {
   codigo: '',
@@ -2162,8 +2115,11 @@ function App() {
       setEmployeeCatalogs(employeeCatalogsResponse);
       setFormatosCreditoList(formatosResponse);
       setPlazosPagoList(plazosResponse);
-      if (Array.isArray(tblAtributosResponse) && tblAtributosResponse.length > 0) {
+      if (Array.isArray(tblAtributosResponse)) {
         setTblAtributosList(tblAtributosResponse);
+      }
+      if (catalogsResponse?.tiposCalculo?.length > 0) {
+        setCustomFormulas(catalogsResponse.tiposCalculo.map((tc) => tc.nombre));
       }
       setSelectedProductoCreditoId((current) => current ?? productosResponse[0]?.id ?? null);
       setProductoCreditoForm((current) => ({
@@ -3885,7 +3841,7 @@ function App() {
           }
         } catch {
           setProductosCreditoCatalogs((prev) => {
-            const existing = prev.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST;
+            const existing = prev.tiposCalculo || [];
             let updatedList: FormulaCalculoRow[];
             if (editingFormulaCalculoId) {
               updatedList = existing.map((tc) => (tc.id === editingFormulaCalculoId ? { ...tc, ...payload, id: editingFormulaCalculoId, activo: tc.activo } : tc));
@@ -3898,7 +3854,7 @@ function App() {
         }
       } else {
         setProductosCreditoCatalogs((prev) => {
-          const existing = prev.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST;
+          const existing = prev.tiposCalculo || [];
           let updatedList: FormulaCalculoRow[];
           if (editingFormulaCalculoId) {
             updatedList = existing.map((tc) => (tc.id === editingFormulaCalculoId ? { ...tc, ...payload, id: editingFormulaCalculoId, activo: tc.activo } : tc));
@@ -3997,31 +3953,58 @@ function App() {
     const tipoAtributo = productosCreditoCatalogs.tiposAtributo.find(
       (item) => item.id === atributo.idTipoAtributo || item.nombre.toUpperCase() === (atributo.tipoAtributo || '').toUpperCase()
     );
-    const tipoCalculo = productosCreditoCatalogs.tiposCalculo.find(
-      (item) => item.id === atributo.idTipoCalculo ||
-                item.nombre.trim().toUpperCase() === (atributo.tipoCalculo || '').trim().toUpperCase() ||
-                (item.codigo && item.codigo.trim().toUpperCase() === (atributo.tipoCalculo || '').trim().toUpperCase())
+
+    const catalogItem = tblAtributosList.find(
+      (item) => item.nombre.trim().toUpperCase() === atributo.nombre.trim().toUpperCase()
     );
 
     let operacion = 'Porcentaje';
-    const formulaName = (tipoCalculo?.nombre || atributo.tipoCalculo || '').toUpperCase();
-    if (formulaName.includes('/') || formulaName.includes('VALOR2') || (atributo.valor2 && Number(atributo.valor2) > 0)) {
+    const rawFormula = (catalogItem?.tipoFormula || atributo.tipoCalculo || '').toUpperCase();
+    if (rawFormula.includes('/') || rawFormula.includes('VALOR2') || (atributo.valor2 && Number(atributo.valor2) > 0)) {
       operacion = 'Base * valor / valor2';
-    } else if (formulaName.includes('VALOR FIJO') || (Number(atributo.valor) > 0 && !Number(atributo.porcentaje))) {
+    } else if (rawFormula.includes('VALOR FIJO') || (Number(atributo.valor) > 0 && !Number(atributo.porcentaje))) {
       operacion = 'Valor fijo';
-    } else if (formulaName.includes('MANUAL')) {
+    } else if (rawFormula.includes('MANUAL')) {
       operacion = 'Manual';
-    } else if (formulaName.includes('%') || formulaName.includes('PORCENTAJE') || Number(atributo.porcentaje) > 0) {
+    } else if (rawFormula.includes('%') || rawFormula.includes('PORCENTAJE') || Number(atributo.porcentaje) > 0) {
       operacion = 'Porcentaje';
     } else if (Number(atributo.valor) > 0) {
       operacion = 'Valor fijo';
     }
 
-    const defaultCalculoId = productosCreditoCatalogs.tiposCalculo.find(tc =>
-      (operacion === 'Base * valor / valor2' && (tc.operacion === 'BASE_POR_VALOR_DIV_VALOR2' || tc.nombre.toUpperCase().includes('VALOR2'))) ||
-      (operacion === 'Porcentaje' && (tc.operacion === 'PORCENTAJE' || tc.nombre.toUpperCase().includes('PORCENTAJE'))) ||
-      (operacion === 'Valor fijo' && (tc.operacion === 'VALOR_FIJO' || tc.nombre.toUpperCase().includes('VALOR FIJO')))
-    )?.id ?? productosCreditoCatalogs.tiposCalculo[0]?.id ?? 1;
+    let tipoCalculo: FormulaCalculoRow | undefined;
+    const targetFormulaName = (catalogItem?.tipoFormula || '').trim().toUpperCase();
+
+    if (targetFormulaName) {
+      tipoCalculo = productosCreditoCatalogs.tiposCalculo.find(
+        (tc) => tc.nombre.trim().toUpperCase() === targetFormulaName ||
+                (tc.codigo && tc.codigo.trim().toUpperCase() === targetFormulaName)
+      );
+    }
+
+    if (!tipoCalculo) {
+      tipoCalculo = productosCreditoCatalogs.tiposCalculo.find(
+        (tc) => tc.nombre.trim().toUpperCase() === atributo.nombre.trim().toUpperCase() ||
+                (tc.codigo && tc.codigo.trim().toUpperCase() === atributo.nombre.trim().toUpperCase())
+      );
+    }
+
+    if (!tipoCalculo && atributo.idTipoCalculo) {
+      const byId = productosCreditoCatalogs.tiposCalculo.find((tc) => tc.id === atributo.idTipoCalculo);
+      if (byId && (byId.nombre.toUpperCase() !== 'MANUAL' || operacion === 'Manual')) {
+        tipoCalculo = byId;
+      }
+    }
+
+    if (!tipoCalculo) {
+      tipoCalculo = productosCreditoCatalogs.tiposCalculo.find(tc =>
+        (operacion === 'Base * valor / valor2' && (tc.operacion === 'BASE_POR_VALOR_DIV_VALOR2' || tc.nombre.toUpperCase().includes('VALOR2') || tc.nombre.toUpperCase().includes('SEGURO DE VIDA'))) ||
+        (operacion === 'Porcentaje' && (tc.operacion === 'PORCENTAJE' || tc.nombre.toUpperCase().includes('PORCENTAJE'))) ||
+        (operacion === 'Valor fijo' && (tc.operacion === 'VALOR_FIJO' || tc.nombre.toUpperCase().includes('VALOR FIJO')))
+      );
+    }
+
+    const defaultCalculoId = tipoCalculo?.id ?? productosCreditoCatalogs.tiposCalculo[0]?.id ?? 1;
 
     const defaultAtributoId = productosCreditoCatalogs.tiposAtributo.find(ta =>
       ta.nombre.toUpperCase().includes('CREDITO')
@@ -4030,7 +4013,7 @@ function App() {
     setEditingProductoAtributoId(atributo.id);
     setProductoAtributoForm({
       idTipoAtributo: String(tipoAtributo?.id ?? defaultAtributoId),
-      idTipoCalculo: String(tipoCalculo?.id ?? defaultCalculoId),
+      idTipoCalculo: String(defaultCalculoId),
       operacion,
       nombre: atributo.nombre,
       valor: atributo.valor === 0 && Number(atributo.porcentaje) > 0 ? '' : String(atributo.valor ?? ''),
@@ -7832,14 +7815,27 @@ function App() {
                         const item = tblAtributosList.find((a) => a.id === selectedId);
                         if (!item) return;
                         const tipoAtributoObj = productosCreditoCatalogs.tiposAtributo.find((t) => t.nombre.toUpperCase() === item.aplicaA.toUpperCase());
-                        const tipoCalculoObj = productosCreditoCatalogs.tiposCalculo.find((c) => c.nombre.toLowerCase().includes(item.tipoFormula.toLowerCase()) || item.tipoFormula.toLowerCase().includes(c.nombre.toLowerCase()));
+                        const tipoCalculoObj = productosCreditoCatalogs.tiposCalculo.find((c) =>
+                          c.nombre.toLowerCase().trim() === item.tipoFormula.toLowerCase().trim() ||
+                          (c.codigo && c.codigo.toLowerCase().trim() === item.tipoFormula.toLowerCase().trim()) ||
+                          c.nombre.toLowerCase().includes(item.tipoFormula.toLowerCase()) ||
+                          item.tipoFormula.toLowerCase().includes(c.nombre.toLowerCase())
+                        );
+                        let autoOp = 'Porcentaje';
+                        if (item.valor2Default && Number(item.valor2Default) > 0) {
+                          autoOp = 'Base * valor / valor2';
+                        } else if (item.valorDefault > 0 && !item.porcentajeDefault) {
+                          autoOp = 'Valor fijo';
+                        }
                         setProductoAtributoForm((current) => ({
                           ...current,
                           nombre: item.nombre,
-                          idTipoAtributo: tipoAtributoObj ? String(tipoAtributoObj.id) : (productosCreditoCatalogs.tiposAtributo[0]?.id ? String(productosCreditoCatalogs.tiposAtributo[0].id) : '1'),
+                          operacion: autoOp,
+                          idTipoAtributo: tipoAtributoObj ? String(tipoAtributoObj.id) : (productosCreditoCatalogs.tiposAtributo[0]?.id ? String(productosCreditoCatalogs.tiposAtributo[0].id) : '11'),
                           idTipoCalculo: tipoCalculoObj ? String(tipoCalculoObj.id) : (productosCreditoCatalogs.tiposCalculo[0]?.id ? String(productosCreditoCatalogs.tiposCalculo[0].id) : '1'),
-                          valor: item.porcentajeDefault > 0 || /porcentaje|%/i.test(item.tipoFormula) ? '' : String(item.valorDefault),
-                          porcentaje: item.porcentajeDefault > 0 || /porcentaje|%/i.test(item.tipoFormula) ? String(item.porcentajeDefault) : '',
+                          valor: item.valorDefault > 0 ? String(item.valorDefault) : '',
+                          valor2: (item.valor2Default && item.valor2Default > 0) ? String(item.valor2Default) : '',
+                          porcentaje: item.porcentajeDefault > 0 ? String(item.porcentajeDefault) : '',
                           minimo: String(item.minimoDefault),
                           maximo: String(item.maximoDefault),
                           proveedor: item.proveedorDefault,
@@ -7860,7 +7856,7 @@ function App() {
                     type={productosCreditoCatalogs.tiposAtributo.find((item) => String(item.id) === productoAtributoForm.idTipoAtributo)?.nombre || productoAtributos.find((item) => item.id === editingProductoAtributoId)?.tipoAtributo || ''}
                     value={productoAtributoForm}
                     tiposAtributo={productosCreditoCatalogs.tiposAtributo}
-                    tiposCalculo={productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST}
+                    tiposCalculo={productosCreditoCatalogs.tiposCalculo}
                     customFormulas={customFormulas}
                     busy={loading}
                     message={message}
@@ -7903,7 +7899,7 @@ function App() {
                 key={subTabAtributos}
                 tab={subTabAtributos}
                 attributes={tblAtributosList}
-                formulas={productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST}
+                formulas={productosCreditoCatalogs.tiposCalculo || []}
                 busy={loading}
                 onTabChange={setSubTabAtributos}
                 onCreateAttribute={() => { handleCancelTblAtributoEdit(); setCatalogDrawer('attribute'); }}
@@ -7967,7 +7963,7 @@ function App() {
                               }}
                             >
                               <option value="">-- Seleccionar Tipo de Fórmula --</option>
-                              {(productosCreditoCatalogs.tiposCalculo || INITIAL_TIPOS_CALCULO_LIST).map((tc) => (
+                              {(productosCreditoCatalogs.tiposCalculo || []).map((tc) => (
                                 <option key={tc.id} value={tc.nombre}>
                                   {tc.nombre} ({tc.baseCalculo || 'CRÉDITO'})
                                 </option>
