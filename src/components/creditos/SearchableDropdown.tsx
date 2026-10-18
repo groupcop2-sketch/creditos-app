@@ -3,10 +3,10 @@ import { ChevronDown, Search } from 'lucide-react';
 
 export type DropdownOption = { value: string; label: string; count?: number; icon?: ReactNode; tone?: 'blue' | 'green' | 'red' | 'purple' | 'orange' | 'cyan' };
 
-type Props = { label: string; value: string; options: DropdownOption[]; onChange: (value: string) => void; searchPlaceholder?: string };
+type Props = { label: string; value: string; options: DropdownOption[]; onChange: (value: string) => void; searchPlaceholder?: string; disabled?: boolean };
 const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
 
-export function SearchableDropdown({ label, value, options, onChange, searchPlaceholder = 'Buscar opción…' }: Props) {
+export function SearchableDropdown({ label, value, options, onChange, searchPlaceholder = 'Buscar opción…', disabled = false }: Props) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -18,13 +18,13 @@ export function SearchableDropdown({ label, value, options, onChange, searchPlac
   const choose = (option: DropdownOption) => { onChange(option.value); close(); trigger.current?.focus(); };
 
   return (
-    <div className={`searchable-dropdown ${open ? 'is-open' : ''}`} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) close(); }} onKeyDown={(event) => {
+    <div className={`searchable-dropdown ${open ? 'is-open' : ''} ${disabled ? 'is-disabled' : ''}`} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) close(); }} onKeyDown={(event) => {
       if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); close(); trigger.current?.focus(); }
     }}>
-      <button ref={trigger} type="button" className="dropdown-trigger" aria-expanded={open} aria-haspopup="listbox" aria-controls={`${id}-list`} aria-label={`${label}: ${selected?.label ?? 'Selecciona una opción'}`} onClick={() => { if (open) close(); else { setQuery(''); setActive(0); setOpen(true); } }} onKeyDown={(event) => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); setActive(0); } }}>
+      <button ref={trigger} type="button" className="dropdown-trigger" disabled={disabled} aria-expanded={open} aria-haspopup="listbox" aria-controls={`${id}-list`} aria-label={`${label}: ${selected?.label ?? 'Selecciona una opción'}`} onClick={() => { if (disabled) return; if (open) close(); else { setQuery(''); setActive(0); setOpen(true); } }} onKeyDown={(event) => { if (disabled) return; if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setOpen(true); setActive(0); } }}>
         <span><small>{label}</small><strong>{selected?.label ?? 'Selecciona una opción'}</strong></span><ChevronDown size={16} aria-hidden="true" />
       </button>
-      {open && <div className="dropdown-panel">
+      {open && !disabled && <div className="dropdown-panel">
         <label className="dropdown-search"><Search size={15} aria-hidden="true" /><input autoFocus role="combobox" aria-label={`Buscar ${label.toLocaleLowerCase()}`} aria-expanded={true} aria-controls={`${id}-list`} aria-autocomplete="list" aria-activedescendant={visible.length ? `${id}-option-${Math.min(active, visible.length - 1)}` : undefined} value={query} placeholder={searchPlaceholder} onChange={(event) => { setQuery(event.target.value); setActive(0); }} onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();

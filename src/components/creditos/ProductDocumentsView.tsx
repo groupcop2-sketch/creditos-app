@@ -93,14 +93,15 @@ const aplicaOptions = [
   { value: 'VEHICULO', label: 'Vehículo' }
 ];
 
-const tipoOptions = [
-  { value: '', label: 'Todos los tipos' },
+const tipoDocumentoOptions = [
   { value: 'PAGARE', label: 'Pagaré' },
   { value: 'CONTRATO', label: 'Contrato' },
   { value: 'AUTORIZACION', label: 'Autorización' },
   { value: 'FORMULARIO', label: 'Formulario' },
   { value: 'FIANZA', label: 'Fianza' }
 ];
+
+const tipoOptions = [{ value: '', label: 'Todos los tipos' }, ...tipoDocumentoOptions];
 
 export function ProductDocumentsView(props: Props) {
   const {
@@ -765,26 +766,26 @@ export function ProductDocumentsView(props: Props) {
       )}
 
       {tab === 'plantillas' && templateMode === 'editor' && (
-        <section className="requests-list conditions-main-card documents-templates-card documents-templates-editor-view">
-          <header className="agreement-heading documents-templates-editor-toolbar">
-            <div className="documents-templates-editor-title">
-              <button type="button" className="requests-button secondary" onClick={backToTemplateList}>
+        <section className="requests-list conditions-main-card documents-templates-editor-view">
+          <header className="documents-template-topbar">
+            <div className="documents-template-topbar-left">
+              <button type="button" className="requests-button secondary documents-template-back" onClick={backToTemplateList}>
                 <ArrowLeft size={15} />
-                Volver al listado
+                Listado
               </button>
-              <div>
-                <small>{selectedTemplate ? `VERSIÓN ${selectedTemplate.version ?? '—'}` : 'NUEVA PLANTILLA'}</small>
+              <div className="documents-template-topbar-copy">
+                <small>{selectedTemplate ? `Versión ${selectedTemplate.version ?? '—'}` : 'Nueva plantilla'}</small>
                 <h1>{selectedTemplate ? selectedTemplate.nombre : 'Crear plantilla automática'}</h1>
                 <p>
                   {selectedTemplate
-                    ? `${selectedTemplate.codigo} · ${selectedTemplate.tipoDocumento} · ${selectedTemplate.estado}`
-                    : 'Completa los datos base y el contenido. El editor usa todo el ancho disponible.'}
+                    ? `${selectedTemplate.codigo} · ${selectedTemplate.tipoDocumento} · ${formatEstadoLabel(selectedTemplate.estado)}`
+                    : 'Define los datos base e inserta el contenido con campos automáticos.'}
                 </p>
               </div>
             </div>
             <div className="documents-templates-editor-actions">
               <button type="submit" form="documents-template-form" className="requests-button" disabled={busy}>
-                {selectedTemplate ? 'Guardar nueva versión' : 'Crear plantilla'}
+                {selectedTemplate ? 'Guardar versión' : 'Crear plantilla'}
               </button>
               <button type="button" className="requests-button secondary" disabled={!selectedTemplate || busy} onClick={props.onPublishTemplate}>
                 Publicar
@@ -792,104 +793,95 @@ export function ProductDocumentsView(props: Props) {
             </div>
           </header>
 
-          <form id="documents-template-form" className="documents-templates-editor documents-templates-editor-full" onSubmit={props.onSaveTemplate}>
-            <div className="request-drawer-grid documents-template-fields">
-              <label className="request-drawer-field">
-                <span>
-                  Código <b>*</b>
-                </span>
-                <input
-                  required
-                  value={templateForm.codigo}
-                  disabled={Boolean(selectedTemplate)}
-                  onChange={(event) => props.onChangeTemplateForm({ codigo: event.target.value.toUpperCase() })}
-                  placeholder="Ej. PAGARE_LIBRANZA"
-                />
-              </label>
-              <label className="request-drawer-field">
-                <span>
-                  Nombre <b>*</b>
-                </span>
-                <input
-                  required
-                  value={templateForm.nombre}
-                  disabled={Boolean(selectedTemplate)}
-                  onChange={(event) => props.onChangeTemplateForm({ nombre: event.target.value })}
-                  placeholder="Nombre de la plantilla"
-                />
-              </label>
-              <label className="request-drawer-field">
-                <span>Tipo de documento</span>
-                <select
-                  value={templateForm.tipoDocumento}
-                  disabled={Boolean(selectedTemplate)}
-                  onChange={(event) => props.onChangeTemplateForm({ tipoDocumento: event.target.value })}
-                >
-                  <option value="PAGARE">Pagaré</option>
-                  <option value="CONTRATO">Contrato</option>
-                  <option value="AUTORIZACION">Autorización</option>
-                  <option value="FORMULARIO">Formulario</option>
-                  <option value="FIANZA">Fianza</option>
-                </select>
-              </label>
-              {!selectedTemplate && (
-                <label className="request-drawer-field agreement-full">
-                  <span>Descripción</span>
+          <form id="documents-template-form" className="documents-template-workspace" onSubmit={props.onSaveTemplate}>
+            <section className="documents-template-meta">
+              <div className="documents-template-meta-head">
+                <span>1</span>
+                <div>
+                  <strong>Datos de la plantilla</strong>
+                  <p>Identificación y clasificación del documento.</p>
+                </div>
+              </div>
+              <div className={`documents-template-meta-grid ${selectedTemplate ? 'editing' : ''}`}>
+                <label className={`documents-float-field ${selectedTemplate ? 'is-disabled' : ''}`}>
+                  <small>Código *</small>
                   <input
-                    value={templateForm.descripcion}
-                    onChange={(event) => props.onChangeTemplateForm({ descripcion: event.target.value })}
-                    placeholder="Descripción opcional de la plantilla"
+                    required
+                    value={templateForm.codigo}
+                    disabled={Boolean(selectedTemplate)}
+                    onChange={(event) => props.onChangeTemplateForm({ codigo: event.target.value.toUpperCase() })}
+                    placeholder="Ej. PAGARE_LIBRANZA"
                   />
                 </label>
-              )}
-            </div>
+                <label className={`documents-float-field ${selectedTemplate ? 'is-disabled' : ''}`}>
+                  <small>Nombre *</small>
+                  <input
+                    required
+                    value={templateForm.nombre}
+                    disabled={Boolean(selectedTemplate)}
+                    onChange={(event) => props.onChangeTemplateForm({ nombre: event.target.value })}
+                    placeholder="Nombre de la plantilla"
+                  />
+                </label>
+                <SearchableDropdown
+                  label="Tipo de documento"
+                  value={templateForm.tipoDocumento}
+                  disabled={Boolean(selectedTemplate)}
+                  options={tipoDocumentoOptions}
+                  onChange={(value) => props.onChangeTemplateForm({ tipoDocumento: value })}
+                />
+                {!selectedTemplate && (
+                  <label className="documents-float-field documents-template-desc">
+                    <small>Descripción</small>
+                    <input
+                      value={templateForm.descripcion}
+                      onChange={(event) => props.onChangeTemplateForm({ descripcion: event.target.value })}
+                      placeholder="Opcional"
+                    />
+                  </label>
+                )}
+              </div>
+            </section>
 
-            {selectedTemplate?.modoPlantilla !== 'PDF_BASE' && (
-              <div className="documents-template-editor-block">
-                <div className="catalog-section-heading documents-inline-section">
-                  <span>
-                    <LayoutTemplate size={18} />
-                  </span>
-                  <div>
-                    <h3>Contenido de la plantilla</h3>
-                    <p>Inserta variables y edita el texto que se usará al generar el PDF.</p>
-                  </div>
+            <section className="documents-template-content">
+              <div className="documents-template-meta-head">
+                <span>2</span>
+                <div>
+                  <strong>{selectedTemplate?.modoPlantilla === 'PDF_BASE' ? 'Mapeo del PDF' : 'Contenido del documento'}</strong>
+                  <p>
+                    {selectedTemplate?.modoPlantilla === 'PDF_BASE'
+                      ? 'Ubica los campos sobre el formato institucional.'
+                      : 'Edita el texto e inserta variables del crédito desde el panel derecho.'}
+                  </p>
                 </div>
+              </div>
+
+              {selectedTemplate?.modoPlantilla !== 'PDF_BASE' && (
                 <RichDocumentEditor
                   value={templateForm.contenido}
                   variables={documentVariables}
                   onChange={(contenido) => props.onChangeTemplateForm({ contenido })}
                 />
-              </div>
-            )}
+              )}
 
-            {selectedTemplate?.modoPlantilla === 'PDF_BASE' && token && (
-              <div className="documents-template-editor-block">
-                <div className="catalog-section-heading documents-inline-section">
-                  <span>
-                    <FileText size={18} />
-                  </span>
-                  <div>
-                    <h3>Editor visual de PDF</h3>
-                    <p>Carga el PDF institucional y ubica los campos por coordenadas.</p>
-                  </div>
-                </div>
+              {selectedTemplate?.modoPlantilla === 'PDF_BASE' && token && (
                 <PdfFieldMapper token={token} templateId={selectedTemplate.id} variables={documentVariables} onMessage={props.onTemplateMessage} />
-              </div>
-            )}
+              )}
+            </section>
 
-            <div className="documents-generate-bar">
-              <label className="request-drawer-field">
-                <span>Crédito para vista previa</span>
-                <select value={documentCreditoId} onChange={(event) => props.onChangeDocumentCreditoId(event.target.value)}>
-                  <option value="">Selecciona un crédito</option>
-                  {credits.map((credito) => (
-                    <option key={credito.id} value={credito.id}>
-                      {credito.consecutivo} - {credito.nombreCliente}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <footer className="documents-generate-bar">
+              <SearchableDropdown
+                label="Crédito para vista previa PDF"
+                value={documentCreditoId}
+                options={[
+                  { value: '', label: 'Selecciona un crédito' },
+                  ...credits.map((credito) => ({
+                    value: String(credito.id),
+                    label: `${credito.consecutivo} - ${credito.nombreCliente}`
+                  }))
+                ]}
+                onChange={props.onChangeDocumentCreditoId}
+              />
               <button
                 type="button"
                 className="requests-button"
@@ -898,7 +890,7 @@ export function ProductDocumentsView(props: Props) {
               >
                 Generar PDF
               </button>
-            </div>
+            </footer>
           </form>
         </section>
       )}
@@ -918,33 +910,27 @@ export function ProductDocumentsView(props: Props) {
         >
           <CatalogSectionHeader title="Documento a asignar" description="Elige un documento de la biblioteca y su orden de prioridad." />
           <div className="request-drawer-grid two-cols">
-            <label className="request-drawer-field agreement-full">
-              <span>
-                Documento <b>*</b>
-              </span>
-              <select required value={value.idDocumentoCredito} onChange={(event) => props.onChange({ idDocumentoCredito: event.target.value })}>
-                <option value="">Selecciona un documento</option>
-                {library.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="agreement-full">
+              <SearchableDropdown
+                label="Documento *"
+                value={value.idDocumentoCredito}
+                options={[
+                  { value: '', label: 'Selecciona un documento' },
+                  ...library.map((item) => ({ value: String(item.id), label: item.nombre }))
+                ]}
+                onChange={(next) => props.onChange({ idDocumentoCredito: next })}
+              />
+            </div>
             <label className="request-drawer-field">
               <span>Prioridad</span>
               <input type="number" min="1" value={value.prioridad} placeholder="1" onChange={(event) => props.onChange({ prioridad: event.target.value })} />
             </label>
-            <label className="request-drawer-field">
-              <span>Aplica a</span>
-              <select value={value.aplicaA} onChange={(event) => props.onChange({ aplicaA: event.target.value })}>
-                {aplicaOptions.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <SearchableDropdown
+              label="Aplica a"
+              value={value.aplicaA}
+              options={aplicaOptions}
+              onChange={(next) => props.onChange({ aplicaA: next })}
+            />
           </div>
 
           <CatalogSectionHeader kind="additional" title="Requisitos del documento" description="Define si es obligatorio y si requiere firma o validación." />
