@@ -5,8 +5,6 @@ import {
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
 import { Layers, Percent, RefreshCw, Save, ShieldCheck, Users } from 'lucide-react';
-import { RichDocumentEditor } from './RichDocumentEditor';
-import { PdfFieldMapper } from './PdfFieldMapper';
 import { FormStepper, type StepItem } from './FormStepper';
 import { FeedbackAlert, type FeedbackTone } from './FeedbackAlert';
 import { getAuthErrorMessage } from './feedback';
@@ -25,6 +23,7 @@ import { CatalogFormDrawer, CatalogSectionHeader } from './components/creditos/C
 import { EditProductAttributeDrawer } from './components/creditos/EditProductAttributeDrawer';
 import { AttributeCatalogSelect } from './components/creditos/AttributeCatalogSelect';
 import { ProductAgreementsView } from './components/creditos/ProductAgreementsView';
+import { ProductDocumentsView } from './components/creditos/ProductDocumentsView';
 import { ProductConditionsView } from './components/creditos/ProductConditionsView';
 import { CreditProductsView } from './components/creditos/CreditProductsView';
 import { ProductFormDrawer } from './components/creditos/ProductFormDrawer';
@@ -4145,10 +4144,10 @@ function App() {
         ? await api.updateProductoDocumento(session.token, selectedProductoCreditoId, selectedProductoDocumentoId, payload)
         : await api.createProductoDocumento(session.token, selectedProductoCreditoId, payload);
       setProductoDocumentos(response);
-      setSelectedProductoDocumentoId(null);
-      setProductoDocumentoForm({ ...initialProductoDocumentoForm, idDocumentoCredito: productoDocumentoForm.idDocumentoCredito });
+      handleCancelProductoDocumentoEdit();
       await reloadProductosCreditoData();
       setMessage(selectedProductoDocumentoId ? 'Documento actualizado' : 'Documento agregado');
+      return true;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo guardar el documento');
     } finally {
@@ -7440,7 +7439,7 @@ function App() {
 
         {selectedModule && isProductosCreditoModule && (
           <section className="socios-view">
-            {productosCreditoTab !== 'convenios' && productosCreditoTab !== 'atributos' && productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
+            {productosCreditoTab !== 'convenios' && productosCreditoTab !== 'documentos' && productosCreditoTab !== 'atributos' && productosCreditoTab !== 'solicitudes' && productosCreditoTab !== 'general' && productosCreditoTab !== 'parametros' && productosCreditoTab !== 'tblAtributos' && productosCreditoTab !== 'formatos' && productosCreditoTab !== 'tasas' && productosCreditoTab !== 'plazos' && productosCreditoTab !== 'bancos' && (
               <div className="product-context-bar">
                 <div>
                   <span className="section-kicker">Producto en configuracion</span>
@@ -8131,105 +8130,40 @@ function App() {
             )}
 
             {productosCreditoTab === 'documentos' && (
-              <section className="configuration-split">
-                <aside className="surface config-library-panel">
-                  <div className="surface-title"><h2>Biblioteca documental</h2><span>{productosCreditoCatalogs.documentos.length}</span></div>
-                  <p className="muted-note">Documentos disponibles para reutilizar en los productos de credito.</p>
-                  <div className="catalog-list">
-                    {productosCreditoCatalogs.documentos.map((item) => (
-                      <div key={item.id} className="catalog-list-item">
-                        <span className="document-mark">DOC</span>
-                        <strong>{item.nombre}</strong>
-                      </div>
-                    ))}
-                  </div>
-                </aside>
-                <section className="surface employees-panel">
-                  <div className="surface-title"><div><span className="section-kicker">Requisitos del producto</span><h2>Documentos de {selectedProductoCredito?.nombre ?? 'producto'}</h2></div><span>{productoDocumentos.length} asignados</span></div>
-                  <form className="employee-form attribute-form" onSubmit={handleSaveProductoDocumento}>
-                    <label className="product-field"><span>Documento *</span><select value={productoDocumentoForm.idDocumentoCredito} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, idDocumentoCredito: event.target.value }))}>
-                      <option value="">Selecciona</option>
-                      {productosCreditoCatalogs.documentos.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}
-                    </select></label>
-                    <label className="product-field compact-number"><span>Prioridad</span><input value={productoDocumentoForm.prioridad} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, prioridad: event.target.value }))} placeholder="1" /></label>
-                    <label className="product-field"><span>Aplica a</span><select value={productoDocumentoForm.aplicaA} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, aplicaA: event.target.value }))}>
-                      <option value="CLIENTE">Cliente</option>
-                      <option value="CODEUDOR">Codeudor</option>
-                      <option value="EMPRESA">Empresa</option>
-                      <option value="VEHICULO">Vehiculo</option>
-                    </select></label>
-                    <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.obligatorio} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, obligatorio: event.target.checked }))} />Obligatorio</label>
-                    <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.requiereFirma} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, requiereFirma: event.target.checked }))} />Firma</label>
-                    <label className="inline-check"><input type="checkbox" checked={productoDocumentoForm.requiereValidacion} onChange={(event) => setProductoDocumentoForm((current) => ({ ...current, requiereValidacion: event.target.checked }))} />Validacion</label>
-                    <button type="submit" disabled={!selectedProductoCreditoId || loading}>{selectedProductoDocumentoId ? 'Guardar documento' : 'Agregar documento'}</button>
-                    {selectedProductoDocumentoId && <button type="button" className="ghost-button" onClick={handleCancelProductoDocumentoEdit}>Cancelar</button>}
-                  </form>
-                  <div className="table-wrap"><table><thead><tr><th>Documento</th><th>Prioridad</th><th>Aplica a</th><th>Obligatorio</th><th>Firma</th><th>Validacion</th><th>Acciones</th></tr></thead><tbody>{productoDocumentos.map((item) => <tr key={item.id}><td>{item.documento}</td><td>{item.prioridad}</td><td>{item.aplicaA}</td><td>{item.obligatorio ? 'Si' : 'No'}</td><td>{item.requiereFirma ? 'Si' : 'No'}</td><td>{item.requiereValidacion ? 'Si' : 'No'}</td><td><span className="row-actions compact-actions"><button type="button" onClick={() => handleEditProductoDocumento(item)}>Editar</button><button type="button" className="danger" onClick={() => handleDeleteProductoDocumento(item)}>Eliminar</button></span></td></tr>)}</tbody></table></div>
-                </section>
-                <section className="document-template-workspace">
-                  <aside className="surface template-list-panel">
-                    <div className="surface-title"><h2>Plantillas automaticas</h2><button type="button" onClick={() => { setSelectedDocumentTemplate(null); setDocumentTemplateForm(initialDocumentTemplateForm); }}>Nueva</button></div>
-                    <div className="catalog-list">
-                      {documentTemplates.map((template) => (
-                        <button key={template.id} type="button" className={selectedDocumentTemplate?.id === template.id ? 'template-row active' : 'template-row'} onClick={() => handleSelectDocumentTemplate(template.id)}>
-                          <strong>{template.nombre}</strong>
-                          <span>{template.codigo} - v{template.ultimaVersion ?? 0} - {template.estado}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </aside>
-                  <form className="surface template-editor" onSubmit={handleSaveDocumentTemplate}>
-                    <div className="surface-title">
-                      <div><span className="section-kicker">{selectedDocumentTemplate ? `Version ${selectedDocumentTemplate.version}` : 'Nueva plantilla'}</span><h2>Editor documental</h2></div>
-                      <div className="inline-actions">
-                        <button type="submit" disabled={loading}>{selectedDocumentTemplate ? 'Guardar nueva version' : 'Crear plantilla'}</button>
-                        <button type="button" disabled={!selectedDocumentTemplate || loading} onClick={handlePublishDocumentTemplate}>Publicar</button>
-                      </div>
-                    </div>
-                    <div className="field-grid three-cols">
-                      <input required value={documentTemplateForm.codigo} disabled={Boolean(selectedDocumentTemplate)} onChange={(event) => setDocumentTemplateForm((current) => ({ ...current, codigo: event.target.value.toUpperCase() }))} placeholder="Codigo *" />
-                      <input required value={documentTemplateForm.nombre} disabled={Boolean(selectedDocumentTemplate)} onChange={(event) => setDocumentTemplateForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Nombre *" />
-                      <select value={documentTemplateForm.tipoDocumento} disabled={Boolean(selectedDocumentTemplate)} onChange={(event) => setDocumentTemplateForm((current) => ({ ...current, tipoDocumento: event.target.value }))}>
-                        <option value="PAGARE">Pagare</option>
-                        <option value="CONTRATO">Contrato</option>
-                        <option value="AUTORIZACION">Autorizacion</option>
-                        <option value="FORMULARIO">Formulario</option>
-                        <option value="FIANZA">Fianza</option>
-                      </select>
-                    </div>
-                    {!selectedDocumentTemplate && <input value={documentTemplateForm.descripcion} onChange={(event) => setDocumentTemplateForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />}
-                    {selectedDocumentTemplate?.modoPlantilla !== 'PDF_BASE' && (
-                      <RichDocumentEditor
-                        value={documentTemplateForm.contenido}
-                        variables={documentVariablesList}
-                        onChange={(contenido) => setDocumentTemplateForm((current) => ({ ...current, contenido }))}
-                      />
-                    )}
-                    {selectedDocumentTemplate?.modoPlantilla === 'PDF_BASE' && session && (
-                      <div className="pdf-base-section">
-                        <div className="surface-title">
-                          <div><span className="section-kicker">Formato existente</span><h2>Editor visual de PDF</h2></div>
-                          <span>Campos por coordenadas</span>
-                        </div>
-                        <p className="muted-note">Carga el PDF institucional, selecciona un campo y haz clic sobre la pagina. Haz doble clic sobre un campo para eliminarlo.</p>
-                        <PdfFieldMapper
-                          token={session.token}
-                          templateId={selectedDocumentTemplate.id}
-                          variables={documentVariablesList}
-                          onMessage={setMessage}
-                        />
-                      </div>
-                    )}
-                    <div className="document-generate-bar">
-                      <select value={documentCreditoId} onChange={(event) => setDocumentCreditoId(event.target.value)}>
-                        <option value="">Selecciona un credito para vista previa</option>
-                        {creditos.map((credito) => <option key={credito.id} value={credito.id}>{credito.consecutivo} - {credito.nombreCliente}</option>)}
-                      </select>
-                      <button type="button" disabled={!selectedDocumentTemplate || !documentCreditoId || loading} onClick={handleGenerateDocument}>Generar PDF</button>
-                    </div>
-                  </form>
-                </section>
-              </section>
+              <ProductDocumentsView
+                key={selectedProductoCreditoId ?? 'none'}
+                products={productosCredito}
+                product={selectedProductoCredito}
+                documents={productoDocumentos}
+                library={productosCreditoCatalogs.documentos}
+                value={productoDocumentoForm}
+                editing={selectedProductoDocumentoId !== null}
+                busy={loading}
+                message={message}
+                messageTone={messageTone}
+                onDismissMessage={() => setMessage('')}
+                onChange={(patch) => setProductoDocumentoForm((current) => ({ ...current, ...patch }))}
+                onSelectProduct={setSelectedProductoCreditoId}
+                onEdit={handleEditProductoDocumento}
+                onCancel={handleCancelProductoDocumentoEdit}
+                onDelete={handleDeleteProductoDocumento}
+                onSave={handleSaveProductoDocumento}
+                templates={documentTemplates}
+                selectedTemplate={selectedDocumentTemplate}
+                templateForm={documentTemplateForm}
+                credits={creditos.map((credito) => ({ id: credito.id, consecutivo: credito.consecutivo, nombreCliente: credito.nombreCliente }))}
+                documentCreditoId={documentCreditoId}
+                documentVariables={documentVariablesList}
+                token={session?.token ?? null}
+                onNewTemplate={() => { setSelectedDocumentTemplate(null); setDocumentTemplateForm(initialDocumentTemplateForm); }}
+                onSelectTemplate={handleSelectDocumentTemplate}
+                onChangeTemplateForm={(patch) => setDocumentTemplateForm((current) => ({ ...current, ...patch }))}
+                onSaveTemplate={handleSaveDocumentTemplate}
+                onPublishTemplate={handlePublishDocumentTemplate}
+                onChangeDocumentCreditoId={setDocumentCreditoId}
+                onGenerateDocument={handleGenerateDocument}
+                onTemplateMessage={setMessage}
+              />
             )}
 
             {productosCreditoTab === 'etapas' && (

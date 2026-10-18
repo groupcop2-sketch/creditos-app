@@ -7335,6 +7335,7 @@ tbody tr:hover {
 .agreement-heading h1 { font-size: 1.15rem; margin: 10px 0 5px; color: var(--text-main); }
 .agreement-heading p { color: var(--text-muted); font-size: 0.7rem; margin: 0; }
 .agreement-filters { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(150px, 220px) auto; align-items: end; gap: 12px; padding: 16px 0; }
+.agreement-filters > .searchable-dropdown .dropdown-panel { left: auto; right: 0; }
 .agreement-company { display: flex; align-items: center; gap: 9px; }
 .agreement-company > span { padding: 8px; border-radius: 7px; background: var(--bg-soft); color: var(--color-info); }
 .agreement-company small { max-width: 230px; white-space: normal; }
@@ -7376,6 +7377,280 @@ tbody tr:hover {
 @media (max-width: 900px) { .agreement-context-metrics { width: 100%; } }
 @media (max-width: 600px) { .agreement-metric-top { flex-direction: column; align-items: flex-start; gap: 6px; } .agreement-metric-label { white-space: normal; } }
 @media (max-width: 600px) { .agreement-filters { grid-template-columns: 1fr; } .agreement-heading { align-items: flex-start; flex-direction: column; } }
+
+/* Product documentation module — aligned with agreements/conditions shell */
+.product-documents-view .documents-view-tabs {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0;
+}
+.product-documents-view .documents-view-tabs button {
+  min-height: 36px;
+  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg-soft);
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+.product-documents-view .documents-view-tabs button em {
+  font-style: normal;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(23, 105, 255, 0.1);
+  color: #1769ff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-align: center;
+}
+.product-documents-view .documents-view-tabs button.selected {
+  background: var(--bg-surface);
+  color: #1769ff;
+  border-color: #83b1ff;
+}
+.product-documents-view .documents-view-tabs button:hover:not(:disabled) {
+  background: var(--bg-surface);
+  transform: none;
+  box-shadow: none;
+}
+.documents-flag-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.documents-mini-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.documents-mini-tag.firma {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+.documents-mini-tag.validacion {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+}
+.documents-priority-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(23, 105, 255, 0.1);
+  color: #1769ff;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.documents-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  padding: 4px 2px 8px;
+}
+.documents-library-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-surface);
+}
+.documents-library-item.assigned {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.04);
+}
+.documents-library-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(23, 105, 255, 0.1);
+  color: #1769ff;
+}
+.documents-library-item strong {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-main);
+}
+.documents-library-item small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.64rem;
+  color: var(--text-muted);
+}
+.documents-library-empty,
+.documents-templates-empty {
+  grid-column: 1 / -1;
+  padding: 28px 16px;
+}
+.documents-templates-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.documents-templates-card .agreement-filters {
+  grid-template-columns: minmax(200px, 1.5fr) minmax(150px, 190px) minmax(150px, 190px) auto;
+}
+.product-documents-view .agreement-filters > .searchable-dropdown .dropdown-panel {
+  left: auto;
+  right: 0;
+}
+.documents-template-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.documents-template-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-soft);
+}
+.documents-template-metric span {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.documents-template-metric strong {
+  font-size: 1.15rem;
+  color: var(--text-main);
+}
+.documents-template-metric.blue { border-color: rgba(23, 105, 255, 0.25); }
+.documents-template-metric.green { border-color: rgba(16, 185, 129, 0.28); }
+.documents-template-metric.orange { border-color: rgba(245, 158, 11, 0.28); }
+.documents-templates-editor-view {
+  gap: 16px;
+}
+.documents-templates-editor-toolbar {
+  align-items: flex-start;
+}
+.documents-templates-editor-title {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.documents-templates-editor-title small {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #1769ff;
+  text-transform: uppercase;
+}
+.documents-templates-editor-title h1 {
+  margin: 2px 0;
+}
+.documents-templates-editor-title p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.documents-templates-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.documents-templates-editor-full {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+}
+.documents-template-fields {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-soft);
+}
+.documents-template-editor-block {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+.documents-inline-section {
+  margin: 0;
+}
+.documents-generate-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-soft);
+}
+.documents-generate-bar .request-drawer-field {
+  margin: 0;
+}
+.catalog-form-drawer.document .catalog-section-heading { margin-top: 22px; }
+.catalog-form-drawer.document .catalog-section-heading:first-child { margin-top: 0; }
+@media (max-width: 900px) {
+  .documents-template-metrics {
+    grid-template-columns: 1fr;
+  }
+  .documents-templates-editor-toolbar {
+    flex-direction: column;
+  }
+  .documents-generate-bar {
+    grid-template-columns: 1fr;
+  }
+}
+:root[data-theme='dark'] .product-documents-view .documents-view-tabs button.selected {
+  color: var(--catalog-blue, #99c3ff);
+  background: #192d48;
+  border-color: #4576b6;
+}
+:root[data-theme='dark'] .documents-mini-tag.firma { background: #2d2150; color: #c4b5fd; }
+:root[data-theme='dark'] .documents-mini-tag.validacion { background: #16364d; color: #7dd3fc; }
+:root[data-theme='dark'] .documents-priority-chip { background: #1b3352; color: #99c3ff; }
+:root[data-theme='dark'] .documents-library-item { background: var(--bg-surface); border-color: #334e70; }
+:root[data-theme='dark'] .documents-library-item.assigned { background: #153d32; border-color: #2f6b55; }
+@media (max-width: 700px) {
+  .documents-library-item {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+  .documents-library-item > .requests-button,
+  .documents-library-item > .requests-state {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
 
 /* Credit detail: keep document surfaces and status accents readable at night. */
 :root[data-theme='dark'] .credit-detail-page .stage-progress-bar-row,
