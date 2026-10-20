@@ -417,6 +417,7 @@ type ProductoCreditoFormState = {
 };
 
 type ProductoAtributoFormState = {
+  tipoLimite?: 'MONTO' | 'EDAD';
   idTipoAtributo: string;
   idTipoCalculo: string;
   operacion?: string;
@@ -3426,12 +3427,10 @@ function App() {
         errors.push('El porcentaje debe ser un número mayor o igual a cero.');
       }
     } else if (op === 'Formula' || op === 'Base * valor / valor2' || op === '(base / valor1) × valor2') {
-      if (!productoAtributoForm.valor.trim() || !Number.isFinite(Number(productoAtributoForm.valor))) {
-        errors.push('Indica el Valor 1 (parámetro).');
-      }
-      if (!productoAtributoForm.valor2.trim() || !Number.isFinite(Number(productoAtributoForm.valor2))) {
-        errors.push('Indica el Valor 2 (parámetro).');
-      }
+      const formula = productosCreditoCatalogs.tiposCalculo.find(item => String(item.id) === productoAtributoForm.idTipoCalculo);
+      if (formula?.requiereValor && !productoAtributoForm.valor.trim()) errors.push('Indica el Valor 1 requerido por la formula.');
+      if (formula?.requiereValor2 && !productoAtributoForm.valor2.trim()) errors.push('Indica el Valor 2 requerido por la formula.');
+      if (formula?.requierePorcentaje && !productoAtributoForm.porcentaje.trim()) errors.push('Indica el porcentaje requerido por la formula.');
     } else {
       // Valor fijo o Manual
       if (!productoAtributoForm.valor.trim() && !productoAtributoForm.porcentaje.trim()) {
@@ -3647,7 +3646,7 @@ function App() {
     } else if (op === 'Formula' || op === 'Base * valor / valor2' || op === '(base / valor1) × valor2') {
       valor = productoAtributoForm.valor ? Number(productoAtributoForm.valor) : null;
       valor2 = productoAtributoForm.valor2 ? Number(productoAtributoForm.valor2) : null;
-      porcentaje = null;
+      porcentaje = productoAtributoForm.porcentaje ? Number(productoAtributoForm.porcentaje) : null;
     } else {
       // Valor fijo o Manual
       valor = productoAtributoForm.valor ? Number(productoAtributoForm.valor) : null;
@@ -3682,6 +3681,8 @@ function App() {
       idTipoAtributo: idTipoAtributoNum,
       idTipoCalculo: idTipoCalculoNum,
       nombre: productoAtributoForm.nombre,
+      modoCalculo: op === 'Formula' || op.includes('valor2') ? 'FORMULA' : op === 'Porcentaje' ? 'PORCENTAJE' : 'VALOR_FIJO',
+      tipoLimite: productoAtributoForm.tipoLimite ?? 'MONTO',
       valor,
       porcentaje,
       valor2,
@@ -4073,10 +4074,10 @@ function App() {
       (item) => item.nombre.trim().toUpperCase() === atributo.nombre.trim().toUpperCase()
     );
 
-    let tipoCalculo: FormulaCalculoRow | undefined;
+    let tipoCalculo = productosCreditoCatalogs.tiposCalculo.find(tc => tc.id === atributo.idTipoCalculo);
     const targetFormulaName = (catalogItem?.tipoFormula || '').trim().toUpperCase();
 
-    if (targetFormulaName) {
+    if (!tipoCalculo && targetFormulaName) {
       tipoCalculo = productosCreditoCatalogs.tiposCalculo.find(
         (tc) => tc.nombre.trim().toUpperCase() === targetFormulaName ||
                 (tc.codigo && tc.codigo.trim().toUpperCase() === targetFormulaName)
@@ -4128,6 +4129,10 @@ function App() {
       );
     }
 
+    if (atributo.modoCalculo) operacion = atributo.modoCalculo === 'FORMULA' ? 'Formula' : atributo.modoCalculo === 'PORCENTAJE' ? 'Porcentaje' : 'Valor fijo';
+
+    if (!atributo.modoCalculo && operacion !== 'Formula' && atributo.porcentaje != null && !(atributo.porcentaje === 0 && Number(atributo.valor) > 0)) operacion = 'Porcentaje';
+
     const defaultCalculoId = tipoCalculo?.id ?? productosCreditoCatalogs.tiposCalculo[0]?.id ?? 1;
 
     const defaultAtributoId = productosCreditoCatalogs.tiposAtributo.find(ta =>
@@ -4140,6 +4145,7 @@ function App() {
       idTipoCalculo: String(defaultCalculoId),
       operacion,
       nombre: atributo.nombre,
+      tipoLimite: atributo.tipoLimite ?? 'MONTO',
       valor: atributo.valor === 0 && Number(atributo.porcentaje) > 0 ? '' : String(atributo.valor ?? ''),
       porcentaje: atributo.porcentaje === 0 && Number(atributo.valor) > 0 ? '' : String(atributo.porcentaje ?? ''),
       valor2: String(atributo.valor2 ?? ''),

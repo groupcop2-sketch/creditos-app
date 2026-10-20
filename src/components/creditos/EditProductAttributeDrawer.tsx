@@ -6,6 +6,7 @@ import { CatalogSectionHeader } from './CatalogFormDrawer';
 import type { FormulaCalculoRow } from '../../api';
 
 export type ProductAttributeValues = {
+  tipoLimite?: 'MONTO' | 'EDAD';
   idTipoAtributo: string;
   idTipoCalculo: string;
   operacion?: string;
@@ -202,7 +203,7 @@ export function EditProductAttributeDrawer({
     });
   };
 
-  const needsValor2 = currentOperacion === 'Formula';
+
   const needsValorSolo = currentOperacion === 'Valor fijo' || currentOperacion === 'Manual';
 
   const currentTypeName = tiposAtributo.find((ta) => String(ta.id) === String(value.idTipoAtributo))?.nombre || type || '—';
@@ -369,35 +370,25 @@ export function EditProductAttributeDrawer({
                   </label>
                 )}
 
-                {needsValor2 && (
-                  <>
-                    <label className="product-field">
-                      <span>Valor 1 (parámetro) *</span>
-                      <input
-                        type="number"
-                        step="any"
-                        value={value.valor}
-                        placeholder="Ej. 1000000"
-                        onChange={(event) => onChange({ valor: event.target.value, porcentaje: '' })}
-                      />
-                    </label>
-                    <label className="product-field">
-                      <span>Valor 2 (parámetro) *</span>
-                      <input
-                        type="number"
-                        step="any"
-                        value={value.valor2}
-                        placeholder="Ej. 1"
-                        onChange={(event) => onChange({ valor2: event.target.value })}
-                      />
-                    </label>
-                  </>
-                )}
+                {currentOperacion === 'Formula' && (() => {
+                  const formula = tiposCalculo.find(item => String(item.id) === value.idTipoCalculo);
+                  return <>
+                    {formula?.requiereValor && <label className="product-field"><span>Valor 1 (parametro) *</span><input type="number" min="0" step="any" value={value.valor} onChange={event => onChange({valor: event.target.value})} /></label>}
+                    {formula?.requiereValor2 && <label className="product-field"><span>Valor 2 (parametro) *</span><input type="number" min="0" step="any" value={value.valor2} onChange={event => onChange({valor2: event.target.value})} /></label>}
+                    {formula?.requierePorcentaje && <label className="product-field"><span>Porcentaje (parametro) *</span><input type="number" min="0" step="any" value={value.porcentaje} onChange={event => onChange({porcentaje: event.target.value})} /></label>}
+                    <p>{formula?.expresion || formula?.nombre || 'Selecciona una formula del catalogo.'}</p>
+                  </>;
+                })()}
 
+                <label className="product-field"><span>Estos limites corresponden a</span>
+                  <select value={value.tipoLimite ?? 'MONTO'} onChange={event => onChange({tipoLimite: event.target.value as 'MONTO' | 'EDAD'})}>
+                    <option value="MONTO">Monto del cargo (pesos)</option><option value="EDAD">Edad del solicitante (anios)</option>
+                  </select>
+                </label>
                 <label className="product-field">
-                  <span>Valor mínimo</span>
+                  <span>{value.tipoLimite === 'EDAD' ? 'Edad minima' : 'Valor minimo'}</span>
                   <div className="attribute-value-input">
-                    <span>$</span>
+                    <span>{value.tipoLimite === 'EDAD' ? 'Edad' : '$'}</span>
                     <input
                       type="number"
                       step="any"
@@ -409,9 +400,9 @@ export function EditProductAttributeDrawer({
                 </label>
 
                 <label className="product-field">
-                  <span>Valor máximo</span>
+                  <span>{value.tipoLimite === 'EDAD' ? 'Edad maxima' : 'Valor maximo'}</span>
                   <div className="attribute-value-input">
-                    <span>$</span>
+                    <span>{value.tipoLimite === 'EDAD' ? 'Edad' : '$'}</span>
                     <input
                       type="number"
                       step="any"

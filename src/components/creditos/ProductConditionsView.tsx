@@ -12,6 +12,7 @@ type Props = {
 const money = (value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(value);
 
 export function labelOperacionCalculo(attribute: ProductoAtributoRow, tiposCalculo: FormulaCalculoRow[] = []): 'Porcentaje' | 'Valor fijo' | 'Manual' | 'Formula' {
+  if (attribute.modoCalculo) return attribute.modoCalculo === 'FORMULA' ? 'Formula' : attribute.modoCalculo === 'PORCENTAJE' ? 'Porcentaje' : 'Valor fijo';
   const formula = tiposCalculo.find(
     (tc) =>
       (attribute.idTipoCalculo != null && tc.id === attribute.idTipoCalculo) ||
