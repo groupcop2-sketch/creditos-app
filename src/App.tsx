@@ -437,11 +437,13 @@ type FormulaCalculoFormState = {
   codigo: string;
   baseCalculo: string;
   operacion: string;
+  expresion: string;
   requiereValor: boolean;
   requiereValor2: boolean;
   requierePorcentaje: boolean;
   aplicaMinimo: boolean;
   aplicaMaximo: boolean;
+  multiplicaPorPlazo: boolean;
 };
 
 type ParametroFinancieroFormState = {
@@ -856,12 +858,102 @@ const initialFormulaCalculoForm: FormulaCalculoFormState = {
   codigo: '',
   baseCalculo: 'VALOR_CREDITO',
   operacion: 'PORCENTAJE',
+  expresion: '',
   requiereValor: false,
   requiereValor2: false,
   requierePorcentaje: true,
   aplicaMinimo: true,
-  aplicaMaximo: true
+  aplicaMaximo: true,
+  multiplicaPorPlazo: false
 };
+
+const FORMULA_BASE_OPTIONS = [
+  { value: 'VALOR_CREDITO', label: 'Valor del crédito' },
+  { value: 'VALOR_DESEMBOLSO', label: 'Valor desembolso' },
+  { value: 'PLAZO', label: 'Plazo (cuotas)' },
+  { value: 'CUOTA', label: 'Cuota' },
+  { value: 'SALDO', label: 'Saldo deudor' },
+  { value: 'SMLMV', label: 'SMLMV (salario mínimo)' }
+] as const;
+
+const FORMULA_OPERACION_OPTIONS = [
+  { value: 'PORCENTAJE', label: 'Porcentaje: base × % / 100' },
+  { value: 'PORCENTAJE_POR_PLAZO', label: 'Porcentaje × plazo: (base × % / 100) × plazo' },
+  { value: 'VALOR_FIJO', label: 'Valor fijo' },
+  { value: 'VALOR_POR_PLAZO', label: 'Valor × plazo' },
+  { value: 'BASE_MUL_VALOR', label: 'base × valor1' },
+  { value: 'BASE_MUL_VALOR_POR_PLAZO', label: 'base × valor1 × plazo' },
+  { value: 'BASE_DIV_VALOR', label: 'base / valor1' },
+  { value: 'BASE_POR_VALOR_DIV_VALOR2', label: '(base × valor1) / valor2' },
+  { value: 'BASE_POR_VALOR_DIV_VALOR2_POR_PLAZO', label: '((base × valor1) / valor2) × plazo' },
+  { value: 'BASE_DIV_VALOR_MUL_VALOR2', label: '(base / valor1) × valor2' },
+  { value: 'BASE_DIV_VALOR_MUL_VALOR2_POR_PLAZO', label: '(base / valor1) × valor2 × plazo' },
+  { value: 'PERSONALIZADA', label: 'Personalizada (crear mi expresión)' }
+] as const;
+
+const FORMULA_EXPR_TOKENS = ['BASE', 'VALOR1', 'VALOR2', 'PLAZO', 'PORCENTAJE', '(', ')', '+', '-', '*', '/'] as const;
+
+const OPS_CON_PLAZO_INTEGRADO = new Set([
+  'PORCENTAJE_POR_PLAZO',
+  'VALOR_POR_PLAZO',
+  'BASE_MUL_VALOR_POR_PLAZO',
+  'BASE_POR_VALOR_DIV_VALOR2_POR_PLAZO',
+  'BASE_DIV_VALOR_MUL_VALOR2_POR_PLAZO'
+]);
+
+function formulaPreviewExpression(form: FormulaCalculoFormState) {
+  if (form.operacion === 'PERSONALIZADA') {
+    return form.expresion.trim() || 'Escribe tu expresión con BASE, VALOR1, VALOR2, PLAZO, PORCENTAJE';
+  }
+  const baseLabel = FORMULA_BASE_OPTIONS.find((item) => item.value === form.baseCalculo)?.label ?? form.baseCalculo;
+  const fromCatalog = FORMULA_OPERACION_OPTIONS.find((item) => item.value === form.operacion);
+  let expression = fromCatalog
+    ? fromCatalog.label.replace(/^[^:]+:\s*/, '').replace(/\bbase\b/gi, baseLabel)
+    : form.operacion;
+  if (form.operacion === 'VALOR_FIJO') expression = 'Valor fijo';
+  if (form.multiplicaPorPlazo && form.baseCalculo !== 'PLAZO' && !OPS_CON_PLAZO_INTEGRADO.has(form.operacion)) {
+    expression = `(${expression}) × Plazo`;
+  }
+  return expression;
+}
+
+function flagsFromExpresion(expresion: string) {
+  const upper = expresion.toUpperCase();
+  const sinValor2 = upper.replace(/\bVALOR2\b/g, ' ');
+  return {
+    requiereValor: /\bVALOR1\b/.test(upper) || /\bVALOR\b/.test(sinValor2),
+    requiereValor2: /\bVALOR2\b/.test(upper),
+    requierePorcentaje: /\bPORCENTAJE\b/.test(upper) || upper.includes('%')
+  };
+}
+
+function formulaFlagsForOperacion(operacion: string, baseCalculo: string, multiplicaPorPlazo: boolean, expresion = '') {
+  const conPlazo = OPS_CON_PLAZO_INTEGRADO.has(operacion) || operacion === 'PERSONALIZADA';
+  if (operacion === 'PERSONALIZADA') {
+    return { ...flagsFromExpresion(expresion), multiplicaPorPlazo: false };
+  }
+  return {
+    requiereValor: [
+      'VALOR_FIJO',
+      'VALOR_POR_PLAZO',
+      'BASE_MUL_VALOR',
+      'BASE_MUL_VALOR_POR_PLAZO',
+      'BASE_DIV_VALOR',
+      'BASE_POR_VALOR_DIV_VALOR2',
+      'BASE_POR_VALOR_DIV_VALOR2_POR_PLAZO',
+      'BASE_DIV_VALOR_MUL_VALOR2',
+      'BASE_DIV_VALOR_MUL_VALOR2_POR_PLAZO'
+    ].includes(operacion),
+    requiereValor2: [
+      'BASE_POR_VALOR_DIV_VALOR2',
+      'BASE_POR_VALOR_DIV_VALOR2_POR_PLAZO',
+      'BASE_DIV_VALOR_MUL_VALOR2',
+      'BASE_DIV_VALOR_MUL_VALOR2_POR_PLAZO'
+    ].includes(operacion),
+    requierePorcentaje: operacion === 'PORCENTAJE' || operacion === 'PORCENTAJE_POR_PLAZO',
+    multiplicaPorPlazo: baseCalculo === 'PLAZO' || conPlazo ? false : multiplicaPorPlazo
+  };
+}
 
 type TblAtributoItem = {
   id: number;
@@ -3333,12 +3425,12 @@ function App() {
       } else if (!Number.isFinite(Number(productoAtributoForm.porcentaje)) || Number(productoAtributoForm.porcentaje) < 0) {
         errors.push('El porcentaje debe ser un número mayor o igual a cero.');
       }
-    } else if (op === 'Base * valor / valor2') {
+    } else if (op === 'Formula' || op === 'Base * valor / valor2' || op === '(base / valor1) × valor2') {
       if (!productoAtributoForm.valor.trim() || !Number.isFinite(Number(productoAtributoForm.valor))) {
-        errors.push('Indica el multiplicador (Valor 1).');
+        errors.push('Indica el Valor 1 (parámetro).');
       }
       if (!productoAtributoForm.valor2.trim() || !Number.isFinite(Number(productoAtributoForm.valor2))) {
-        errors.push('Indica el divisor (Valor 2).');
+        errors.push('Indica el Valor 2 (parámetro).');
       }
     } else {
       // Valor fijo o Manual
@@ -3420,15 +3512,27 @@ function App() {
     setMessage('');
     setCatalogDrawer('attribute');
     setEditingTblAtributoId(item.id);
+    const matched = (productosCreditoCatalogs.tiposCalculo || []).find((tc) => tc.nombre === item.tipoFormula);
+    const opCode = (matched?.operacion || '').toUpperCase();
     let autoOp = 'Porcentaje';
-    if (item.tipoFormula.includes('%') || item.porcentajeDefault > 0) {
-      autoOp = 'Porcentaje';
-    } else if (item.tipoFormula.toUpperCase().includes('VALOR FIJO')) {
-      autoOp = 'Valor fijo';
+    if (
+      opCode === 'PERSONALIZADA' ||
+      Boolean(matched?.expresion) ||
+      opCode.includes('BASE_') ||
+      opCode.includes('VALOR2') ||
+      opCode.includes('POR_PLAZO') ||
+      item.tipoFormula.includes('/') ||
+      item.tipoFormula.toUpperCase().includes('VALOR2') ||
+      item.tipoFormula.toUpperCase().includes('PLAZO') ||
+      (Number(item.valor2Default) > 0 && !item.porcentajeDefault)
+    ) {
+      autoOp = 'Formula';
     } else if (item.tipoFormula.toUpperCase().includes('MANUAL')) {
       autoOp = 'Manual';
-    } else if (item.tipoFormula.includes('/') || item.tipoFormula.includes('VALOR2')) {
-      autoOp = 'Base * valor / valor2';
+    } else if (item.tipoFormula.toUpperCase().includes('VALOR FIJO') || (item.valorDefault > 0 && !item.porcentajeDefault)) {
+      autoOp = 'Valor fijo';
+    } else if (item.tipoFormula.includes('%') || item.porcentajeDefault > 0 || opCode === 'PORCENTAJE') {
+      autoOp = 'Porcentaje';
     }
     setTblAtributoForm({
       nombre: item.nombre,
@@ -3540,7 +3644,7 @@ function App() {
       porcentaje = productoAtributoForm.porcentaje ? Number(productoAtributoForm.porcentaje) : null;
       valor = null;
       valor2 = null;
-    } else if (op === 'Base * valor / valor2') {
+    } else if (op === 'Formula' || op === 'Base * valor / valor2' || op === '(base / valor1) × valor2') {
       valor = productoAtributoForm.valor ? Number(productoAtributoForm.valor) : null;
       valor2 = productoAtributoForm.valor2 ? Number(productoAtributoForm.valor2) : null;
       porcentaje = null;
@@ -3558,7 +3662,7 @@ function App() {
       const matchTc = productosCreditoCatalogs.tiposCalculo.find((tc) =>
         tc.nombre.trim().toUpperCase() === formulaStr ||
         (tc.codigo && tc.codigo.trim().toUpperCase() === formulaStr) ||
-        (opStr.includes('VALOR2') && (tc.operacion === 'BASE_POR_VALOR_DIV_VALOR2' || tc.nombre.toUpperCase().includes('VALOR2'))) ||
+        (opStr === 'FORMULA' && (tc.operacion === 'PERSONALIZADA' || Boolean(tc.expresion) || (tc.operacion || '').includes('BASE_') || (tc.operacion || '').includes('VALOR2'))) ||
         (opStr.includes('VALOR FIJO') && (tc.operacion === 'VALOR_FIJO' || tc.nombre.toUpperCase().includes('VALOR FIJO'))) ||
         (opStr.includes('PORCENTAJE') && (tc.operacion === 'PORCENTAJE' || tc.nombre.toUpperCase().includes('PORCENTAJE'))) ||
         (opStr.includes('MANUAL') && tc.nombre.toUpperCase().includes('MANUAL'))
@@ -3787,6 +3891,10 @@ function App() {
       setMessage('El nombre de la fórmula es obligatorio.');
       return;
     }
+    if (formulaCalculoForm.operacion === 'PERSONALIZADA' && !formulaCalculoForm.expresion.trim()) {
+      setMessage('Escribe la expresión personalizada (ej. (BASE / VALOR1) * VALOR2 * PLAZO).');
+      return;
+    }
     const nombreFormula = formulaCalculoForm.nombre.trim().toUpperCase();
     if (!customFormulas.includes(nombreFormula)) {
       setCustomFormulas((prev) => [nombreFormula, ...prev]);
@@ -3794,32 +3902,32 @@ function App() {
     setLoading(true);
     setMessage('');
     try {
+      const flags = formulaFlagsForOperacion(
+        formulaCalculoForm.operacion,
+        formulaCalculoForm.baseCalculo,
+        formulaCalculoForm.multiplicaPorPlazo,
+        formulaCalculoForm.expresion
+      );
       const payload = {
         nombre: nombreFormula,
         codigo: formulaCalculoForm.codigo || null,
         baseCalculo: formulaCalculoForm.baseCalculo,
         operacion: formulaCalculoForm.operacion,
-        requiereValor: formulaCalculoForm.requiereValor,
-        requiereValor2: formulaCalculoForm.requiereValor2,
-        requierePorcentaje: formulaCalculoForm.requierePorcentaje,
+        expresion: formulaCalculoForm.operacion === 'PERSONALIZADA' ? formulaCalculoForm.expresion.trim() : null,
+        requiereValor: flags.requiereValor,
+        requiereValor2: flags.requiereValor2,
+        requierePorcentaje: flags.requierePorcentaje,
         aplicaMinimo: formulaCalculoForm.aplicaMinimo,
-        aplicaMaximo: formulaCalculoForm.aplicaMaximo
+        aplicaMaximo: formulaCalculoForm.aplicaMaximo,
+        multiplicaPorPlazo: flags.multiplicaPorPlazo
       };
 
       if (session) {
         if (editingFormulaCalculoId) {
-          try {
-            await api.updateTipoCalculoCredito(session.token, editingFormulaCalculoId, payload);
-          } catch {
-            // local update if backend endpoint fails
-          }
+          await api.updateTipoCalculoCredito(session.token, editingFormulaCalculoId, payload);
         } else {
-          try {
-            const formula = await api.createTipoCalculoCredito(session.token, payload);
-            setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: String(formula.id) }));
-          } catch {
-            // local creation fallback
-          }
+          const formula = await api.createTipoCalculoCredito(session.token, payload);
+          setProductoAtributoForm((current) => ({ ...current, idTipoCalculo: String(formula.id) }));
         }
         try {
           const catalogs = await api.listProductosCreditoCatalogs(session.token);
@@ -3881,16 +3989,24 @@ function App() {
     setMessage('');
     setCatalogDrawer('formula');
     setEditingFormulaCalculoId(formula.id);
+    const baseCalculo = formula.baseCalculo === 'DESEMBOLSO' ? 'VALOR_DESEMBOLSO'
+      : formula.baseCalculo === 'SMMLV' ? 'SMLMV'
+      : formula.baseCalculo || 'VALOR_CREDITO';
+    const operacion = formula.operacion === 'MULTIPLICAR_DIVIDIR' ? 'BASE_POR_VALOR_DIV_VALOR2'
+      : formula.operacion === 'MANUAL' ? 'VALOR_FIJO'
+      : formula.operacion || 'PORCENTAJE';
     setFormulaCalculoForm({
       nombre: formula.nombre,
       codigo: formula.codigo || '',
-      baseCalculo: formula.baseCalculo || 'VALOR_CREDITO',
-      operacion: formula.operacion || 'PORCENTAJE',
+      baseCalculo,
+      operacion: formula.expresion ? 'PERSONALIZADA' : operacion,
+      expresion: formula.expresion || '',
       requiereValor: !!formula.requiereValor,
       requiereValor2: !!formula.requiereValor2,
       requierePorcentaje: !!formula.requierePorcentaje,
       aplicaMinimo: !!formula.aplicaMinimo,
-      aplicaMaximo: !!formula.aplicaMaximo
+      aplicaMaximo: !!formula.aplicaMaximo,
+      multiplicaPorPlazo: !!formula.multiplicaPorPlazo
     });
     setSubTabAtributos('formulas');
     setMessage(`Editando fórmula: "${formula.nombre}"`);
@@ -3957,20 +4073,6 @@ function App() {
       (item) => item.nombre.trim().toUpperCase() === atributo.nombre.trim().toUpperCase()
     );
 
-    let operacion = 'Porcentaje';
-    const rawFormula = (catalogItem?.tipoFormula || atributo.tipoCalculo || '').toUpperCase();
-    if (rawFormula.includes('/') || rawFormula.includes('VALOR2') || (atributo.valor2 && Number(atributo.valor2) > 0)) {
-      operacion = 'Base * valor / valor2';
-    } else if (rawFormula.includes('VALOR FIJO') || (Number(atributo.valor) > 0 && !Number(atributo.porcentaje))) {
-      operacion = 'Valor fijo';
-    } else if (rawFormula.includes('MANUAL')) {
-      operacion = 'Manual';
-    } else if (rawFormula.includes('%') || rawFormula.includes('PORCENTAJE') || Number(atributo.porcentaje) > 0) {
-      operacion = 'Porcentaje';
-    } else if (Number(atributo.valor) > 0) {
-      operacion = 'Valor fijo';
-    }
-
     let tipoCalculo: FormulaCalculoRow | undefined;
     const targetFormulaName = (catalogItem?.tipoFormula || '').trim().toUpperCase();
 
@@ -3990,15 +4092,38 @@ function App() {
 
     if (!tipoCalculo && atributo.idTipoCalculo) {
       const byId = productosCreditoCatalogs.tiposCalculo.find((tc) => tc.id === atributo.idTipoCalculo);
-      if (byId && (byId.nombre.toUpperCase() !== 'MANUAL' || operacion === 'Manual')) {
-        tipoCalculo = byId;
-      }
+      if (byId) tipoCalculo = byId;
+    }
+
+    let operacion = 'Porcentaje';
+    const rawFormula = (catalogItem?.tipoFormula || atributo.tipoCalculo || '').toUpperCase();
+    const formulaOp = tipoCalculo?.operacion || '';
+    if (
+      formulaOp === 'PERSONALIZADA' ||
+      Boolean(tipoCalculo?.expresion) ||
+      formulaOp.includes('BASE_') ||
+      formulaOp.includes('VALOR2') ||
+      formulaOp.includes('POR_PLAZO') ||
+      rawFormula.includes('BASE_DIV') ||
+      rawFormula.includes('/') ||
+      rawFormula.includes('VALOR2') ||
+      (atributo.valor2 && Number(atributo.valor2) > 0)
+    ) {
+      operacion = 'Formula';
+    } else if (formulaOp === 'VALOR_FIJO' || formulaOp === 'BASE_MUL_VALOR' || formulaOp === 'BASE_DIV_VALOR' || rawFormula.includes('VALOR FIJO') || (Number(atributo.valor) > 0 && !Number(atributo.porcentaje))) {
+      operacion = 'Valor fijo';
+    } else if (rawFormula.includes('MANUAL')) {
+      operacion = 'Manual';
+    } else if (formulaOp === 'PORCENTAJE' || formulaOp === 'PORCENTAJE_POR_PLAZO' || rawFormula.includes('%') || rawFormula.includes('PORCENTAJE') || Number(atributo.porcentaje) > 0) {
+      operacion = 'Porcentaje';
+    } else if (Number(atributo.valor) > 0) {
+      operacion = 'Valor fijo';
     }
 
     if (!tipoCalculo) {
       tipoCalculo = productosCreditoCatalogs.tiposCalculo.find(tc =>
-        (operacion === 'Base * valor / valor2' && (tc.operacion === 'BASE_POR_VALOR_DIV_VALOR2' || tc.nombre.toUpperCase().includes('VALOR2') || tc.nombre.toUpperCase().includes('SEGURO DE VIDA'))) ||
-        (operacion === 'Porcentaje' && (tc.operacion === 'PORCENTAJE' || tc.nombre.toUpperCase().includes('PORCENTAJE'))) ||
+        (operacion === 'Formula' && (tc.operacion === 'PERSONALIZADA' || Boolean(tc.expresion) || (tc.operacion || '').includes('BASE_') || (tc.operacion || '').includes('VALOR2') || tc.nombre.toUpperCase().includes('VALOR2') || tc.nombre.toUpperCase().includes('SEGURO DE VIDA'))) ||
+        (operacion === 'Porcentaje' && (tc.operacion === 'PORCENTAJE' || tc.operacion === 'PORCENTAJE_POR_PLAZO' || tc.nombre.toUpperCase().includes('PORCENTAJE'))) ||
         (operacion === 'Valor fijo' && (tc.operacion === 'VALOR_FIJO' || tc.nombre.toUpperCase().includes('VALOR FIJO')))
       );
     }
@@ -7800,6 +7925,7 @@ function App() {
                 product={selectedProductoCredito}
                 attributes={productoAtributos}
                 descriptions={Object.fromEntries(tblAtributosList.map((item) => [item.nombre, item.descripcion]))}
+                tiposCalculo={productosCreditoCatalogs.tiposCalculo || []}
                 busy={loading}
                 onSelectProduct={(id) => { if (id === selectedProductoCreditoId) return; handleCancelProductoAtributoEdit(); setSelectedCatalogAtributoId(''); setProductoAtributos([]); setSelectedProductoCreditoId(id); setMessage(''); }}
                 onEdit={handleEditProductoAtributo}
@@ -7822,7 +7948,7 @@ function App() {
                         );
                         let autoOp = 'Porcentaje';
                         if (item.valor2Default && Number(item.valor2Default) > 0) {
-                          autoOp = 'Base * valor / valor2';
+                          autoOp = 'Formula';
                         } else if (item.valorDefault > 0 && !item.porcentajeDefault) {
                           autoOp = 'Valor fijo';
                         }
@@ -7948,15 +8074,27 @@ function App() {
                               value={tblAtributoForm.tipoFormula}
                               onChange={(e) => {
                                 const selectedFormula = e.target.value;
+                                const matched = (productosCreditoCatalogs.tiposCalculo || []).find((tc) => tc.nombre === selectedFormula);
+                                const opCode = (matched?.operacion || '').toUpperCase();
+                                const expr = (matched?.expresion || '').toUpperCase();
                                 let autoOp = tblAtributoForm.operacion;
-                                if (selectedFormula.includes('%') || selectedFormula.toUpperCase().includes('PORCENTAJE')) {
+                                if (
+                                  opCode === 'PERSONALIZADA' ||
+                                  Boolean(expr) ||
+                                  opCode.includes('BASE_') ||
+                                  opCode.includes('VALOR2') ||
+                                  opCode.includes('POR_PLAZO') ||
+                                  selectedFormula.includes('/') ||
+                                  selectedFormula.toUpperCase().includes('VALOR2') ||
+                                  selectedFormula.toUpperCase().includes('PLAZO')
+                                ) {
+                                  autoOp = 'Formula';
+                                } else if (selectedFormula.includes('%') || selectedFormula.toUpperCase().includes('PORCENTAJE') || opCode === 'PORCENTAJE' || opCode === 'PORCENTAJE_POR_PLAZO') {
                                   autoOp = 'Porcentaje';
-                                } else if (selectedFormula.toUpperCase().includes('VALOR FIJO')) {
+                                } else if (selectedFormula.toUpperCase().includes('VALOR FIJO') || opCode === 'VALOR_FIJO') {
                                   autoOp = 'Valor fijo';
                                 } else if (selectedFormula.toUpperCase().includes('MANUAL')) {
                                   autoOp = 'Manual';
-                                } else if (selectedFormula.includes('/') || selectedFormula.includes('VALOR2')) {
-                                  autoOp = 'Base * valor / valor2';
                                 }
                                 setTblAtributoForm((cur) => ({ ...cur, tipoFormula: selectedFormula, operacion: autoOp }));
                               }}
@@ -7964,7 +8102,7 @@ function App() {
                               <option value="">-- Seleccionar Tipo de Fórmula --</option>
                               {(productosCreditoCatalogs.tiposCalculo || []).map((tc) => (
                                 <option key={tc.id} value={tc.nombre}>
-                                  {tc.nombre} ({tc.baseCalculo || 'CRÉDITO'})
+                                  {tc.nombre} ({tc.baseCalculo || 'CRÉDITO'}{tc.multiplicaPorPlazo ? ' × PLAZO' : ''})
                                 </option>
                               ))}
                               {customFormulas
@@ -7983,7 +8121,7 @@ function App() {
                               <option value="Porcentaje">Porcentaje</option>
                               <option value="Valor fijo">Valor fijo</option>
                               <option value="Manual">Manual</option>
-                              <option value="Base * valor / valor2">Base * valor / valor2</option>
+                              <option value="Formula">Formula</option>
                             </select>
                           </label>
 
@@ -8001,15 +8139,15 @@ function App() {
                             </label>
                           )}
 
-                          {tblAtributoForm.operacion === 'Base * valor / valor2' && (
+                          {tblAtributoForm.operacion === 'Formula' && (
                             <>
                               <label className="product-field">
-                                <span>Multiplicador (Valor 1)</span>
-                                <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 1000" />
+                                <span>Valor 1 (parámetro)</span>
+                                <input value={tblAtributoForm.valorDefault} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valorDefault: e.target.value }))} placeholder="Ej. 1000000" />
                               </label>
                               <label className="product-field">
-                                <span>Divisor (Valor 2)</span>
-                                <input value={tblAtributoForm.valor2Default} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valor2Default: e.target.value }))} placeholder="Ej. 100" />
+                                <span>Valor 2 (parámetro)</span>
+                                <input value={tblAtributoForm.valor2Default} onChange={(e) => setTblAtributoForm((cur) => ({ ...cur, valor2Default: e.target.value }))} placeholder="Ej. 1" />
                               </label>
                             </>
                           )}
@@ -8061,36 +8199,110 @@ function App() {
                           </label>
 
                           <label className="product-field">
-                            <span>Base de Cálculo *</span>
+                            <span>Entidad base del crédito *</span>
                             <select
                               value={formulaCalculoForm.baseCalculo}
-                              onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, baseCalculo: event.target.value }))}
+                              onChange={(event) => {
+                                const baseCalculo = event.target.value;
+                                setFormulaCalculoForm((current) => ({
+                                  ...current,
+                                  baseCalculo,
+                                  ...formulaFlagsForOperacion(current.operacion, baseCalculo, current.multiplicaPorPlazo, current.expresion)
+                                }));
+                              }}
                             >
-                              <option value="VALOR_CREDITO">Valor crédito</option>
-                              <option value="CUOTA">Cuota</option>
-                              <option value="SALDO">Saldo deudor</option>
-                              <option value="DESEMBOLSO">Valor desembolso</option>
-                              <option value="SMMLV">SMMLV (Salario Mínimo)</option>
+                              {FORMULA_BASE_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
                             </select>
                           </label>
 
                           <label className="product-field">
-                            <span>Operación Matemática *</span>
+                            <span>Operación matemática *</span>
                             <select
                               value={formulaCalculoForm.operacion}
-                              onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, operacion: event.target.value }))}
+                              onChange={(event) => {
+                                const operacion = event.target.value;
+                                setFormulaCalculoForm((current) => ({
+                                  ...current,
+                                  operacion,
+                                  expresion: operacion === 'PERSONALIZADA'
+                                    ? (current.expresion || '(BASE / VALOR1) * VALOR2 * PLAZO')
+                                    : current.expresion,
+                                  ...formulaFlagsForOperacion(
+                                    operacion,
+                                    current.baseCalculo,
+                                    current.multiplicaPorPlazo,
+                                    operacion === 'PERSONALIZADA' ? (current.expresion || '(BASE / VALOR1) * VALOR2 * PLAZO') : current.expresion
+                                  )
+                                }));
+                              }}
                             >
-                              <option value="PORCENTAJE">Porcentaje (%)</option>
-                              <option value="VALOR_FIJO">Valor fijo ($)</option>
-                              <option value="MANUAL">Manual / Ingreso Libre</option>
-                              <option value="MULTIPLICAR_DIVIDIR">Base * valor / valor2</option>
+                              {FORMULA_OPERACION_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>{option.label}</option>
+                              ))}
                             </select>
                           </label>
+                        </div>
+
+                        {formulaCalculoForm.operacion === 'PERSONALIZADA' && (
+                          <div style={{ marginTop: '16px', background: '#fff7ed', padding: '14px 16px', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+                            <strong style={{ display: 'block', marginBottom: 8, color: '#9a3412' }}>Crear operación matemática</strong>
+                            <p style={{ margin: '0 0 10px', fontSize: '0.82rem', color: '#9a3412' }}>
+                              Usa tokens: BASE (entidad elegida arriba), VALOR1, VALOR2, PLAZO, PORCENTAJE. Operadores: + − * / ( )
+                            </p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                              {FORMULA_EXPR_TOKENS.map((token) => (
+                                <button
+                                  key={token}
+                                  type="button"
+                                  className="requests-button secondary"
+                                  style={{ padding: '4px 10px', fontSize: '0.78rem' }}
+                                  onClick={() => setFormulaCalculoForm((current) => {
+                                    const expresion = `${current.expresion}${current.expresion && !/\s$/.test(current.expresion) ? ' ' : ''}${token}`.trim();
+                                    return { ...current, expresion, ...flagsFromExpresion(expresion) };
+                                  })}
+                                >
+                                  {token}
+                                </button>
+                              ))}
+                            </div>
+                            <label className="product-field" style={{ margin: 0 }}>
+                              <span>Expresión *</span>
+                              <input
+                                value={formulaCalculoForm.expresion}
+                                onChange={(event) => {
+                                  const expresion = event.target.value.toUpperCase();
+                                  setFormulaCalculoForm((current) => ({
+                                    ...current,
+                                    expresion,
+                                    ...flagsFromExpresion(expresion)
+                                  }));
+                                }}
+                                placeholder="(BASE / VALOR1) * VALOR2 * PLAZO"
+                              />
+                            </label>
+                          </div>
+                        )}
+
+                        <div style={{ marginTop: '16px', background: '#eff6ff', padding: '14px 16px', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                          <small style={{ display: 'block', color: '#1d4ed8', fontWeight: 600, marginBottom: 4 }}>Vista previa de la fórmula</small>
+                          <strong style={{ fontSize: '0.98rem', color: '#0f172a' }}>{formulaPreviewExpression(formulaCalculoForm)}</strong>
+                          <p style={{ margin: '8px 0 0', fontSize: '0.82rem', color: '#475569' }}>
+                            Valor 1, Valor 2 y % se capturan al asociar la fórmula a un atributo del producto.
+                          </p>
                         </div>
 
                         <div style={{ marginTop: '16px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                           <CatalogSectionHeader title="Condiciones y parámetros" description="Define los parámetros adicionales que aplican a la fórmula." kind="calculation" />
                           <div className="catalog-formula-options">
+                            <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={formulaCalculoForm.multiplicaPorPlazo}
+                                disabled={formulaCalculoForm.baseCalculo === 'PLAZO' || OPS_CON_PLAZO_INTEGRADO.has(formulaCalculoForm.operacion) || formulaCalculoForm.operacion === 'PERSONALIZADA'}
+                                onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, multiplicaPorPlazo: event.target.checked }))}
+                              /><span><strong>Multiplicar también por plazo</strong><small>No aplica en operación personalizada (incluye PLAZO en la expresión si lo necesitas).</small></span></label>
                             <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
@@ -8114,7 +8326,13 @@ function App() {
                                 type="checkbox"
                                 checked={formulaCalculoForm.requiereValor}
                                 onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, requiereValor: event.target.checked }))}
-                              /><span><strong>Requiere valor fijo / multiplicador</strong><small>Indica si la fórmula utiliza un valor fijo o multiplicador.</small></span></label>
+                              /><span><strong>Requiere Valor 1</strong><small>Divisor o multiplicador según la operación.</small></span></label>
+                            <label className="inline-check" style={{ fontSize: '0.88rem', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={formulaCalculoForm.requiereValor2}
+                                onChange={(event) => setFormulaCalculoForm((current) => ({ ...current, requiereValor2: event.target.checked }))}
+                              /><span><strong>Requiere Valor 2</strong><small>Segundo parámetro (multiplicador o divisor).</small></span></label>
                           </div>
                         </div>
                       </div>

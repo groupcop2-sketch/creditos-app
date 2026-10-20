@@ -99,7 +99,26 @@ export function EditProductAttributeDrawer({
     return () => document.removeEventListener('keydown', handle);
   }, [busy, onClose]);
 
-  const currentOperacion = value.operacion || (Number(value.valor) > 0 && !Number(value.porcentaje) ? 'Valor fijo' : 'Porcentaje');
+  const normalizeOperacionUi = (raw?: string) => {
+    const op = (raw || '').trim();
+    if (op === 'Porcentaje' || op === 'Valor fijo' || op === 'Manual' || op === 'Formula') return op;
+    if (
+      op === 'Formula' ||
+      op === 'Base * valor / valor2' ||
+      op === '(base / valor1) × valor2' ||
+      op === 'Valor × plazo' ||
+      op.toUpperCase().includes('BASE') ||
+      op.toUpperCase().includes('VALOR2') ||
+      op.toUpperCase().includes('PLAZO')
+    ) return 'Formula';
+    if (op.toUpperCase().includes('MANUAL')) return 'Manual';
+    if (op.toUpperCase().includes('FIJO') || (Number(value.valor) > 0 && !Number(value.porcentaje))) return 'Valor fijo';
+    return 'Porcentaje';
+  };
+
+  const currentOperacion = normalizeOperacionUi(
+    value.operacion || (Number(value.valor) > 0 && !Number(value.porcentaje) ? 'Valor fijo' : 'Porcentaje')
+  );
 
   const handleFormulaChange = (selectedVal: string) => {
     let resolvedId = selectedVal;
@@ -116,7 +135,9 @@ export function EditProductAttributeDrawer({
 
     if (!selectedFormula && tiposCalculo.length > 0) {
       const upper = selectedVal.trim().toUpperCase();
-      if (upper.includes('/') || upper.includes('VALOR2') || upper.includes('DIV')) {
+      if (upper.includes('BASE_DIV') || (upper.includes('VALOR1') && upper.includes('VALOR2'))) {
+        selectedFormula = tiposCalculo.find((tc) => tc.operacion === 'BASE_DIV_VALOR_MUL_VALOR2') || tiposCalculo[0];
+      } else if (upper.includes('/') || upper.includes('VALOR2') || upper.includes('DIV')) {
         selectedFormula = tiposCalculo.find((tc) => tc.operacion === 'BASE_POR_VALOR_DIV_VALOR2' || tc.nombre.toUpperCase().includes('VALOR2')) || tiposCalculo[0];
       } else if (upper.includes('FIJO') || upper.includes('VALOR *')) {
         selectedFormula = tiposCalculo.find((tc) => tc.nombre.toUpperCase().includes('VALOR FIJO')) || tiposCalculo[0];
@@ -134,14 +155,26 @@ export function EditProductAttributeDrawer({
     }
 
     const formulaName = (selectedFormula?.nombre || selectedVal).toUpperCase();
+    const formulaOp = (selectedFormula?.operacion || '').toUpperCase();
     let autoOp = currentOperacion;
-    if (formulaName.includes('/') || formulaName.includes('VALOR2') || formulaName.includes('SEGURO DE VIDA')) {
-      autoOp = 'Base * valor / valor2';
-    } else if (formulaName.includes('VALOR FIJO')) {
+    const expr = (selectedFormula?.expresion || '').toUpperCase();
+    if (
+      formulaOp === 'PERSONALIZADA' ||
+      Boolean(expr) ||
+      formulaOp.includes('BASE_') ||
+      formulaOp.includes('VALOR2') ||
+      formulaOp.includes('POR_PLAZO') ||
+      formulaName.includes('/') ||
+      formulaName.includes('VALOR2') ||
+      formulaName.includes('PLAZO') ||
+      formulaName.includes('SEGURO DE VIDA')
+    ) {
+      autoOp = 'Formula';
+    } else if (formulaOp === 'VALOR_FIJO' || formulaName.includes('VALOR FIJO')) {
       autoOp = 'Valor fijo';
     } else if (formulaName.includes('MANUAL')) {
       autoOp = 'Manual';
-    } else if (formulaName.includes('%') || formulaName.includes('PORCENTAJE') || formulaName.includes('FIANZA')) {
+    } else if (formulaOp === 'PORCENTAJE' || formulaOp === 'PORCENTAJE_POR_PLAZO' || formulaName.includes('%') || formulaName.includes('PORCENTAJE') || formulaName.includes('FIANZA')) {
       autoOp = 'Porcentaje';
     }
 
@@ -165,9 +198,12 @@ export function EditProductAttributeDrawer({
       operacion: newOp,
       ...(newOp === 'Porcentaje' ? { valor: '', valor2: '' } : {}),
       ...(newOp === 'Valor fijo' || newOp === 'Manual' ? { porcentaje: '', valor2: '' } : {}),
-      ...(newOp === 'Base * valor / valor2' ? { porcentaje: '' } : {})
+      ...(newOp === 'Formula' ? { porcentaje: '' } : {})
     });
   };
+
+  const needsValor2 = currentOperacion === 'Formula';
+  const needsValorSolo = currentOperacion === 'Valor fijo' || currentOperacion === 'Manual';
 
   const currentTypeName = tiposAtributo.find((ta) => String(ta.id) === String(value.idTipoAtributo))?.nombre || type || '—';
 
@@ -298,7 +334,7 @@ export function EditProductAttributeDrawer({
                     <option value="Porcentaje">Porcentaje</option>
                     <option value="Valor fijo">Valor fijo</option>
                     <option value="Manual">Manual</option>
-                    <option value="Base * valor / valor2">Base * valor / valor2</option>
+                    <option value="Formula">Formula</option>
                   </select>
                 </label>
 
@@ -316,7 +352,7 @@ export function EditProductAttributeDrawer({
                   </label>
                 )}
 
-                {(currentOperacion === 'Valor fijo' || currentOperacion === 'Manual') && (
+                {needsValorSolo && (
                   <label className="product-field">
                     <span>Valor ($) *</span>
                     <div className="attribute-value-input">
@@ -333,25 +369,25 @@ export function EditProductAttributeDrawer({
                   </label>
                 )}
 
-                {currentOperacion === 'Base * valor / valor2' && (
+                {needsValor2 && (
                   <>
                     <label className="product-field">
-                      <span>Multiplicador (Valor 1)</span>
+                      <span>Valor 1 (parámetro) *</span>
                       <input
                         type="number"
                         step="any"
                         value={value.valor}
-                        placeholder="Ej. 1000"
+                        placeholder="Ej. 1000000"
                         onChange={(event) => onChange({ valor: event.target.value, porcentaje: '' })}
                       />
                     </label>
                     <label className="product-field">
-                      <span>Divisor (Valor 2)</span>
+                      <span>Valor 2 (parámetro) *</span>
                       <input
                         type="number"
                         step="any"
                         value={value.valor2}
-                        placeholder="Ej. 100"
+                        placeholder="Ej. 1"
                         onChange={(event) => onChange({ valor2: event.target.value })}
                       />
                     </label>

@@ -728,11 +728,13 @@ export type FormulaCalculoRow = {
   codigo: string | null;
   baseCalculo: string;
   operacion: string;
+  expresion?: string | null;
   requiereValor: boolean;
   requiereValor2: boolean;
   requierePorcentaje: boolean;
   aplicaMinimo: boolean;
   aplicaMaximo: boolean;
+  multiplicaPorPlazo?: boolean;
   activo: boolean;
 };
 
