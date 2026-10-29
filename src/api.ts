@@ -1857,4 +1857,122 @@ export type IntegracionFinancieraRow = {
   ind_modo_prueba: boolean;
 };
 
+// ==========================================
+// ARQUITECTURA LIBRANZA & CONTABILIDAD NIIF
+// ==========================================
+export const libranzaWorkflowApi = {
+  getArquitectura: (token?: string) =>
+    request<{
+      success: boolean;
+      descripcion: string;
+      actores: Array<{ id: string; descripcion: string }>;
+      pasos: Array<{
+        paso: number;
+        codigo: string;
+        actorOrigen: string;
+        actorDestino: string;
+        nombre: string;
+        descripcion: string;
+      }>;
+    }>('/api/v1/libranza/workflow/arquitectura', {}, token),
+
+  getEstado: (token: string, creditoId: number) =>
+    request<{
+      success: boolean;
+      data: {
+        credito: any;
+        actores: Array<{ id: string; nombre: string; icon: string }>;
+        progresoPorcentaje: number;
+        pasoActualNumero: number;
+        pasos: Array<{
+          paso: number;
+          codigo: string;
+          actorOrigen: string;
+          actorDestino: string;
+          nombre: string;
+          estado: string;
+          referencia?: string;
+          observaciones?: string;
+          fechaEjecucion?: string;
+          payloadSalida?: any;
+        }>;
+      };
+    }>(`/api/v1/libranza/workflow/${creditoId}/estado`, {}, token),
+
+  ejecutarPaso2ValidarMotor: (token: string, creditoId: number, body?: any) =>
+    request<any>(`/api/v1/libranza/workflow/${creditoId}/paso-2-validar-motor`, {
+      method: 'POST',
+      body: JSON.stringify(body || {})
+    }, token),
+
+  ejecutarPaso6NotificarPagaduria: (token: string, creditoId: number, body?: any) =>
+    request<any>(`/api/v1/libranza/workflow/${creditoId}/paso-6-notificar-pagaduria`, {
+      method: 'POST',
+      body: JSON.stringify(body || {})
+    }, token),
+
+  ejecutarPaso7DesembolsoContable: (token: string, creditoId: number, body?: any) =>
+    request<any>(`/api/v1/libranza/workflow/${creditoId}/paso-7-desembolso-contable`, {
+      method: 'POST',
+      body: JSON.stringify(body || {})
+    }, token),
+
+  ejecutarPaso8y9RecaudoNomina: (token: string, creditoId: number, body: any) =>
+    request<any>(`/api/v1/libranza/workflow/${creditoId}/paso-8-9-recaudo-nomina`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }, token),
+
+  getEstadoCuenta: (token: string, creditoId: number) =>
+    request<any>(`/api/v1/libranza/workflow/${creditoId}/estado-cuenta`, {}, token)
+};
+
+export const contabilidadApi = {
+  getStatus: (token: string) =>
+    request<{
+      success: boolean;
+      data: {
+        online: boolean;
+        activeUrl?: string;
+        companyId: string;
+        templatesCount?: number;
+        message?: string;
+      };
+    }>('/api/v1/contabilidad/status', {}, token),
+
+  simularCapacidad: (token: string, body: any) =>
+    request<{ success: boolean; data: any }>('/api/v1/contabilidad/simular-capacidad', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }, token),
+
+  getComprobantesCredito: (token: string, creditoId: number) =>
+    request<{
+      success: boolean;
+      creditoId: number;
+      consecutivo: string;
+      count: number;
+      data: any[];
+    }>(`/api/v1/contabilidad/creditos/${creditoId}/comprobantes`, {}, token),
+
+  sincronizarDesembolso: (token: string, creditoId: number, body?: any) =>
+    request<any>(`/api/v1/contabilidad/creditos/${creditoId}/sincronizar-desembolso`, {
+      method: 'POST',
+      body: JSON.stringify(body || {})
+    }, token),
+
+  sincronizarRecaudo: (token: string, creditoId: number, body: any) =>
+    request<any>(`/api/v1/contabilidad/creditos/${creditoId}/sincronizar-recaudo`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }, token),
+
+  getBalanceComprobacion: (token: string) =>
+    request<any>('/api/v1/contabilidad/balance-comprobacion', {}, token),
+
+  getPUC: (token: string) =>
+    request<any>('/api/v1/contabilidad/puc', {}, token)
+};
+
+
 
