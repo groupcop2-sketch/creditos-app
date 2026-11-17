@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Building2, Handshake, KeyRound, Layers, Plus, Search, ShieldCheck, Sparkles, Users, Wallet, Workflow, X } from 'lucide-react';
+import { Building2, Handshake, KeyRound, Layers, Plus, Receipt, Search, ShieldCheck, Sparkles, Users, Wallet, Workflow, X } from 'lucide-react';
 import { api, type PermissionRow, type RoleRow } from '../api';
 
 type Props = {
@@ -16,6 +16,7 @@ export type Grupo = { titulo: string; ayuda?: string; icon: React.ElementType; m
 
 export const GRUPOS: Grupo[] = [
   { titulo: 'Etapas del crédito', ayuda: 'Quién trabaja cada etapa: aprobar, devolver, rechazar y sus acciones.', icon: Workflow, match: (c) => c.startsWith('creditos:etapa-') },
+  { titulo: 'Pagos y facturación', ayuda: 'Cobro a pagadurías, carga de pagos, formatos y cierre del mes.', icon: Receipt, match: (c) => c.startsWith('recaudo:') },
   { titulo: 'Créditos y productos', icon: Wallet, match: (c) => /^(creditos|productos-creditos):/.test(c) },
   { titulo: 'Empresas y empleados', icon: Building2, match: (c) => c.startsWith('empresas:') },
   { titulo: 'Aliados y comerciales', icon: Handshake, match: (c) => /^(aliados|comerciales|libranzeras):/.test(c) },
