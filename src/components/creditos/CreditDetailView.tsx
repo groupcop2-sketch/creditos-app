@@ -11,8 +11,26 @@ import type {
   EmployeeCatalogs
 } from '../../api';
 import { CreditHistoryDrawer } from './CreditHistoryDrawer';
+import { EstudioCreditoPanel } from './EstudioCreditoPanel';
+import { SoportesClientePanel } from './SoportesClientePanel';
+import { RadicacionResumen } from './RadicacionResumen';
+import { DesembolsoPanel } from './DesembolsoPanel';
+import { VisacionPanel } from './VisacionPanel';
+import { DocumentosAdicionalesPanel } from './DocumentosAdicionalesPanel';
 import { DocuSignStateMachine } from '../docusign/DocuSignStateMachine';
 import { Banknote, Building2, CalendarDays, Check, ChevronDown, ChevronRight, Download, MoreVertical, RefreshCw, ClipboardList, Clock3, FileText, History, Info, LockKeyhole, Mail, MessageSquare, Package, Percent, Phone, Search, ShieldCheck, UserRound, Users, Wallet } from 'lucide-react';
+
+const ESTADO_ETAPA_LABEL: Record<string, string> = {
+  APROBADA: 'Aprobada',
+  EN_PROCESO: 'En proceso',
+  PENDIENTE: 'Pendiente',
+  DEVUELTA: 'Devuelta',
+  RECHAZADA: 'Rechazada'
+};
+
+// The approval stage is shown as "Visación". shortcut: display-only rename; rename it in the stage catalog
+// ("Flujo del crédito") once the backend that recognizes VISACION is deployed.
+const etapaLabel = (nombre: string) => (/aprob/i.test(nombre.normalize('NFD').replace(/[̀-ͯ]/g, '')) ? 'Visación' : nombre);
 
 export interface CreditDetailViewProps {
   credito: CreditoRow;
@@ -74,6 +92,8 @@ export interface CreditDetailViewProps {
     comprobantePago: string;
     observacionCalendario: string;
     observacion: string;
+    idCuentaEgreso: string;
+    fechaConsignacion: string;
   };
   onChangeDesembolsoForm?: React.Dispatch<React.SetStateAction<any>>;
   onRegistrarDesembolso?: () => Promise<void>;
@@ -88,9 +108,12 @@ export interface CreditDetailViewProps {
   documentTemplates?: DocumentTemplateRow[];
   onOpenFirmaPdf?: (id: number) => Promise<void>;
   onFirmaManualEstado?: (id: number, estado: string) => Promise<void>;
+  /** Logged-in user's permissions; stages without their creditos:etapa-* permission are read-only. */
+  permisos?: string[];
 }
 
 export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
+  permisos,
   credito,
   expediente,
   documentos,
@@ -149,10 +172,31 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
     return etapas.find((item) => item.id === selectedEtapaId) ?? etapas[0] ?? null;
   }, [etapas, selectedEtapaId]);
 
-  const isApprovalStage = useMemo(() => {
-    const name = (activeEtapa?.etapa || '').toLowerCase();
-    return name.includes('aprob') || name.includes('comite') || name.includes('analisis') || name.includes('estudio');
-  }, [activeEtapa]);
+  // Stage kinds mirror the backend rules in creditos.service.ts (isClientDocsStage / isStudyStage / isApprovalStage).
+  const stageKey = (activeEtapa?.etapa || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const isClientDocsStage = stageKey.includes('validacion') && stageKey.includes('document');
+  const isStudyStage = !isClientDocsStage && (stageKey.includes('estudio') || stageKey.includes('analisis'));
+  const isApprovalStage = stageKey.includes('aprob') || stageKey.includes('comite') || stageKey.includes('visacion');
+  const isRadicacionStage = stageKey.includes('radic');
+  // Stage permission (same mapping and order as permisos-etapa.ts in the backend).
+  const permisoEtapa = isRadicacionStage ? 'creditos:etapa-radicacion'
+    : isClientDocsStage ? 'creditos:etapa-validacion'
+    : isStudyStage ? 'creditos:etapa-estudio'
+    : isApprovalStage ? 'creditos:etapa-visacion'
+    : stageKey.includes('desembols') ? 'creditos:etapa-desembolso'
+    : null;
+  const sinPermisoEtapa = Boolean(permisoEtapa && permisos && !permisos.includes(permisoEtapa));
+  // A closed stage (approved or rejected), or one the user's role cannot work, is shown read-only.
+  const etapaCerrada = activeEtapa?.estadoEtapa === 'APROBADA' || activeEtapa?.estadoEtapa === 'RECHAZADA';
+  const readOnly = etapaCerrada || sinPermisoEtapa;
+  const needsSigningDocs = !isClientDocsStage && (stageKey.includes('document') || stageKey.includes('soporte') || stageKey.includes('firma') || isApprovalStage);
+  const [soportesPendientes, setSoportesPendientes] = useState(0);
+  const [estudiosCount, setEstudiosCount] = useState(0);
+  // Payroll loans: documents go to the client for signature only after the employer approved (Visación).
+  const [firmaHabilitada, setFirmaHabilitada] = useState(true);
+  useEffect(() => setFirmaHabilitada(true), [credito?.id]);
+  const firmaBloqueada = isApprovalStage && !firmaHabilitada;
+  const firmaBloqueadaTitle = 'Primero registra la aprobación de la empresa en Visación';
 
   const isDisbursementStage = useMemo(() => {
     const name = (activeEtapa?.etapa || '').toLowerCase();
@@ -178,6 +222,36 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
     }).length;
   }, [documentos, envelope]);
 
+  // The backend rejects approving a stage while an earlier one is not approved.
+  const etapaAnteriorPendiente = activeEtapa
+    ? etapas.find((item) => item.orden < activeEtapa.orden && item.estadoEtapa !== 'APROBADA')
+    : undefined;
+  const approveBlocked = Boolean(etapaAnteriorPendiente) || (isClientDocsStage
+    ? soportesPendientes > 0
+    : isStudyStage
+      ? estudiosCount === 0
+      : needsSigningDocs && mandatoryPendingCount > 0);
+  const approveBlockedTitle = etapaAnteriorPendiente
+    ? `Primero aprueba la etapa "${etapaLabel(etapaAnteriorPendiente.etapa)}".`
+    : isClientDocsStage
+    ? 'Para continuar, aprueba todos los documentos que cargó el cliente.'
+    : isStudyStage
+      ? 'Para continuar, guarda el estudio de capacidad de pago.'
+      : needsSigningDocs
+        ? 'Para continuar, debes aprobar todos los documentos obligatorios.'
+        : isRadicacionStage
+          ? 'Revisa la solicitud, los datos del cliente y del empleador antes de aprobar.'
+          : 'Revisa la información de la etapa antes de aprobarla.';
+  const approveBlockedDetail = etapaAnteriorPendiente
+    ? 'Las etapas se aprueban en orden. Selecciónala en la barra de arriba para gestionarla.'
+    : isClientDocsStage
+    ? soportesPendientes > 0 ? `Faltan ${soportesPendientes} documentos del cliente por aprobar.` : 'Todos los documentos del cliente están aprobados.'
+    : isStudyStage
+      ? estudiosCount === 0 ? 'Aún no hay un estudio guardado para este crédito.' : `Hay ${estudiosCount} estudio(s) guardado(s).`
+      : needsSigningDocs
+        ? mandatoryPendingCount > 0 ? `Faltan ${mandatoryPendingCount} documentos obligatorios por validar.` : 'Todos los documentos obligatorios han sido validados correctamente.'
+        : 'Esta etapa no exige documentos para avanzar.';
+
   // Filtered documents
   const filteredDocs = useMemo(() => {
     if (!docSearch.trim()) return documentos;
@@ -197,17 +271,12 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
     ] as CreditoEtapaRow[];
   }, [etapas, credito]);
 
-  const activeEtapaIndex = useMemo(() => {
-    if (!activeEtapa) return 1;
-    const idx = displayEtapas.findIndex((e) => e.id === activeEtapa.id);
-    return idx >= 0 ? idx : 1;
-  }, [displayEtapas, activeEtapa]);
-
   const getStageDescription = (etapaName?: string) => {
     const norm = (etapaName || '').toLowerCase();
+    if (norm.includes('radic')) return 'Solicitud tal como la envió el cliente, con su información y la de su empleador.';
     if (norm.includes('document')) return 'Revisa y valida los documentos requeridos para continuar con el proceso de crédito.';
     if (norm.includes('estudio')) return 'Analiza la capacidad de pago, historial crediticio y endeudamiento del solicitante.';
-    if (norm.includes('aprob')) return 'Registra la decisión definitiva o votos requeridos del comité de crédito.';
+    if (norm.includes('aprob') || norm.includes('visac')) return 'Visación: gestiona los documentos de firma, la carta a la empresa pagadora y la decisión del crédito.';
     if (norm.includes('desembol')) return 'Gestiona la dispersión de fondos, cuenta bancaria y fondeo de inversionista.';
     return 'Gestiona las actividades correspondientes a esta etapa del flujo de crédito.';
   };
@@ -237,7 +306,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
         </div>
 
         <div className="credit-hero-actions">
-          <div className="credit-current-stage"><small>Etapa seleccionada</small><strong><Clock3 size={12} />{activeEtapa?.etapa || 'Sin etapa disponible'}</strong></div>
+          <div className="credit-current-stage"><small>Etapa seleccionada</small><strong><Clock3 size={12} />{activeEtapa ? etapaLabel(activeEtapa.etapa) : 'Sin etapa disponible'}</strong></div>
           <div className="credit-actions-dropdown" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setQuickActionsOpen(false); }} onKeyDown={(event) => {
             if (event.key === 'Escape') { event.preventDefault(); setQuickActionsOpen(false); actionsTrigger.current?.focus(); }
             if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key) && quickActionsOpen) {
@@ -251,7 +320,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
             <button ref={actionsTrigger} type="button" className={`credit-action-btn-secondary credit-actions-trigger ${quickActionsOpen ? 'is-open' : ''}`} aria-haspopup="menu" aria-expanded={quickActionsOpen} aria-controls={actionsId} onClick={() => setQuickActionsOpen(!quickActionsOpen)}><MoreVertical size={16} />Acciones<ChevronDown size={15} /></button>
             {quickActionsOpen && <div className="credit-actions-menu" id={actionsId} role="menu" aria-label="Acciones del crédito" ref={actionsMenu}>
               <span className="credit-actions-menu-title">ACCIONES</span>
-              <button type="button" role="menuitem" className="credit-actions-option featured" disabled={loading} onClick={() => { setQuickActionsOpen(false); onOpenSendDocumentsModal(); }}><span className="credit-actions-icon"><Mail size={22} /></span><span><strong>Enviar documentos al correo</strong><small>Se enviará un enlace seguro al cliente</small></span><ChevronRight size={17} /></button>
+              <button type="button" role="menuitem" className="credit-actions-option featured" disabled={loading || firmaBloqueada} title={firmaBloqueada ? firmaBloqueadaTitle : undefined} onClick={() => { setQuickActionsOpen(false); onOpenSendDocumentsModal(); }}><span className="credit-actions-icon"><Mail size={22} /></span><span><strong>Enviar documentos al correo</strong><small>Se enviará un enlace seguro al cliente</small></span><ChevronRight size={17} /></button>
               <button type="button" role="menuitem" className="credit-actions-option" disabled={!envelope} onClick={() => { setQuickActionsOpen(false); setActiveTab('docusign'); }}><span className="credit-actions-icon"><RefreshCw size={21} /></span><span><strong>Trazabilidad DocuSign</strong><small>{envelope ? 'Consulta el estado de firma' : 'Disponible después del primer envío'}</small></span><ChevronRight size={17} /></button>
               {envelope?.estado === 'COMPLETED' && onDownloadSignedPdf && <button type="button" role="menuitem" className="credit-actions-option" disabled={loading} onClick={() => { setQuickActionsOpen(false); void onDownloadSignedPdf(envelope.envelopeId); }}><span className="credit-actions-icon"><Download size={21} /></span><span><strong>Descargar PDF firmado</strong><small>Obtén los documentos completados</small></span><ChevronRight size={17} /></button>}
               <div className="credit-actions-separator" />
@@ -265,7 +334,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
       <section className="credit-stepper-card">
         <div className="credit-stepper">
           {displayEtapas.map((etapa, idx) => {
-            const isCompleted = etapa.estadoEtapa === 'APROBADA' || idx < activeEtapaIndex;
+            const isCompleted = etapa.estadoEtapa === 'APROBADA';
             const isActive = activeEtapa?.id === etapa.id;
             const isPending = !isCompleted && !isActive;
 
@@ -279,15 +348,15 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   type="button"
                   className={`stepper-step ${statusClass}`}
                   onClick={() => onSelectEtapa(etapa.id)}
-                  title={`Ver etapa: ${etapa.etapa}`}
+                  title={`Ver etapa: ${etapaLabel(etapa.etapa)}`}
                 >
                   <div className="stepper-circle">
                     {isCompleted ? <Check size={15} /> : etapa.orden || idx + 1}
                   </div>
                   <div className="stepper-labels">
-                    <span className="stepper-title">{etapa.etapa}</span>
+                    <span className="stepper-title">{etapaLabel(etapa.etapa)}</span>
                     <span className="stepper-subtitle">
-                      {isCompleted ? 'Aprobada' : isActive ? 'En proceso' : 'Pendiente'}
+                      {ESTADO_ETAPA_LABEL[etapa.estadoEtapa] ?? 'Pendiente'}
                     </span>
                   </div>
                 </button>
@@ -320,7 +389,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
             <div className="stage-header-left">
               <div className="stage-header-icon"><FileText size={20} /></div>
               <div className="stage-header-titles">
-                <h2>{activeTab === 'documentos' ? 'Gestión documental' : activeEtapa?.etapa || 'Gestión de la solicitud'}</h2>
+                <h2>{isApprovalStage && activeEtapa ? etapaLabel(activeEtapa.etapa) : activeTab === 'documentos' && needsSigningDocs ? 'Gestión documental' : activeEtapa ? etapaLabel(activeEtapa.etapa) : 'Gestión de la solicitud'}</h2>
                 <p>{getStageDescription(activeEtapa?.etapa)}</p>
               </div>
             </div>
@@ -383,6 +452,16 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
           {/* TAB 1: Documentos */}
           {activeTab === 'documentos' && (
             <>
+              {isClientDocsStage && (
+                <SoportesClientePanel token={token} creditoId={credito.id} readOnly={readOnly} formatMoney={formatMoney} onPendientesChange={(pendientes) => setSoportesPendientes(pendientes)} />
+              )}
+              {isStudyStage && (
+                <EstudioCreditoPanel token={token} credito={credito} readOnly={readOnly} formatMoney={formatMoney} formatDateTime={formatDateTime} onEstudiosChange={setEstudiosCount} />
+              )}
+              {isRadicacionStage && (
+                <RadicacionResumen token={token} credito={credito} expediente={expediente} formatMoney={formatMoney} formatDateTime={formatDateTime} />
+              )}
+              {needsSigningDocs && (<>
               {/* Progress and Top Action Buttons */}
               <div className="stage-progress-bar-row">
                 <label className="credit-doc-search"><Search size={14} aria-hidden="true" /><input type="search" aria-label="Buscar documentos del crédito" placeholder="Buscar documento…" value={docSearch} onChange={(event) => setDocSearch(event.target.value)} /></label>
@@ -399,7 +478,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   <span className="stage-progress-percent">{porcentajeAprobados}%</span>
                 </div>
 
-                <div className="stage-top-actions">
+                {!readOnly && <div className="stage-top-actions">
                   <button
                     type="button"
                     className="stage-upload-primary-btn"
@@ -421,9 +500,9 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   <button
                     type="button"
                     className="doc-action-btn primary"
-                    disabled={loading}
+                    disabled={loading || firmaBloqueada}
                     onClick={() => onOpenSendDocumentsModal()}
-                    title="Enviar documentos para firma electrónica por correo"
+                    title={firmaBloqueada ? firmaBloqueadaTitle : 'Enviar documentos para firma electrónica por correo'}
                     style={{ fontWeight: 700 }}
                   >
                     ✉️ Enviar documentos
@@ -437,7 +516,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   >
                     ⋮
                   </button>
-                </div>
+                </div>}
               </div>
 
               {/* Modern Documents Table */}
@@ -529,7 +608,9 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                                 }}
                               />
 
-                              {!item.archivoNombre && !item.archivoUrl && !isDocSigned ? (
+                              {!item.archivoNombre && !item.archivoUrl && !isDocSigned && readOnly ? (
+                                <span className="soporte-sub">Sin archivo</span>
+                              ) : !item.archivoNombre && !item.archivoUrl && !isDocSigned ? (
                                 <>
                                   <button
                                     type="button"
@@ -562,17 +643,17 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                               )}
 
                               {/* Row menu toggle */}
-                              <button
+                              {!readOnly && <button
                                 type="button"
                                 className="stage-menu-btn"
                                 style={{ width: '30px', height: '30px' }}
                                 onClick={() => setOpenDocMenuId(openDocMenuId === item.id ? null : item.id)}
                               >
                                 ⋮
-                              </button>
+                              </button>}
 
                               {/* Dropdown menu */}
-                              {openDocMenuId === item.id && (
+                              {!readOnly && openDocMenuId === item.id && (
                                 <div
                                   style={{
                                     position: 'absolute',
@@ -664,15 +745,24 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   </tbody>
                 </table>
               </div>
+              </>)}
+
+              {isApprovalStage && (
+                <VisacionPanel token={token} creditoId={credito.id} readOnly={readOnly} formatMoney={formatMoney} formatDateTime={formatDateTime} onFirmaHabilitadaChange={setFirmaHabilitada} />
+              )}
+
+              <DocumentosAdicionalesPanel token={token} creditoId={credito.id} readOnly={readOnly} formatDateTime={formatDateTime} />
 
               {/* Observación de la gestión box */}
-              <div className="stage-observation-box">
-                <label className="stage-observation-label">Observación de la gestión</label>
+              {!readOnly && <div className="stage-observation-box">
+                <label className="stage-observation-label" htmlFor="stage-observacion">Observación de la gestión</label>
+                <p className="stage-observation-hint">Para devolver o rechazar la etapa es obligatoria: se le envía al cliente por correo como motivo.</p>
                 <div className="stage-observation-textarea-wrap">
                   <textarea
+                    id="stage-observacion"
                     rows={2}
                     maxLength={500}
-                    placeholder="Agrega una observación sobre la validación documental..."
+                    placeholder="Agrega una observación sobre esta etapa…"
                     value={observacionEtapa}
                     onChange={(e) => onChangeObservacionEtapa(e.target.value)}
                   />
@@ -680,13 +770,13 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                     {observacionEtapa.length}/500
                   </span>
                 </div>
-              </div>
+              </div>}
 
               {/* Decision details if stage is Aprobación */}
-              {isApprovalStage && creditoDecisionForm && onChangeDecisionForm && onDecideCredito && (
+              {!readOnly && isApprovalStage && creditoDecisionForm && onChangeDecisionForm && onDecideCredito && (
                 <div style={{ margin: '0 1.5rem 1.5rem 1.5rem', padding: '1.25rem', background: 'var(--bg-soft)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
                   <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
-                    Decisión de Aprobación
+                    Decisión del crédito
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
                     <input
@@ -745,47 +835,20 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                 </div>
               )}
 
-              {/* Disbursement details if stage is Desembolso */}
-              {isDisbursementStage && creditoDesembolsoForm && onChangeDesembolsoForm && onRegistrarDesembolso && (
-                <div style={{ margin: '0 1.5rem 1.5rem 1.5rem', padding: '1.25rem', background: 'var(--bg-soft)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.75rem' }}>
-                    Registro de Desembolso
-                  </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '12px' }}>
-                    <input
-                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
-                      value={creditoDesembolsoForm.valorDesembolso}
-                      onChange={(e) => onChangeDesembolsoForm((c: any) => ({ ...c, valorDesembolso: e.target.value }))}
-                      placeholder="Valor desembolso"
-                    />
-                    <input
-                      type="date"
-                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
-                      value={creditoDesembolsoForm.fechaDesembolso}
-                      onChange={(e) => onChangeDesembolsoForm((c: any) => ({ ...c, fechaDesembolso: e.target.value }))}
-                    />
-                    <select
-                      style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.82rem' }}
-                      value={creditoDesembolsoForm.idInversion}
-                      onChange={(e) => onChangeDesembolsoForm((c: any) => ({ ...c, idInversion: e.target.value }))}
-                    >
-                      <option value="">Socio / Inversión fondeo</option>
-                      {fondeoDisponible.map((item) => (
-                        <option key={item.idInversion} value={item.idInversion}>
-                          {item.inversionista} - {formatMoney(item.saldoDisponible)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    className="stage-btn-primary"
-                    disabled={loading}
-                    onClick={onRegistrarDesembolso}
-                  >
-                    Registrar desembolso definitivo
-                  </button>
-                </div>
+              {isDisbursementStage && credito && creditoDesembolsoForm && onChangeDesembolsoForm && onRegistrarDesembolso && (
+                <DesembolsoPanel
+                  token={token}
+                  credito={credito}
+                  liquidacion={expediente?.liquidacionDefinitiva ?? null}
+                  desembolsos={expediente?.desembolsos ?? []}
+                  form={creditoDesembolsoForm}
+                  onChange={onChangeDesembolsoForm}
+                  onSubmit={onRegistrarDesembolso}
+                  fondeoDisponible={fondeoDisponible}
+                  readOnly={readOnly}
+                  loading={loading}
+                  formatMoney={formatMoney}
+                />
               )}
 
               {/* Bottom Sticky Action Bar */}
@@ -829,7 +892,7 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                     <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: et.estadoEtapa === 'APROBADA' ? '#10b981' : 'var(--border-color)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800 }}>
                       {i + 1}
                     </span>
-                    <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>{et.etapa}</strong>
+                    <strong style={{ fontSize: '0.84rem', color: 'var(--text-main)' }}>{etapaLabel(et.etapa)}</strong>
                     <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>({et.estadoEtapa})</span>
                     <span style={{ marginLeft: 'auto', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
                       {formatDateTime(et.fechaInicio) || '-'}
@@ -959,20 +1022,31 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                 <div className="stage-footer-info">
                   <span className="stage-footer-info-icon">ℹ</span>
                   <div className="stage-footer-info-text">
-                    <strong>Para continuar, debes aprobar todos los documentos obligatorios.</strong>
-                    <small>
-                      {mandatoryPendingCount > 0
-                        ? `Faltan ${mandatoryPendingCount} documentos obligatorios por validar.`
-                        : 'Todos los documentos obligatorios han sido validados correctamente.'}
-                    </small>
+                    {sinPermisoEtapa && !etapaCerrada ? (
+                      <>
+                        <strong>Tu rol no tiene permiso para trabajar la etapa {activeEtapa ? etapaLabel(activeEtapa.etapa) : ''}.</strong>
+                        <small>Solo consulta. Un administrador puede asignarlo en Seguridad → Roles.</small>
+                      </>
+                    ) : readOnly ? (
+                      <>
+                        <strong>Etapa {activeEtapa?.estadoEtapa === 'APROBADA' ? 'aprobada' : 'rechazada'}{activeEtapa?.fechaFin ? ` el ${formatDateTime(activeEtapa.fechaFin)}` : ''}.</strong>
+                        <small>Solo lectura: la información de esta etapa ya no se puede modificar.</small>
+                      </>
+                    ) : (
+                      <>
+                        <strong>{approveBlockedTitle}</strong>
+                        <small>{approveBlockedDetail}</small>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="stage-footer-actions">
+                {!readOnly && <div className="stage-footer-actions">
                   <button
                     type="button"
                     className="stage-btn-outline"
-                    disabled={loading || !activeEtapa}
+                    disabled={loading || !activeEtapa || !observacionEtapa.trim()}
+                    title={observacionEtapa.trim() ? 'Devuelve la etapa y envía el motivo al cliente por correo' : 'Escribe el motivo en la observación'}
                     onClick={() => onUpdateEtapa('DEVUELTA')}
                   >
                     Devolver
@@ -980,7 +1054,8 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   <button
                     type="button"
                     className="stage-btn-danger"
-                    disabled={loading || !activeEtapa}
+                    disabled={loading || !activeEtapa || !observacionEtapa.trim()}
+                    title={observacionEtapa.trim() ? 'Rechaza la etapa y envía el motivo al cliente por correo' : 'Escribe el motivo en la observación'}
                     onClick={() => onUpdateEtapa('RECHAZADA')}
                   >
                     Rechazar
@@ -988,17 +1063,13 @@ export const CreditDetailView: React.FC<CreditDetailViewProps> = ({
                   <button
                     type="button"
                     className="stage-btn-primary"
-                    disabled={loading || !activeEtapa || mandatoryPendingCount > 0}
+                    disabled={loading || !activeEtapa || approveBlocked}
                     onClick={() => onUpdateEtapa('APROBADA')}
-                    title={
-                      mandatoryPendingCount > 0
-                        ? 'Aprueba los documentos obligatorios para avanzar'
-                        : 'Aprobar etapa y avanzar al siguiente paso'
-                    }
+                    title={approveBlocked ? approveBlockedDetail : 'Aprobar etapa y avanzar al siguiente paso'}
                   >
                     <span>✓</span> Aprobar etapa →
                   </button>
-                </div>
+                </div>}
               </footer>
       )}
 

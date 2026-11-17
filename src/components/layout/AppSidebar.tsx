@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ClipboardList, Package, SlidersHorizontal, ListTree, Handshake, Files, GitBranch, Settings2, FileText, Percent, Clock, Landmark, ChevronRight, Calculator } from 'lucide-react';
+import { ClipboardList, Package, SlidersHorizontal, ListTree, Handshake, Files, GitBranch, Settings2, FileText, Percent, Clock, Landmark, ChevronRight, Calculator, ShieldCheck, Receipt } from 'lucide-react';
 import type { CatalogModule, SecurityUser } from '../../api';
+import { BrandMark, type Branding } from '../../branding';
 
 export type ViewKey =
   | 'dashboard'
@@ -14,6 +15,7 @@ export type ViewKey =
   | 'formatos'
   | 'financieras'
   | 'docusign'
+  | 'recaudo'
   | `modulo:${number}`;
 
 export type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
@@ -53,6 +55,9 @@ interface AppSidebarProps {
   onNavigateCreditTab: (tab: ProductosCreditoTab) => void;
   isEmpresasActive: boolean;
   isSociosActive: boolean;
+  branding: Branding;
+  isSuperAdmin: boolean;
+  canRecaudo: boolean;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -69,7 +74,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   creditTab,
   onNavigateCreditTab,
   isEmpresasActive,
-  isSociosActive
+  isSociosActive,
+  branding,
+  isSuperAdmin,
+  canRecaudo
 }) => {
   const isSecondaryFinancialActive = ['plazos', 'bancos', 'docusign'].includes(view);
   const [showMoreFinancial, setShowMoreFinancial] = useState(isSecondaryFinancialActive);
@@ -90,18 +98,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     visibleUserModules.some((m) => m.nombre.toLowerCase().includes('seguridad') && view === `modulo:${m.id}`) ||
     (view === 'configuracion' && configTab === 'roles');
 
-  const fullName = activeUser?.fullName || 'EDWIN ENRIQUE CAPDEVILLA PACHECO';
+  const fullName = activeUser?.fullName || 'Usuario';
   const roleDisplay = activeUser?.roles?.length
     ? activeUser.roles.join(' / ').toUpperCase()
-    : 'ADMINISTRADOR / ANALISTA DE CRÉDITO / CONSULTOR';
+    : '';
 
   return (
     <aside className="side-nav" id="app-sidebar">
       {/* 1. Brand Block - Aligned with the left grid */}
       <div className="brand-block">
-        <span className="brand-mark">CA</span>
+        <BrandMark branding={branding} className="brand-mark" />
         <div className="brand-text">
-          <strong>Creditos App</strong>
+          <strong>{branding.nombreComercial}</strong>
           <small>Panel administrativo</small>
         </div>
       </div>
@@ -202,6 +210,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </div>
         )}
 
+        {canRecaudo && (
+          <button
+            type="button"
+            className={`module-link ${view === 'recaudo' ? 'active' : ''}`}
+            onClick={() => onNavigateView('recaudo')}
+            id="nav-recaudo"
+          >
+            <span className="menu-icon-box"><Receipt size={18} aria-hidden="true" /></span>
+            <span className="menu-text">Pagos y facturación</span>
+          </button>
+        )}
+
         {/* Empresas */}
         <button
           type="button"
@@ -292,6 +312,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </span>
           <span className="menu-text">Configuración</span>
         </button>
+
+        {isSuperAdmin && (
+          <button
+            type="button"
+            className={`module-link ${view === 'superadmin' ? 'active' : ''}`}
+            onClick={() => onNavigateView('superadmin')}
+            id="nav-superadmin"
+          >
+            <span className="menu-icon-box"><ShieldCheck size={18} aria-hidden="true" /></span>
+            <span className="menu-text">Super Admin</span>
+          </button>
+        )}
 
         {/* Section Header: CONFIGURACIÓN FINANCIERA */}
         <div className="nav-section-title">CONFIGURACIÓN FINANCIERA</div>

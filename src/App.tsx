@@ -1,14 +1,21 @@
+import { DocumentViewerHost, openDocument } from './components/DocumentViewer';
+import { RolePermissionsEditor } from './components/RolePermissionsEditor';
+import { PermissionsCatalog } from './components/PermissionsCatalog';
+import { SuperAdminView } from './components/SuperAdminView';
+import { RecaudoView } from './components/recaudo/RecaudoView';
+import { BrandMark, shade, useBranding } from './branding';
 const API_URL = import.meta.env.VITE_API_URL || "";
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
-import { Layers, Percent, RefreshCw, Save, ShieldCheck, Users } from 'lucide-react';
+import { Layers, Lock, Moon, Percent, RefreshCw, Save, ShieldCheck, Sun, Users } from 'lucide-react';
 import { FormStepper, type StepItem } from './FormStepper';
 import { FeedbackAlert, type FeedbackTone } from './FeedbackAlert';
 import { getAuthErrorMessage } from './feedback';
 import { EntidadesBancariasView } from './components/configuracion-financiera/EntidadesBancariasView';
+import { CuentasEgresoPanel } from './components/configuracion-financiera/CuentasEgresoPanel';
 import { TasasInteresView } from './components/configuracion-financiera/TasasInteresView';
 import { PlazosPagoView } from './components/configuracion-financiera/PlazosPagoView';
 import { FormatosCreditoView } from './components/configuracion-financiera/FormatosCreditoView';
@@ -86,14 +93,14 @@ import {
   type UserRow
 } from './api';
 
-type ViewKey = 'dashboard' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | 'financieras' | 'docusign' | `modulo:${number}`;
+type ViewKey = 'dashboard' | 'superadmin' | 'recaudo' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | 'financieras' | 'docusign' | `modulo:${number}`;
 type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
 type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
 type AliadosTab = 'registro' | 'directorio';
 type ComercialesTab = 'libranzera' | 'vendedor' | 'directorio';
 type ThemeMode = 'light' | 'dark';
-type PaletteKey = 'azul' | 'verde' | 'vino' | 'grafito';
+type PaletteKey = 'marca' | 'azul' | 'verde' | 'vino' | 'grafito';
 
 type SessionState = {
   token: string;
@@ -510,11 +517,18 @@ type Palette = {
 };
 
 const palettes: Record<PaletteKey, Palette> = {
+  // Colors come from the Super Admin brand at runtime (see activePalette).
+  marca: {
+    name: 'Marca de la empresa',
+    primary: '#14325c',
+    primaryDark: '#0c2140',
+    accent: '#1b3a6b'
+  },
   azul: {
-    name: 'Azul corporativo',
-    primary: '#164d83',
-    primaryDark: '#0f3e70',
-    accent: '#2f7cc1'
+    name: 'Marino P&S',
+    primary: '#14325c',
+    primaryDark: '#0c2140',
+    accent: '#1b3a6b'
   },
   verde: {
     name: 'Verde financiero',
@@ -1283,7 +1297,7 @@ function App() {
   );
   const [paletteKey, setPaletteKey] = useState<PaletteKey>(() => {
     const stored = localStorage.getItem('creditos.theme.palette') as PaletteKey | null;
-    return stored && stored in palettes ? stored : 'azul';
+    return stored && stored in palettes ? stored : 'marca';
   });
   const [users, setUsers] = useState<UserRow[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
@@ -1297,6 +1311,7 @@ function App() {
   const [moduleForm, setModuleForm] = useState<ModuleFormState>(initialModuleForm);
   const [submoduleForm, setSubmoduleForm] = useState<SubmoduleFormState>(initialSubmoduleForm);
   const [empresaForm, setEmpresaForm] = useState<EmpresaFormState>(initialEmpresaForm);
+  const [editingEmpresa, setEditingEmpresa] = useState<EmpresaRow | null>(null);
   const [empleadoForm, setEmpleadoForm] = useState<EmpleadoFormState>(initialEmpleadoForm);
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [empleadosEmpresa, setEmpleadosEmpresa] = useState<EmpleadoEmpresaRow[]>([]);
@@ -1449,7 +1464,9 @@ function App() {
     referenciaPago: '',
     numeroOrden: '',
     comprobantePago: '',
-    observacion: ''
+    observacion: '',
+    idCuentaEgreso: '',
+    fechaConsignacion: ''
   });
   const [fondeoDisponible, setFondeoDisponible] = useState<FondeoDisponibleRow[]>([]);
   const [creditoFondeoForm, setCreditoFondeoForm] = useState({
@@ -1486,8 +1503,6 @@ function App() {
   const [documentCreditoId, setDocumentCreditoId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedUserRoleIds, setSelectedUserRoleIds] = useState<string[]>([]);
-  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const [selectedPermissionIds, setSelectedPermissionIds] = useState<number[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -1539,7 +1554,13 @@ function App() {
 
   const activeUser = useMemo(() => session?.user ?? null, [session]);
   const selectedUser = users.find((user) => user.id === selectedUserId);
-  const activePalette = palettes[paletteKey];
+  const branding = useBranding();
+  const activePalette: Palette = paletteKey === 'marca'
+    ? { name: palettes.marca.name, primary: branding.colorPrimario, primaryDark: shade(branding.colorPrimario, -0.35), accent: shade(branding.colorPrimario, 0.12) }
+    : palettes[paletteKey];
+  // apiStatus is "API <status> - PostgreSQL <db>"; the login shows a plain-language version.
+  const apiStatusTone = /no disponible/i.test(apiStatus) ? 'down' : /\b(ok|up|healthy)\b/i.test(apiStatus) ? 'ok' : /conectando/i.test(apiStatus) ? 'pending' : 'warn';
+  const apiStatusLabel = { ok: 'Sistema operativo', warn: 'Servicio con intermitencias', down: 'Servicio no disponible', pending: 'Conectando…' }[apiStatusTone];
   const visibleUserModules = userModules.filter((module) => !module.nombre.toLowerCase().includes('colaborador'));
   const selectedModule =
     view.startsWith('modulo:') ? visibleUserModules.find((module) => `modulo:${module.id}` === view) : null;
@@ -1779,12 +1800,16 @@ function App() {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = themeMode;
-    root.style.setProperty('--color-primary', activePalette.primary);
-    root.style.setProperty('--color-primary-dark', activePalette.primaryDark);
-    root.style.setProperty('--color-accent', activePalette.accent);
+    // Dark mode uses the dark tokens from styles.css; palette colors are too dark to read on dark surfaces.
+    const paletteVars: Record<string, string> = { '--color-primary': activePalette.primary, '--color-primary-dark': activePalette.primaryDark, '--color-accent': activePalette.accent };
+    if (paletteKey === 'marca') paletteVars['--color-gold'] = branding.colorAcento;
+    else root.style.removeProperty('--color-gold');
+    Object.entries(paletteVars).forEach(([name, value]) =>
+      themeMode === 'dark' ? root.style.removeProperty(name) : root.style.setProperty(name, value)
+    );
     localStorage.setItem('creditos.theme.mode', themeMode);
     localStorage.setItem('creditos.theme.palette', paletteKey);
-  }, [activePalette, paletteKey, themeMode]);
+  }, [activePalette.primary, activePalette.primaryDark, activePalette.accent, branding.colorAcento, paletteKey, themeMode]);
 
   const reloadSecurityData = async () => {
     if (!session) return;
@@ -2982,18 +3007,6 @@ function App() {
     }
   };
 
-  const handleAssignPermissions = async () => {
-    if (!session || !selectedRoleId) return;
-
-    try {
-      await api.updateRolePermissions(session.token, selectedRoleId, selectedPermissionIds);
-      await reloadSecurityData();
-      setMessage('Permisos del rol actualizados');
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudieron actualizar los permisos');
-    }
-  };
-
   const handleCreateModule = async (event: FormEvent) => {
     event.preventDefault();
     if (!session) return;
@@ -3035,6 +3048,55 @@ function App() {
     }
   };
 
+  const startEditEmpresa = (empresa: EmpresaRow) => {
+    const text = (value: string | number | null | undefined) => (value == null ? '' : String(value));
+    const date = (value: string | null) => (value ? value.slice(0, 10) : '');
+    setEmpresaForm({
+      ...initialEmpresaForm,
+      nit: empresa.nit,
+      razonSocial: empresa.razonSocial,
+      vendedor: text(empresa.vendedor),
+      domicilio: text(empresa.domicilio),
+      correo: text(empresa.correo),
+      telefono: text(empresa.telefono),
+      representanteLegal: text(empresa.representanteLegal),
+      telefonoRepresentante: text(empresa.telefonoRepresentante),
+      tipoIdentificacionRepresentante: text(empresa.tipoIdentificacionRepresentante),
+      identificacionRepresentante: text(empresa.identificacionRepresentante),
+      correoRepresentante: text(empresa.correoRepresentante),
+      codigo: text(empresa.codigo),
+      contactoCargo: text(empresa.contactoCargo),
+      contactoNombre: text(empresa.contactoNombre),
+      contactoCorreo: text(empresa.contactoCorreo),
+      contactoTelefono: text(empresa.contactoTelefono),
+      fechaConstitucion: date(empresa.fechaConstitucion),
+      capitalSociedad: text(empresa.capitalSociedad),
+      fechaVenta: date(empresa.fechaVenta),
+      ventasFecha: text(empresa.ventasFecha),
+      naturaleza: text(empresa.naturaleza),
+      camaraNumero: text(empresa.camaraNumero),
+      camaraLibro: text(empresa.camaraLibro),
+      camaraCiudad: text(empresa.camaraCiudad),
+      periodicidadNomina: empresa.periodicidadNomina || initialEmpresaForm.periodicidadNomina,
+      diaCorteNomina: text(empresa.diaCorteNomina),
+      diaPagoNomina: text(empresa.diaPagoNomina),
+      segundoDiaPagoNomina: text(empresa.segundoDiaPagoNomina),
+      diaDescuentoLibranza: text(empresa.diaDescuentoLibranza),
+      ajustarFinSemana: empresa.ajustarFinSemana ?? true,
+      observacionCalendario: text(empresa.observacionCalendario)
+    });
+    setCitySearch('');
+    setEditingEmpresa(empresa);
+    setEmpresaTab('registro');
+  };
+
+  const cancelEditEmpresa = () => {
+    setEditingEmpresa(null);
+    setEmpresaForm(initialEmpresaForm);
+    setCitySearch('');
+    setEmpresaTab('directorio');
+  };
+
   const handleCreateEmpresa = async (event: FormEvent) => {
     event.preventDefault();
     if (!session) return;
@@ -3043,7 +3105,7 @@ function App() {
     setMessage('');
 
     try {
-      const created = await api.createEmpresa(session.token, {
+      const payload = {
         ...empresaForm,
         capitalSociedad: empresaForm.capitalSociedad ? Number(empresaForm.capitalSociedad) : null,
         ventasFecha: empresaForm.ventasFecha ? Number(empresaForm.ventasFecha) : null,
@@ -3051,15 +3113,23 @@ function App() {
         diaPagoNomina: empresaForm.diaPagoNomina ? Number(empresaForm.diaPagoNomina) : null,
         segundoDiaPagoNomina: empresaForm.segundoDiaPagoNomina ? Number(empresaForm.segundoDiaPagoNomina) : null,
         diaDescuentoLibranza: empresaForm.diaDescuentoLibranza ? Number(empresaForm.diaDescuentoLibranza) : null,
+        // null keeps the current address on update (backend only rewrites it when sent)
         direccion: buildDireccionPayload()
-      });
+      };
+      const saved = editingEmpresa
+        ? await api.updateEmpresa(session.token, editingEmpresa.id, payload)
+        : await api.createEmpresa(session.token, payload);
       setEmpresaForm(initialEmpresaForm);
       setCitySearch('');
       await reloadEmpresasData();
-      setSelectedEmpresaId(created.id);
-      setMessage('Empresa creada correctamente');
+      setSelectedEmpresaId(saved.id);
+      if (editingEmpresa) {
+        setEditingEmpresa(null);
+        setEmpresaTab('directorio');
+      }
+      setMessage(editingEmpresa ? 'Empresa actualizada correctamente' : 'Empresa creada correctamente');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo crear la empresa');
+      setMessage(error instanceof Error ? error.message : editingEmpresa ? 'No se pudo actualizar la empresa' : 'No se pudo crear la empresa');
     } finally {
       setLoading(false);
     }
@@ -4389,9 +4459,7 @@ function App() {
     try {
       const generated = await api.generateDocument(session.token, selectedDocumentTemplate.id, Number(documentCreditoId));
       const blob = await api.getGeneratedDocumentPdf(session.token, generated.id);
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      openDocument(blob, generated.fileName);
       setMessage(`Documento generado: ${generated.fileName}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo generar el documento');
@@ -4549,9 +4617,9 @@ function App() {
       const refreshed = await api.listCreditos(session.token);
       setCreditos(refreshed);
       setSelectedCreditoId(selectedCreditoId);
-      setMessage('Etapa actualizada');
+      notify(estado === 'APROBADA' ? 'Etapa aprobada' : 'Etapa actualizada', 'success');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'No se pudo actualizar la etapa');
+      notify(error instanceof Error ? error.message : 'No se pudo actualizar la etapa', 'error');
     } finally {
       setLoading(false);
     }
@@ -4739,7 +4807,8 @@ function App() {
     setMessage('');
     try {
       const expediente = await api.registrarDesembolso(session.token, selectedCreditoId, {
-        valorDesembolso: Number(creditoDesembolsoForm.valorDesembolso),
+        // The backend requires the value of the current final liquidation.
+        valorDesembolso: creditoExpediente?.liquidacionDefinitiva?.valorDesembolso ?? Number(creditoDesembolsoForm.valorDesembolso),
         fechaDesembolso: creditoDesembolsoForm.fechaDesembolso,
         fechaPrimeraCuota: creditoDesembolsoForm.fechaPrimeraCuota || null,
         diaCorte: creditoDesembolsoForm.diaCorte ? Number(creditoDesembolsoForm.diaCorte) : null,
@@ -4756,6 +4825,8 @@ function App() {
         referenciaPago: creditoDesembolsoForm.referenciaPago || null,
         numeroOrden: creditoDesembolsoForm.numeroOrden || null,
         comprobantePago: creditoDesembolsoForm.comprobantePago || creditoDesembolsoForm.referenciaPago || null,
+        idCuentaEgreso: creditoDesembolsoForm.idCuentaEgreso ? Number(creditoDesembolsoForm.idCuentaEgreso) : null,
+        fechaConsignacion: creditoDesembolsoForm.fechaConsignacion || null,
         observacion: creditoDesembolsoForm.observacion || null
       });
       applyCreditoExpediente(expediente);
@@ -4948,9 +5019,7 @@ function App() {
     if (!session) return;
     try {
       const blob = await api.getFirmaPdfFirmado(session.token, firmaId);
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      openDocument(blob, `documento-firmado-${firmaId}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo abrir el PDF firmado');
     }
@@ -4960,9 +5029,7 @@ function App() {
     if (!session) return;
     try {
       const blob = await api.getCreditoDocumentoArchivo(session.token, documentoId);
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      openDocument(blob, `documento-${documentoId}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo abrir el archivo');
     }
@@ -5075,9 +5142,7 @@ function App() {
     if (!session) return;
     try {
       const blob = await api.getCreditoPagoSoporte(session.token, pagoId);
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      openDocument(blob, `soporte-pago-${pagoId}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'No se pudo abrir el soporte de pago');
     }
@@ -5138,7 +5203,7 @@ function App() {
     }
     if (isEmpresasModule) {
       const sub =
-        empresaTab === 'registro' ? 'Crear empresa' : empresaTab === 'directorio' ? 'Directorio de empresas' : 'Empleados';
+        empresaTab === 'registro' ? (editingEmpresa ? 'Editar empresa' : 'Crear empresa') : empresaTab === 'directorio' ? 'Directorio de empresas' : 'Empleados';
       return { root: 'Empresas', current: sub };
     }
     if (isAliadosModule) {
@@ -5210,7 +5275,7 @@ function App() {
       <div className="portal-screen">
         <section className="portal-shell">
           <div className="portal-toolbar">
-            <div className="portal-logo">P&S</div>
+            <div className="portal-logo"><BrandMark branding={branding} className="" /></div>
             <div className="portal-controls">
               <button type="button" className={themeMode === 'light' ? 'chip-button active' : 'chip-button'} onClick={() => setThemeMode('light')}>Dia</button>
               <button type="button" className={themeMode === 'dark' ? 'chip-button active' : 'chip-button'} onClick={() => setThemeMode('dark')}>Noche</button>
@@ -5225,7 +5290,7 @@ function App() {
             </div>
           </div>
           <div className="portal-brand">
-            <span>P&S</span>
+            <span>{branding.nombreComercial}</span>
             <h1>{portalCliente ? (portalCliente.perfilCompleto ? 'Portal del cliente' : 'Completa tu perfil') : portalMode === 'registro' ? 'Crea tu cuenta' : 'Iniciar sesion'}</h1>
             <p>{portalCliente ? (portalCliente.perfilCompleto ? 'Gestiona tus solicitudes y creditos.' : 'Asocia tu empresa y registra tu informacion laboral para continuar.') : portalMode === 'registro' ? 'Registra tus datos basicos y activa tu cuenta.' : 'Ingresa con tu identificacion o correo.'}</p>
           </div>
@@ -5511,39 +5576,41 @@ function App() {
   if (!session) {
     return (
       <div className="login-screen">
-        <section className="login-panel">
-          <div className="login-brand">
-            <span>Creditos App</span>
-            <h1>Gestion de creditos y accesos</h1>
-            <p>Seguridad, empresas, creditos, cartera e inversionistas desde una base modular.</p>
-            <strong>{apiStatus}</strong>
+        <aside className="login-brand">
+          <div className="login-logo">
+            <BrandMark branding={branding} className="login-logo-mark" imgClassName="login-logo-img" />
+            <span className="login-logo-text"><strong>{branding.nombreComercial}</strong><small>Libranzas y cartera</small></span>
           </div>
+          <div className="login-brand-copy">
+            <h1>Gestión de créditos de libranza, de punta a punta.</h1>
+            <p>Originación, estudio, firma electrónica, desembolso y recaudo en una sola plataforma.</p>
+            <ul className="login-features">
+              <li>Estudio de crédito y validación de identidad</li>
+              <li>Cartera, recaudo y pagadurías al día</li>
+              <li>Firma electrónica y trazabilidad completa</li>
+            </ul>
+          </div>
+          <footer className="login-brand-footer">
+            <span>© {new Date().getFullYear()} {branding.nombreComercial}</span>
+            <span className={`login-status login-status-${apiStatusTone}`} title={apiStatus}>{apiStatusLabel}</span>
+          </footer>
+        </aside>
 
+        <main className="login-main">
+          <button
+            type="button"
+            className="login-theme-toggle"
+            onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')}
+            aria-label={themeMode === 'light' ? 'Cambiar a modo noche' : 'Cambiar a modo día'}
+            title={themeMode === 'light' ? 'Modo noche' : 'Modo día'}
+          >
+            {themeMode === 'light' ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
+          </button>
           <form className="login-form" onSubmit={handleLogin}>
-            <h2>Iniciar sesion</h2>
-            <div className="theme-toolbar login-theme-toolbar">
-              <div className="mode-switch" aria-label="Modo de visualizacion">
-                <button
-                  type="button"
-                  className={themeMode === 'light' ? 'mode-button active' : 'mode-button'}
-                  onClick={() => setThemeMode('light')}
-                >
-                  Dia
-                </button>
-                <button
-                  type="button"
-                  className={themeMode === 'dark' ? 'mode-button active' : 'mode-button'}
-                  onClick={() => setThemeMode('dark')}
-                >
-                  Noche
-                </button>
-              </div>
-              <select value={paletteKey} onChange={(event) => setPaletteKey(event.target.value as PaletteKey)}>
-                {(Object.entries(palettes) as Array<[PaletteKey, Palette]>).map(([key, palette]) => (
-                  <option key={key} value={key}>{palette.name}</option>
-                ))}
-              </select>
-            </div>
+            <header>
+              <h2>Iniciar sesión</h2>
+              <p>Ingresa con tu usuario corporativo.</p>
+            </header>
             <label>
               Usuario o correo
               <input
@@ -5555,11 +5622,11 @@ function App() {
                   setAuthForm((current) => ({ ...current, username: event.target.value }));
                   if (message) setMessage('');
                 }}
-                placeholder="admin o correo@dominio.com"
+                placeholder="usuario o correo@empresa.com"
               />
             </label>
             <label>
-              Contrasena
+              Contraseña
               <input
                 type="password"
                 autoComplete="current-password"
@@ -5570,13 +5637,14 @@ function App() {
                   setAuthForm((current) => ({ ...current, password: event.target.value }));
                   if (message) setMessage('');
                 }}
-                placeholder="********"
+                placeholder="••••••••"
               />
             </label>
-            <button type="submit" disabled={loading}>{loading ? 'Ingresando...' : 'Ingresar'}</button>
+            <button type="submit" disabled={loading}>{loading ? 'Ingresando…' : 'Ingresar'}</button>
             <FeedbackAlert message={message} tone={messageTone} onDismiss={() => setMessage('')} />
+            <p className="login-secure"><Lock size={14} aria-hidden="true" /> Conexión cifrada · Acceso solo para personal autorizado</p>
           </form>
-        </section>
+        </main>
       </div>
     );
   }
@@ -5663,6 +5731,9 @@ function App() {
         isCreditosActive={Boolean(isProductosCreditoModule)}
         isEmpresasActive={Boolean(isEmpresasModule)}
         isSociosActive={Boolean(isSociosModule)}
+        branding={branding}
+        isSuperAdmin={Boolean(session?.user.permissions.includes('superadmin:config'))}
+        canRecaudo={Boolean(session?.user.permissions.includes('recaudo:read'))}
       />
 
       <main className="workspace">
@@ -5914,8 +5985,16 @@ function App() {
             {empresaTab === 'registro' && (
               <form className="surface pagaduria-form" onSubmit={handleCreateEmpresa}>
                 <div className="surface-title">
-                  <h2>Crear empresa</h2>
+                  <h2>{editingEmpresa ? `Editar empresa · ${editingEmpresa.razonSocial}` : 'Crear empresa'}</h2>
+                  {editingEmpresa && (
+                    <button type="button" className="ghost-button" onClick={cancelEditEmpresa}>Cancelar edición</button>
+                  )}
                 </div>
+                {editingEmpresa && (
+                  <p className="muted-note">
+                    Dirección actual: <strong>{editingEmpresa.direccionCompuesta ?? editingEmpresa.domicilio ?? 'Sin dirección'}</strong>. Deja los campos de dirección vacíos para conservarla, o llénalos para reemplazarla.
+                  </p>
+                )}
 
                 <FormStepper
                   steps={[
@@ -6297,7 +6376,12 @@ function App() {
                 <section className="surface company-detail">
                   <div className="surface-title">
                     <h2>{selectedEmpresa?.razonSocial ?? 'Detalle de empresa'}</h2>
-                    <span>{selectedEmpresa?.estado ?? 'Sin seleccion'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span>{selectedEmpresa?.estado ?? 'Sin seleccion'}</span>
+                      {selectedEmpresa && (
+                        <button type="button" onClick={() => startEditEmpresa(selectedEmpresa)}>Editar empresa</button>
+                      )}
+                    </div>
                   </div>
                   {selectedEmpresa ? (
                     <div className="detail-sections">
@@ -7613,6 +7697,7 @@ function App() {
             {productosCreditoTab === 'solicitudes' && (
               selectedCreditoId !== null && selectedCredito ? (
                 <CreditDetailView
+                  permisos={session?.user.permissions}
                   credito={selectedCredito}
                   expediente={creditoExpediente}
                   documentos={creditoDocumentos}
@@ -8485,10 +8570,10 @@ function App() {
             )}
 
             {productosCreditoTab === 'bancos' && session && (
-              <EntidadesBancariasView
-                token={session.token}
-                notify={notify}
-              />
+              <>
+                <EntidadesBancariasView token={session.token} notify={notify} />
+                <CuentasEgresoPanel token={session.token} notify={notify} />
+              </>
             )}
           </section>
         )}
@@ -8662,62 +8747,35 @@ function App() {
               ))}
             </div>
 
-            {configTab === 'roles' && (
-              <div className="config-grid">
-                <form className="form-section clean" onSubmit={handleCreateRole}>
-                  <h2>Crear rol</h2>
-                  <input value={roleForm.nombre} onChange={(event) => setRoleForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Nombre del rol" />
-                  <input value={roleForm.descripcion} onChange={(event) => setRoleForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />
-                  <input value={roleForm.montoMaximoAprobacion} onChange={(event) => setRoleForm((current) => ({ ...current, montoMaximoAprobacion: event.target.value }))} placeholder="Monto maximo aprobacion" />
-                  <button type="submit" disabled={loading}>Guardar rol</button>
-                </form>
-
-                <div className="form-section clean">
-                  <h2>Permisos por rol</h2>
-                  <select value={selectedRoleId ?? ''} onChange={(event) => setSelectedRoleId(Number(event.target.value) || null)}>
-                    <option value="">Selecciona rol</option>
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>{role.nombre}</option>
-                    ))}
-                  </select>
-                  <select multiple value={selectedPermissionIds.map(String)} onChange={(event) => setSelectedPermissionIds(Array.from(event.target.selectedOptions, (option) => Number(option.value)))}>
-                    {permissions.map((permission) => (
-                      <option key={permission.id} value={permission.id}>{permission.nombre}</option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={handleAssignPermissions} disabled={!selectedRoleId}>Asignar permisos</button>
-                </div>
-
-                <div className="list-panel">
-                  {roles.map((role) => (
-                    <article key={role.id} className="row-card">
-                      <strong>{role.nombre}</strong>
-                      <span>{role.descripcion}</span>
-                      <small>Limite aprobacion: {role.montoMaximoAprobacion === null ? 'Sin limite' : formatMoney(role.montoMaximoAprobacion)}</small>
-                    </article>
-                  ))}
-                </div>
-              </div>
+            {configTab === 'roles' && session && (
+              <RolePermissionsEditor
+                token={session.token}
+                roles={roles}
+                permissions={permissions}
+                formatMoney={formatMoney}
+                notify={notify}
+                createForm={(
+                  <form className="roles-create-form" onSubmit={handleCreateRole}>
+                    <label><span>Nombre del rol</span><input required value={roleForm.nombre} onChange={(event) => setRoleForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="Ej. Analista de desembolsos" /></label>
+                    <label><span>Descripción</span><input value={roleForm.descripcion} onChange={(event) => setRoleForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Qué hace este rol" /></label>
+                    <label><span>Monto máximo de aprobación</span><input inputMode="numeric" value={roleForm.montoMaximoAprobacion} onChange={(event) => setRoleForm((current) => ({ ...current, montoMaximoAprobacion: event.target.value }))} placeholder="Vacío = sin límite" /></label>
+                    <button type="submit" className="stage-btn-primary" disabled={loading}>Guardar rol</button>
+                  </form>
+                )}
+              />
             )}
 
             {configTab === 'permisos' && (
-              <div className="config-grid two-cols">
-                <form className="form-section clean" onSubmit={handleCreatePermission}>
-                  <h2>Crear permiso</h2>
-                  <input value={permissionForm.nombre} onChange={(event) => setPermissionForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="usuarios:create" />
-                  <input value={permissionForm.descripcion} onChange={(event) => setPermissionForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Descripcion" />
-                  <button type="submit" disabled={loading}>Guardar permiso</button>
-                </form>
-
-                <div className="list-panel tall">
-                  {permissions.map((permission) => (
-                    <article key={permission.id} className="row-card">
-                      <strong>{permission.nombre}</strong>
-                      <span>{permission.descripcion}</span>
-                    </article>
-                  ))}
-                </div>
-              </div>
+              <PermissionsCatalog
+                permissions={permissions}
+                createForm={(
+                  <form className="roles-create-form" onSubmit={handleCreatePermission}>
+                    <label><span>Código</span><input required className="perms-code-input" value={permissionForm.nombre} onChange={(event) => setPermissionForm((current) => ({ ...current, nombre: event.target.value }))} placeholder="modulo:accion (ej. recaudo:aplicar)" /></label>
+                    <label><span>Descripción</span><input required value={permissionForm.descripcion} onChange={(event) => setPermissionForm((current) => ({ ...current, descripcion: event.target.value }))} placeholder="Qué permite hacer" /></label>
+                    <button type="submit" className="stage-btn-primary" disabled={loading}>Guardar permiso</button>
+                  </form>
+                )}
+              />
             )}
 
             {configTab === 'modulos' && (
@@ -8810,8 +8868,8 @@ function App() {
 
                 <section className="brand-preview">
                   <div className="preview-sidebar">
-                    <span className="brand-mark">CA</span>
-                    <strong>Creditos App</strong>
+                    <BrandMark branding={branding} className="brand-mark" />
+                    <strong>{branding.nombreComercial}</strong>
                   </div>
                   <div className="preview-content">
                     <span className="section-kicker">Vista previa</span>
@@ -8845,9 +8903,22 @@ function App() {
           </section>
         )}
 
+        {view === 'recaudo' && session?.user.permissions.includes('recaudo:read') && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <RecaudoView token={session.token} notify={notify} permisos={session.user.permissions} />
+          </section>
+        )}
+
+        {view === 'superadmin' && session?.user.permissions.includes('superadmin:config') && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <SuperAdminView token={session.token} notify={notify} />
+          </section>
+        )}
+
         {view === 'bancos' && session && (
           <section className="surface" style={{ padding: '24px' }}>
             <EntidadesBancariasView token={session.token} notify={notify} />
+            <CuentasEgresoPanel token={session.token} notify={notify} />
           </section>
         )}
 
@@ -8895,7 +8966,12 @@ function App() {
           onSubmit={handleSendDocumentsSubmit}
         />}
 
-        <p className="message-line">{message}</p>
+        {message && (
+          <div className="app-toast">
+            <FeedbackAlert message={message} tone={messageTone} onDismiss={() => setMessage('')} />
+          </div>
+        )}
+        <DocumentViewerHost />
       </main>
     </div>
   );
