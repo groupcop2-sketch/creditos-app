@@ -16,6 +16,7 @@ export type ViewKey =
   | 'financieras'
   | 'docusign'
   | 'recaudo'
+  | 'superadmin'
   | `modulo:${number}`;
 
 export type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
