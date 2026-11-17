@@ -9091,3 +9091,31 @@ fieldset:disabled .estudio-money {
 
 @media (max-width: 900px) { .rec-two { grid-template-columns: 1fr; } .rec-dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .rec-check { grid-template-columns: 1fr; } }
+
+/* ── Utilitarios (tablas de opciones) ─────────────────────── */
+.util .roles-aside { max-height: calc(100vh - 120px); overflow-y: auto; }
+.util-aside-search { min-width: 0; width: 100%; }
+.util-groups { display: grid; gap: 14px; }
+.util-group { display: grid; gap: 4px; }
+.util-group-title { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-muted); padding: 0 10px; }
+.util .roles-list button { padding: 8px 10px; justify-content: flex-start; text-align: left; }
+.util-lock { margin-left: auto; color: var(--text-muted); flex: none; }
+.util-desc { margin: 0 0 8px; color: var(--text-muted); font-size: 13.5px; max-width: 70ch; }
+.util .roles-chips span { display: inline-flex; align-items: center; gap: 4px; }
+.util-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 14px 0; }
+.util-toolbar .roles-search { flex: 1 1 260px; }
+.util-toolbar select { min-height: 38px; max-width: 260px; }
+.util-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+.util-check input { width: auto; min-height: 0; }
+.util-table th.util-short { width: 130px; }
+.util-table td { height: 48px; }
+.util-inactive td { color: var(--text-muted); }
+.util-inactive td strong { font-weight: 500; }
+.util-pill { margin-left: 8px; font-size: 11px; padding: 1px 8px; }
+.util-edit-row td { background: color-mix(in srgb, var(--color-primary) 6%, transparent); }
+.util-edit-row input, .util-edit-row select { min-height: 36px; padding: 6px 10px; width: 100%; }
+.util-upper { text-transform: uppercase; }
+.util-row-actions { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.util-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 0 16px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-color); margin-top: 4px; }
+.util-kbd { display: inline-flex; align-items: center; gap: 4px; }
+@media (max-width: 860px) { .util .roles-aside { max-height: none; } }
