@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ClipboardList, Package, SlidersHorizontal, ListTree, Handshake, Files, GitBranch, Settings2, FileText, Percent, Clock, Landmark, ChevronRight, Calculator, ShieldCheck, Receipt } from 'lucide-react';
+import { ClipboardList, Package, SlidersHorizontal, ListTree, Handshake, Files, GitBranch, Settings2, FileText, Percent, Clock, Landmark, ChevronRight, Calculator, ShieldCheck, Receipt, Database } from 'lucide-react';
 import type { CatalogModule, SecurityUser } from '../../api';
 import { BrandMark, type Branding } from '../../branding';
 
@@ -16,6 +16,7 @@ export type ViewKey =
   | 'financieras'
   | 'docusign'
   | 'recaudo'
+  | 'utilitarios'
   | 'superadmin'
   | `modulo:${number}`;
 
@@ -59,6 +60,7 @@ interface AppSidebarProps {
   branding: Branding;
   isSuperAdmin: boolean;
   canRecaudo: boolean;
+  canUtilitarios: boolean;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -78,7 +80,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   isSociosActive,
   branding,
   isSuperAdmin,
-  canRecaudo
+  canRecaudo,
+  canUtilitarios
 }) => {
   const isSecondaryFinancialActive = ['plazos', 'bancos', 'docusign'].includes(view);
   const [showMoreFinancial, setShowMoreFinancial] = useState(isSecondaryFinancialActive);
@@ -313,6 +316,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
           </span>
           <span className="menu-text">Configuración</span>
         </button>
+
+        {canUtilitarios && (
+          <button
+            type="button"
+            className={`module-link ${view === 'utilitarios' ? 'active' : ''}`}
+            onClick={() => onNavigateView('utilitarios')}
+            id="nav-utilitarios"
+          >
+            <span className="menu-icon-box"><Database size={18} aria-hidden="true" /></span>
+            <span className="menu-text">Utilitarios</span>
+          </button>
+        )}
 
         {isSuperAdmin && (
           <button

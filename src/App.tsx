@@ -3,6 +3,7 @@ import { RolePermissionsEditor } from './components/RolePermissionsEditor';
 import { PermissionsCatalog } from './components/PermissionsCatalog';
 import { SuperAdminView } from './components/SuperAdminView';
 import { RecaudoView } from './components/recaudo/RecaudoView';
+import { UtilitariosView } from './components/utilitarios/UtilitariosView';
 import { BrandMark, shade, useBranding } from './branding';
 const API_URL = import.meta.env.VITE_API_URL || "";
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
@@ -93,7 +94,7 @@ import {
   type UserRow
 } from './api';
 
-type ViewKey = 'dashboard' | 'superadmin' | 'recaudo' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | 'financieras' | 'docusign' | `modulo:${number}`;
+type ViewKey = 'dashboard' | 'superadmin' | 'recaudo' | 'utilitarios' | 'usuarios' | 'configuracion' | 'salarios' | 'fianzas' | 'bancos' | 'tasas' | 'plazos' | 'formatos' | 'financieras' | 'docusign' | `modulo:${number}`;
 type ConfigTab = 'roles' | 'permisos' | 'modulos' | 'salarios' | 'fianzas' | 'apariencia';
 type EmpresaTab = 'registro' | 'directorio' | 'empleados';
 type SociosTab = 'registro' | 'directorio' | 'inversiones';
@@ -5734,6 +5735,7 @@ function App() {
         branding={branding}
         isSuperAdmin={Boolean(session?.user.permissions.includes('superadmin:config'))}
         canRecaudo={Boolean(session?.user.permissions.includes('recaudo:read'))}
+        canUtilitarios={Boolean(session?.user.permissions.includes('utilitarios:read'))}
       />
 
       <main className="workspace">
@@ -8900,6 +8902,12 @@ function App() {
         {view === 'fianzas' && session && (
           <section className="surface" style={{ padding: '24px' }}>
             <TiposFianzasView token={session.token} notify={notify} />
+          </section>
+        )}
+
+        {view === 'utilitarios' && session?.user.permissions.includes('utilitarios:read') && (
+          <section className="surface" style={{ padding: '24px' }}>
+            <UtilitariosView token={session.token} notify={notify} puedeEditar={session.user.permissions.includes('utilitarios:config')} />
           </section>
         )}
 
